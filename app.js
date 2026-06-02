@@ -392,11 +392,11 @@ function shareWithKakaoTalk() {
       imageUrl,
       imageWidth: 600,
       imageHeight: 800,
-      link: { mobileWebUrl: url, webUrl: url },
+      link: { mobileWebUrl: 'https://mobile-wedding-expanded.vercel.app/', webUrl: 'url' },
     },
     buttons: [
-      { title: "청첩장 보기", link: { mobileWebUrl: url, webUrl: url } },
-      { title: "위치 보기", link: { mobileWebUrl: `${url}/#location`, webUrl: `${url}/#location` } },
+      { title: "청첩장 보기", link: { mobileWebUrl: 'https://mobile-wedding-expanded.vercel.app/', webUrl: 'https://mobile-wedding-expanded.vercel.app/' } },
+      { title: "위치 보기", link: { mobileWebUrl: 'https://mobile-wedding-expanded.vercel.app/#location', webUrl: 'https://mobile-wedding-expanded.vercel.app/#location' } },
     ],
   });
   return true;
