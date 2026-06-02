@@ -380,7 +380,7 @@ function initializeKakaoShare() {
 function shareWithKakaoTalk() {
   if (!initializeKakaoShare()) return false;
 
-  const shareUrl = "https://mobile-wedding-expanded.vercel.app/";
+  const shareUrl = location.origin + "/";
   const imageUrl = data.meta.shareImage || data.hero.image;
 
   if (!imageUrl) {
@@ -411,12 +411,14 @@ function shareWithKakaoTalk() {
       {
         title: "위치 보기",
         link: {
-          mobileWebUrl: `${shareUrl}#location`,
-          webUrl: `${shareUrl}#location`,
+          mobileWebUrl: shareUrl + "#location",
+          webUrl: shareUrl + "#location",
         },
       },
     ],
   });
+
+  return true;
 }
 
 function sharePageUrl() {
