@@ -1,0 +1,98 @@
+/*
+ * 이 파일의 값만 바꾸면 청첩장 내용이 갱신됩니다.
+ * 사진은 image 폴더에 넣고 "./image/파일명.jpg" 형태로 입력하세요.
+ * 빈 문자열("")로 두면 사진 대신 기본 배경이 표시됩니다.
+ */
+window.INVITATION_DATA = {
+  appearance: {
+    theme: "sky",
+    movieConcept: "none",
+    fontSet: "classic",
+    heroDecoration: "none",
+    heroTextTheme: "auto",
+  },
+  meta: {
+    title: "조성호 ♥ 전지연 결혼합니다",
+    description: "2026년 10월 4일 오후 12시 20분, 소중한 분들을 초대합니다.",
+    shareImage: "",
+  },
+  couple: {
+    groom: {
+      name: "조성호",
+      phone: "010-9630-2909",
+      parents: "조용석 · 이영희",
+      relation: "의 아들",
+      birthday: "1995년 10월 4일",
+      mbti: "",
+      tags: [],
+      photo: "",
+    },
+    bride: {
+      name: "전지연",
+      phone: "010-9472-4875",
+      parents: "전명근 · 박현옥",
+      relation: "의 딸",
+      birthday: "1997년 9월 29일",
+      mbti: "",
+      tags: [],
+      photo: "",
+    },
+  },
+  wedding: {
+    date: "2026-10-04T12:20:00+09:00",
+    displayDate: "2026. 10. 04. 일요일 오후 12시 20분",
+    displayDateFormat: "long_ko",
+    displayDateCustom: "",
+    venue: "그랜드 머큐어 앰배서더 창원 2F 그랜드볼룸홀",
+    address: "경상남도 창원시 성산구 원이대로 332",
+    mapLinks: [
+      { label: "네이버 지도", url: "https://map.naver.com/p/search/%EA%B2%BD%EC%83%81%EB%82%A8%EB%8F%84%20%EC%B0%BD%EC%9B%90%EC%8B%9C%20%EC%84%B1%EC%82%B0%EA%B5%AC%20%EC%9B%90%EC%9D%B4%EB%8C%80%EB%A1%9C%20332" },
+      { label: "카카오맵", url: "https://map.kakao.com/link/search/%EA%B2%BD%EC%83%81%EB%82%A8%EB%8F%84%20%EC%B0%BD%EC%9B%90%EC%8B%9C%20%EC%84%B1%EC%82%B0%EA%B5%AC%20%EC%9B%90%EC%9D%B4%EB%8C%80%EB%A1%9C%20332" },
+      { label: "티맵", url: "https://www.tmap.co.kr/tmap2/mobile/route.jsp?name=%EA%B2%BD%EC%83%81%EB%82%A8%EB%8F%84%20%EC%B0%BD%EC%9B%90%EC%8B%9C%20%EC%84%B1%EC%82%B0%EA%B5%AC%20%EC%9B%90%EC%9D%B4%EB%8C%80%EB%A1%9C%20332" },
+    ],
+  },
+  hero: {
+    eyebrow: "our wedding day",
+    image: "",
+    contentPosition: "top",
+  },
+  invitation: {
+    title: "소중한 분들을 초대합니다",
+    paragraphs: [
+      "저희 두 사람의 작은 만남이\n진실한 사랑으로 이어졌습니다.",
+      "평생 서로를 귀히 여기며\n처음의 설렘을 잃지 않고 살아가겠습니다.",
+      "새로운 시작의 자리에 함께하시어\n따뜻한 축복을 나누어 주세요.",
+    ],
+  },
+  transport: [
+    { title: "창원중앙역", text: "호텔까지 차량으로 약 15분" },
+    { title: "창원역", text: "호텔까지 차량으로 약 17분" },
+    { title: "자가용", text: "내비게이션에 호텔명 또는 주소를 입력해 주세요." },
+  ],
+  gallery: ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+  notices: [
+    { title: "식사 안내", text: "예식 전후로 연회장을 편하게 이용해 주세요." },
+    { title: "주차 안내", text: "주차 등록은 예식장 로비 키오스크에서 가능합니다." },
+  ],
+  guestPhotos: {
+    eventDate: "2026-10-04",
+    previewVisible: true,
+    uploadSlug: "wedding-day",
+  },
+  sectionSettings: {
+    preWedding: ["invitation", "about-us", "wedding-day", "location", "gallery", "wedding-snap", "information", "attendance", "account", "guestbook"],
+    weddingDay: ["invitation", "about-us", "wedding-day", "location", "gallery", "wedding-snap", "information", "attendance", "account", "guestbook"],
+  },
+  accounts: [
+    { side: "신랑측", name: "조성호", relation: "신랑", bank: "국민은행", number: "000000-00-000000" },
+    { side: "신랑측", name: "조용석", relation: "신랑 아버지", bank: "신한은행", number: "000-000-000000" },
+    { side: "신랑측", name: "이영희", relation: "신랑 어머니", bank: "", number: "" },
+    { side: "신부측", name: "전지연", relation: "신부", bank: "우리은행", number: "0000-000-000000" },
+    { side: "신부측", name: "전명근", relation: "신부 아버지", bank: "하나은행", number: "000-000000-00000" },
+    { side: "신부측", name: "박현옥", relation: "신부 어머니", bank: "", number: "" },
+  ],
+  ending: {
+    image: "",
+    text: "저희의 새로운 시작을\n함께해 주셔서 감사합니다.",
+  },
+};
