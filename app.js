@@ -379,11 +379,14 @@ function initializeKakaoShare() {
 
 function shareWithKakaoTalk() {
   if (!initializeKakaoShare()) return false;
-  const url = location.origin;
+
+  const shareUrl = "https://mobile-wedding-expanded.vercel.app/";
   const imageUrl = data.meta.shareImage || data.hero.image;
+
   if (!imageUrl) {
     throw new Error("카카오톡 공유용 이미지 또는 메인 사진을 먼저 등록해 주세요.");
   }
+
   window.Kakao.Share.sendDefault({
     objectType: "feed",
     content: {
@@ -392,14 +395,28 @@ function shareWithKakaoTalk() {
       imageUrl,
       imageWidth: 600,
       imageHeight: 800,
-      link: { mobileWebUrl: 'https://mobile-wedding-expanded.vercel.app/', webUrl: 'url' },
+      link: {
+        mobileWebUrl: shareUrl,
+        webUrl: shareUrl,
+      },
     },
     buttons: [
-      { title: "청첩장 보기", link: { mobileWebUrl: 'https://mobile-wedding-expanded.vercel.app/', webUrl: 'https://mobile-wedding-expanded.vercel.app/' } },
-      { title: "위치 보기", link: { mobileWebUrl: 'https://mobile-wedding-expanded.vercel.app/#location', webUrl: 'https://mobile-wedding-expanded.vercel.app/#location' } },
+      {
+        title: "청첩장 보기",
+        link: {
+          mobileWebUrl: shareUrl,
+          webUrl: shareUrl,
+        },
+      },
+      {
+        title: "위치 보기",
+        link: {
+          mobileWebUrl: `${shareUrl}#location`,
+          webUrl: `${shareUrl}#location`,
+        },
+      },
     ],
   });
-  return true;
 }
 
 function sharePageUrl() {
