@@ -43,7 +43,8 @@ window.INVITATION_DATA = {
     displayDate: "2026. 10. 04. 일요일 오후 12시 20분",
     displayDateFormat: "long_ko",
     displayDateCustom: "",
-    venue: "그랜드 머큐어 앰배서더 창원 2F 그랜드볼룸홀",
+    venue: "그랜드 머큐어 앰배서더 창원",
+    hall: "2F 그랜드볼룸홀",
     address: "경상남도 창원시 성산구 원이대로 332",
     mapLinks: [
       { label: "네이버 지도", url: "https://map.naver.com/p/search/%EA%B2%BD%EC%83%81%EB%82%A8%EB%8F%84%20%EC%B0%BD%EC%9B%90%EC%8B%9C%20%EC%84%B1%EC%82%B0%EA%B5%AC%20%EC%9B%90%EC%9D%B4%EB%8C%80%EB%A1%9C%20332" },
@@ -53,7 +54,10 @@ window.INVITATION_DATA = {
   },
   hero: {
     eyebrow: "our wedding day",
+    introEyebrow: "our wedding day",
+    introDate: "",
     image: "",
+    video: "",
     contentPosition: "top",
   },
   invitation: {
@@ -63,6 +67,18 @@ window.INVITATION_DATA = {
       "평생 서로를 귀히 여기며\n처음의 설렘을 잃지 않고 살아가겠습니다.",
       "새로운 시작의 자리에 함께하시어\n따뜻한 축복을 나누어 주세요.",
     ],
+  },
+  sectionTitles: {
+    invitation: { en: "Invitation", ko: "" },
+    aboutUs: { en: "About Us", ko: "저희를 소개합니다" },
+    weddingDay: { en: "Wedding Day", ko: "" },
+    location: { en: "Location", ko: "오시는 길" },
+    gallery: { en: "Gallery", ko: "갤러리" },
+    information: { en: "Information", ko: "식장 안내" },
+    attendance: { en: "Rsvp", ko: "참석 의사 전달" },
+    weddingSnap: { en: "Guest Album", ko: "예쁘게 빛난 순간, 같이 공유해요!" },
+    account: { en: "Account", ko: "마음 전하는 곳" },
+    guestbook: { en: "Guestbook", ko: "축하 메시지" },
   },
   transport: [
     { title: "창원중앙역", text: "호텔까지 차량으로 약 15분" },

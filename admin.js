@@ -8,6 +8,7 @@ const themes = ["beige", "sky", "pink", "gray", "black", "white", "green"];
 const movieConcepts = ["none", "about_time", "la_la_land", "spirited_away", "you_are_the_apple"];
 const heroDecorations = ["none", "doodle_hearts", "organic_heart", "wedding_rings", "poster_card"];
 const heroTextThemes = ["auto", "default_center", "editorial_left", "minimal_center"];
+let superSearchQuery = "";
 
 function applyTheme(theme) {
   const selected = themes.includes(theme) ? theme : "sky";
@@ -64,7 +65,7 @@ function adminHeader(active) {
       <button class="btn ${active === "editor" ? "btn-primary" : ""}" data-admin-view="editor">청첩장 편집</button>
       <button class="btn ${active === "design" ? "btn-primary" : ""}" data-admin-view="design">디자인 적용</button>
       <button class="btn ${active === "responses" ? "btn-primary" : ""}" data-admin-view="responses">참석 현황</button>
-      <button class="btn ${active === "photos" ? "btn-primary" : ""}" data-admin-view="photos">하객 사진</button>
+      <button class="btn ${active === "photos" ? "btn-primary" : ""}" data-admin-view="photos">하객 사진·영상</button>
       <button class="btn ${active === "guestbook" ? "btn-primary" : ""}" data-admin-view="guestbook">방명록</button>
     </nav></div>`;
   const superMenu = `<div class="admin-menu-group admin-menu-super"><strong>슈퍼관리자</strong><nav class="admin-tabs">
@@ -81,7 +82,7 @@ function adminHeader(active) {
     </aside>
     <div class="admin-header super-topbar">
       <div><p class="section-label">Super Admin</p><h1>청첩장 슈퍼관리자</h1></div>
-      <label class="super-search"><span>검색</span><input type="search" placeholder="테마, 요소, 생성물 검색" data-super-search></label>
+      <label class="super-search"><span>검색</span><input type="search" value="${escapeAdminHtml(superSearchQuery)}" placeholder="테마, 요소, 생성물 검색" data-super-search></label>
       <div class="admin-header-actions">
         <button class="btn" id="admin-logout">로그아웃</button>
       </div>
@@ -118,10 +119,15 @@ function bindAdminNavigation() {
     });
   });
   document.querySelector("[data-super-search]")?.addEventListener("input", (event) => {
-    const query = event.currentTarget.value.trim().toLowerCase();
-    document.querySelectorAll(".theme-card, .asset-library-card, .asset-card").forEach((card) => {
-      card.hidden = query && !card.textContent.toLowerCase().includes(query);
-    });
+    superSearchQuery = event.currentTarget.value.trim().toLowerCase();
+    applySuperSearch();
+  });
+  applySuperSearch();
+}
+
+function applySuperSearch() {
+  document.querySelectorAll(".theme-card, .asset-library-card, .asset-card").forEach((card) => {
+    card.hidden = Boolean(superSearchQuery && !card.textContent.toLowerCase().includes(superSearchQuery));
   });
 }
 
@@ -255,6 +261,7 @@ function heroDecorationField(value = "none") {
 }
 
 function imageField(name, label, value = "") {
+  const isProfile = ["couple.groom.photo", "couple.bride.photo"].includes(name);
   return `
     <div class="image-field">
       <input name="${name}" type="hidden" value="${escapeAdminHtml(value)}">
@@ -265,11 +272,115 @@ function imageField(name, label, value = "") {
         <strong>${label}</strong>
         <span class="micro-help">휴대폰 갤러리에서 한 장을 선택해 주세요.</span>
         <div class="image-actions">
-          <label class="btn image-upload">＋ 선택<input type="file" accept="image/*" data-image-target="${name}"></label>
+          <label class="btn image-upload">${value ? "변경" : "＋ 선택"}<input type="file" accept="image/*" data-image-target="${name}"></label>
+          ${isProfile && value ? `<button class="btn" type="button" data-image-crop-edit="${name}">영역 맞추기</button>` : ""}
           <button class="btn" type="button" data-image-remove="${name}">× 제거</button>
         </div>
       </div>
     </div>`;
+}
+
+function videoField(name, label, value = "") {
+  return `
+    <div class="image-field">
+      <input name="${name}" type="hidden" value="${escapeAdminHtml(value)}">
+      <div class="image-preview" data-video-preview="${name}">
+        ${value ? `<video src="${escapeAdminHtml(value)}" muted controls playsinline></video>` : '<span>등록된 영상이 없습니다.</span>'}
+      </div>
+      <div class="image-field-controls">
+        <strong>${label}</strong>
+        <span class="micro-help">MP4, WebM 또는 MOV 영상을 선택해 주세요. 영상 로드가 어려운 기기에서는 메인 사진이 대신 표시됩니다.</span>
+        <div class="image-actions">
+          <label class="btn image-upload">＋ 영상 선택<input type="file" accept="video/mp4,video/webm,video/quicktime" data-video-target="${name}"></label>
+          <button class="btn" type="button" data-video-remove="${name}">× 제거</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function decodeCropImage(file) {
+  try {
+    if ("createImageBitmap" in window) return await createImageBitmap(file);
+  } catch {}
+  const url = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = url;
+    await image.decode();
+    return image;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function cropProfileImage(file) {
+  let currentFile = file;
+  let bitmap = await decodeCropImage(currentFile);
+  let previewUrl = URL.createObjectURL(currentFile);
+  const root = document.createElement("div");
+  root.className = "image-crop-backdrop";
+  root.innerHTML = `<section class="image-crop-modal">
+    <h2>대표사진 영역 맞추기</h2>
+    <p class="micro-help">사진을 확대하고 보여줄 영역을 맞춘 뒤 적용해 주세요.</p>
+    <div class="image-crop-preview" style="--crop-x:50%;--crop-y:50%"><img src="${escapeAdminHtml(previewUrl)}" alt="대표사진 자르기 미리보기"></div>
+    <label class="btn image-upload">새 사진 업로드<input type="file" accept="image/*" data-crop-replace></label>
+    <label class="field"><span>확대</span><input type="range" min="100" max="220" value="100" data-crop-zoom></label>
+    <label class="field"><span>좌우 중심</span><input type="range" min="0" max="100" value="50" data-crop-x></label>
+    <label class="field"><span>상하 중심</span><input type="range" min="0" max="100" value="50" data-crop-y></label>
+    <div class="modal-actions"><button class="btn" type="button" data-crop-cancel>취소</button><button class="btn btn-primary" type="button" data-crop-apply>적용</button></div>
+  </section>`;
+  document.body.append(root);
+  const preview = root.querySelector(".image-crop-preview");
+  const previewImage = preview.querySelector("img");
+  const zoom = root.querySelector("[data-crop-zoom]");
+  const x = root.querySelector("[data-crop-x]");
+  const y = root.querySelector("[data-crop-y]");
+  const update = () => {
+    preview.style.setProperty("--crop-x", `${x.value}%`);
+    preview.style.setProperty("--crop-y", `${y.value}%`);
+    preview.style.setProperty("--crop-zoom", Number(zoom.value) / 100);
+  };
+  zoom.addEventListener("input", update);
+  x.addEventListener("input", update);
+  y.addEventListener("input", update);
+  root.querySelector("[data-crop-replace]").addEventListener("change", async (event) => {
+    const replacement = event.currentTarget.files[0];
+    if (!replacement) return;
+    bitmap.close?.();
+    URL.revokeObjectURL(previewUrl);
+    currentFile = replacement;
+    bitmap = await decodeCropImage(currentFile);
+    previewUrl = URL.createObjectURL(currentFile);
+    previewImage.src = previewUrl;
+    zoom.value = "100";
+    x.value = "50";
+    y.value = "50";
+    update();
+  });
+  return new Promise((resolve) => {
+    const finish = (result) => {
+      bitmap.close?.();
+      URL.revokeObjectURL(previewUrl);
+      root.remove();
+      resolve(result);
+    };
+    root.querySelector("[data-crop-cancel]").addEventListener("click", () => finish(null));
+    root.querySelector("[data-crop-apply]").addEventListener("click", async () => {
+      const ratio = 4 / 5;
+      const sourceRatio = bitmap.width / bitmap.height;
+      const scale = Number(zoom.value) / 100;
+      const cropWidth = (sourceRatio > ratio ? bitmap.height * ratio : bitmap.width) / scale;
+      const cropHeight = (sourceRatio > ratio ? bitmap.height : bitmap.width / ratio) / scale;
+      const sourceX = (bitmap.width - cropWidth) * Number(x.value) / 100;
+      const sourceY = (bitmap.height - cropHeight) * Number(y.value) / 100;
+      const canvas = document.createElement("canvas");
+      canvas.width = 960;
+      canvas.height = 1200;
+      canvas.getContext("2d").drawImage(bitmap, sourceX, sourceY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise((done) => canvas.toBlob(done, "image/webp", 0.88));
+      finish(blob ? new File([blob], `${currentFile.name.replace(/\.[^.]+$/, "")}-crop.webp`, { type: "image/webp" }) : currentFile);
+    });
+  });
 }
 
 function galleryManager(images) {
@@ -299,6 +410,15 @@ function galleryManagerPreview(images) {
     : '<p class="admin-message">등록된 갤러리 사진이 없습니다.</p>';
 }
 
+function copyEditorVisual(key) {
+  if (key === "aboutUs") return `<div class="copy-editor-profile-grid">${[invitationData.couple.groom, invitationData.couple.bride].map((person) => `<img src="${escapeAdminHtml(person.photo)}" alt="">`).join("")}</div>`;
+  if (key === "gallery") return `<div class="copy-editor-gallery">${invitationData.gallery.filter(Boolean).slice(0, 4).map((photo) => `<img src="${escapeAdminHtml(photo)}" alt="">`).join("")}</div>`;
+  if (key === "location") return `<div class="copy-editor-location"><strong>${escapeAdminHtml(invitationData.wedding.venue)}</strong><span>${escapeAdminHtml(invitationData.wedding.hall || "")}</span><small>${escapeAdminHtml(invitationData.wedding.address)}</small></div>`;
+  if (key === "weddingDay") return `<p class="copy-editor-date">${escapeAdminHtml(invitationData.wedding.displayDate)}</p>`;
+  if (key === "information") return `<div class="copy-editor-notice">${invitationData.notices.filter((notice) => !notice.hidden).slice(0, 1).map((notice) => `<strong>${escapeAdminHtml(notice.title)}</strong><p>${escapeAdminHtml(notice.text)}</p>`).join("")}</div>`;
+  return "";
+}
+
 function listText(items, fields) {
   return items.map((item) => fields.map((field) => item[field] || "").join(" | ")).join("\n");
 }
@@ -317,7 +437,7 @@ const sectionLabels = {
   "wedding-day": "예식일",
   location: "오시는 길",
   gallery: "갤러리",
-  "wedding-snap": "하객 사진 업로드",
+  "wedding-snap": "하객 사진·영상 업로드",
   information: "식장 안내",
   attendance: "참석 여부",
   account: "마음 전하기",
@@ -563,6 +683,7 @@ function accountManager(accounts = []) {
 }
 
 function renderEditor(message = "") {
+  window.WEDDING_DESIGN?.normalize(invitationData);
   invitationData.accounts = ensureAccountRows(invitationData.accounts);
   const { groom, bride } = invitationData.couple;
   const [groomFather = "", groomMother = ""] = parentNames(groom.parents);
@@ -587,6 +708,7 @@ function renderEditor(message = "") {
             ${quickInput("couple.groom.birthday", "신랑 생일", birthdayInputValue(groom.birthday), "date")}
             ${quickInput("couple.bride.birthday", "신부 생일", birthdayInputValue(bride.birthday), "date")}
             ${quickInput("wedding.venue", "식장 이름", invitationData.wedding.venue)}
+            ${quickInput("wedding.hall", "홀 정보", invitationData.wedding.hall || "")}
             ${quickInput("wedding.date", "예식 일시", weddingDateInputValue(invitationData.wedding.date), "datetime-local")}
           </div>
         </fieldset>
@@ -594,6 +716,7 @@ function renderEditor(message = "") {
           ${recommendationEditor("hero.eyebrow", "메인 영문 문구", invitationData.hero.eyebrow, recommendations.hero)}
           ${recommendationEditor("meta.title", "페이지 제목", invitationData.meta.title, recommendations.title)}
           ${imageField("hero.image", "메인 사진", invitationData.hero.image)}
+          ${videoField("hero.video", "메인 영상 (선택)", invitationData.hero.video || "")}
           ${imageField("meta.shareImage", "카카오톡 공유 대표 이미지 (선택 · 세로 3:4 권장)", invitationData.meta.shareImage || "")}
           <p class="admin-message micro-help">공유 대표 이미지를 등록하지 않으면 메인 사진이 자동으로 동일하게 적용됩니다. 카카오톡 카드에 별도 세로 사진을 사용하려면 600 x 800px 또는 같은 3:4 비율 이미지를 등록해 주세요.</p>
           ${textarea("meta.description", "공유 설명", invitationData.meta.description)}
@@ -629,6 +752,7 @@ function renderEditor(message = "") {
           <div class="auto-filled-fields">
           ${input("wedding.date", "예식 일시 · 위에서 자동 반영", weddingDateInputValue(invitationData.wedding.date), "datetime-local")}
           ${input("wedding.venue", "식장 이름 · 위에서 자동 반영", invitationData.wedding.venue)}
+          ${input("wedding.hall", "홀 정보 · 식장 이름 아래 줄에 표시", invitationData.wedding.hall || "")}
           </div>
           ${select("wedding.displayDateFormat", "화면 표시 일시 형식", invitationData.wedding.displayDateFormat || "long_ko", [["long_ko", "2026. 10. 04. 일요일 오후 12시 20분"], ["short_ko", "26-10-04 (일) 12시 20분"], ["dot_numeric", "2026.10.04 (일) 12:20"], ["english", "2026. 10. 04. 일요일 · 12:20"], ["custom", "직접 입력"]])}
           ${input("wedding.displayDateCustom", "화면 표시 일시 · 선택 후 수정 가능", invitationData.wedding.displayDateCustom || invitationData.wedding.displayDate)}
@@ -639,9 +763,38 @@ function renderEditor(message = "") {
           </div>
           <p class="admin-message" data-venue-status>등록된 식장은 이름을 입력하면 주소가 자동으로 채워집니다. 다른 식장은 지도에서 확인 후 주소를 직접 입력해 주세요.</p>
         </fieldset>
-        <details class="editor-details"><summary>문구와 안내</summary><div class="editor-details-body">
+        <section class="copy-editor-launch">
+          <button class="btn btn-primary" type="button" data-copy-editor-open>문구 수정</button>
+          <p class="admin-message micro-help">공개 청첩장과 비슷한 화면에서 수정할 문구 영역을 직접 눌러 편집합니다.</p>
+        </section>
+        <div class="copy-editor-overlay" data-copy-editor-overlay hidden>
+          <div class="copy-editor-page">
+            <div class="copy-editor-toolbar"><strong>문구 수정</strong><button class="btn" type="button" data-copy-editor-close>닫기</button></div>
+            <p class="admin-message">각 카드의 문구를 수정한 뒤 아래 최종 저장을 눌러 주세요.</p>
+            <header class="copy-editor-hero" style="background-image:url('${escapeAdminHtml(invitationData.hero.image)}')">
+              <div><small>${escapeAdminHtml(invitationData.hero.eyebrow || "")}</small><strong>${escapeAdminHtml(groom.name)} · ${escapeAdminHtml(bride.name)}</strong><span>${escapeAdminHtml(invitationData.wedding.displayDate)}</span></div>
+            </header>
+            <section class="copy-editor-section">
+              <p class="section-label">Intro</p><h2>진입 화면</h2>
+          ${input("hero.introEyebrow", "진입 화면 영문 문구", invitationData.hero.introEyebrow || invitationData.hero.eyebrow || "")}
+          ${input("hero.introDate", "진입 화면 날짜 문구 · 비우면 예식 일시 사용", invitationData.hero.introDate || "")}
+            </section>
+          ${Object.entries(invitationData.sectionTitles || {}).map(([key, title]) => `
+            <section class="copy-editor-section">
+              <p class="section-label">${escapeAdminHtml(title.en || key)}</p><h2>${escapeAdminHtml(title.ko || key)}</h2>
+              ${copyEditorVisual(key)}
+              <div class="quick-input-grid">
+              ${input(`sectionTitles.${key}.en`, `${key} 영문 타이틀`, title.en || "")}
+              ${input(`sectionTitles.${key}.ko`, `${key} 국문 타이틀`, title.ko || "")}
+              </div>
+            </section>`).join("")}
+            <section class="copy-editor-section">
+              <p class="section-label">Invitation</p><h2>초대 문구</h2>
           ${recommendationEditor("invitation.title", "초대 문구 제목", invitationData.invitation.title, recommendations.invitationTitle)}
           ${recommendationEditor("invitation.paragraphs", "초대 문구", invitationData.invitation.paragraphs.join("\n\n"), recommendations.invitationParagraphs, true, true)}
+            </section>
+            <section class="copy-editor-section">
+              <p class="section-label">Details</p><h2>안내 세부 설정</h2>
           <p class="admin-message micro-help">교통 안내는 항목별로 수정하거나 숨길 수 있습니다. 식장을 바꾸면 등록된 기본 교통 정보로 교체됩니다.</p>
           ${transportManager(invitationData.transport)}
           ${noticeManager(invitationData.notices)}
@@ -649,13 +802,16 @@ function renderEditor(message = "") {
           ${accountManager(invitationData.accounts)}
           ${textarea("ending.text", "마지막 문구", invitationData.ending.text)}
           ${imageField("ending.image", "마지막 사진", invitationData.ending.image)}
-        </div></details>
+            </section>
+            <button class="btn btn-primary editor-save copy-editor-save" type="submit">최종 저장</button>
+          </div>
+        </div>
         <details class="editor-details"><summary>갤러리</summary><div class="editor-details-body">
           <p class="admin-message">최대 20장까지 등록할 수 있습니다. 공개 화면에는 접속할 때마다 등록 사진 중 무작위 6장이 미리보기로 표시됩니다.</p>
           ${select("galleryDisplayMode", "사진 확대 화면 표시 방식", invitationData.galleryDisplayMode || "portrait", [["portrait", "세로형 화면에 맞추기"], ["original", "원본 사진 비율 유지"]])}
           ${galleryManager(gallery)}
         </div></details>
-        <details class="editor-details"><summary>하객 사진 업로드</summary><div class="editor-details-body">
+        <details class="editor-details"><summary>하객 사진·영상 업로드</summary><div class="editor-details-body">
           ${input("guestPhotos.eventDate", "업로드 기능이 열리는 날짜", invitationData.guestPhotos?.eventDate || "2026-10-04", "date")}
           ${select("guestPhotos.previewVisible", "날짜와 관계없이 미리보기 표시", String(invitationData.guestPhotos?.previewVisible ?? true), [["true", "표시"], ["false", "숨김"]])}
         </div></details>
@@ -681,7 +837,10 @@ function renderEditor(message = "") {
 function setNested(target, path, value) {
   const keys = path.split(".");
   const last = keys.pop();
-  const parent = keys.reduce((object, key) => object[key], target);
+  const parent = keys.reduce((object, key) => {
+    if (!object[key] || typeof object[key] !== "object") object[key] = {};
+    return object[key];
+  }, target);
   parent[last] = value;
 }
 
@@ -734,6 +893,15 @@ function editorData(form) {
 
 function bindEditor() {
   const form = document.querySelector("#invitation-editor");
+  const copyEditor = form.querySelector("[data-copy-editor-overlay]");
+  form.querySelector("[data-copy-editor-open]")?.addEventListener("click", () => {
+    copyEditor.hidden = false;
+    document.body.classList.add("copy-editor-open");
+  });
+  form.querySelector("[data-copy-editor-close]")?.addEventListener("click", () => {
+    copyEditor.hidden = true;
+    document.body.classList.remove("copy-editor-open");
+  });
   const syncParentNames = () => {
     form.elements["couple.groom.parents"].value = `${form.querySelector('[data-quick="groomFather"]').value} · ${form.querySelector('[data-quick="groomMother"]').value}`;
     form.elements["couple.bride.parents"].value = `${form.querySelector('[data-quick="brideFather"]').value} · ${form.querySelector('[data-quick="brideMother"]').value}`;
@@ -875,8 +1043,17 @@ function bindEditor() {
   });
   form.querySelectorAll("[data-image-target]").forEach((fileInput) => {
     fileInput.addEventListener("change", async () => {
-      const file = fileInput.files[0];
+      let file = fileInput.files[0];
       if (!file) return;
+      if (["couple.groom.photo", "couple.bride.photo"].includes(fileInput.dataset.imageTarget)) {
+        try {
+          file = await cropProfileImage(file);
+        } catch (error) {
+          alert(`대표사진 자르기 화면을 열지 못했습니다.\n${error.message || "다른 이미지 파일로 다시 시도해 주세요."}`);
+          return;
+        }
+        if (!file) return;
+      }
       const label = fileInput.closest(".image-upload");
       label.firstChild.textContent = "업로드 중...";
       try {
@@ -889,6 +1066,55 @@ function bindEditor() {
         label.firstChild.textContent = "업로드 실패";
         alert(`사진을 업로드하지 못했습니다.\n${error.message || "파일 크기와 Storage 정책을 확인해 주세요."}`);
       }
+    });
+  });
+  form.querySelectorAll("[data-image-crop-edit]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const target = button.dataset.imageCropEdit;
+      const currentUrl = form.elements[target].value;
+      if (!currentUrl) return;
+      button.disabled = true;
+      button.textContent = "불러오는 중...";
+      try {
+        const response = await fetch(currentUrl);
+        if (!response.ok) throw new Error("등록된 사진을 불러오지 못했습니다.");
+        const original = await response.blob();
+        const file = await cropProfileImage(new File([original], "profile-image", { type: original.type || "image/jpeg" }));
+        if (!file) return;
+        button.textContent = "업로드 중...";
+        const url = await window.RSVP_STORAGE.uploadInvitationImage(file, target.replace(/\./g, "-"));
+        form.elements[target].value = url;
+        form.querySelector(`[data-image-preview="${target}"]`).innerHTML = `<img src="${escapeAdminHtml(url)}" alt="업로드한 사진 미리보기">`;
+      } catch (error) {
+        alert(`대표사진 영역을 적용하지 못했습니다.\n${error.message || "잠시 후 다시 시도해 주세요."}`);
+      } finally {
+        button.disabled = false;
+        button.textContent = "영역 맞추기";
+      }
+    });
+  });
+  form.querySelectorAll("[data-video-target]").forEach((fileInput) => {
+    fileInput.addEventListener("change", async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      const label = fileInput.closest(".image-upload");
+      label.firstChild.textContent = "업로드 중...";
+      try {
+        const url = await window.RSVP_STORAGE.uploadInvitationMedia(file, fileInput.dataset.videoTarget.replace(/\./g, "-"));
+        form.elements[fileInput.dataset.videoTarget].value = url;
+        form.querySelector(`[data-video-preview="${fileInput.dataset.videoTarget}"]`).innerHTML = `<video src="${escapeAdminHtml(url)}" muted controls playsinline></video>`;
+        label.firstChild.textContent = "업로드 완료";
+      } catch (error) {
+        label.firstChild.textContent = "업로드 실패";
+        alert(`영상을 업로드하지 못했습니다.\n${error.message || "파일 크기와 Storage 정책을 확인해 주세요."}`);
+      }
+    });
+  });
+  form.querySelectorAll("[data-video-remove]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = button.dataset.videoRemove;
+      form.elements[target].value = "";
+      form.querySelector(`[data-video-preview="${target}"]`).innerHTML = "<span>등록된 영상이 없습니다.</span>";
     });
   });
   form.querySelectorAll("[data-image-remove]").forEach((button) => {
@@ -1004,6 +1230,7 @@ async function renderResponses() {
 }
 
 const ADMIN_SAVED_GUEST_PHOTOS_KEY = "wedding-admin-saved-guest-photos";
+const isGuestVideo = (photo = {}) => /\.(mp4|webm|mov)(?:$|[?#])/i.test(photo.name || photo.path || "");
 
 function savedGuestPhotoPaths() {
   try { return new Set(JSON.parse(localStorage.getItem(ADMIN_SAVED_GUEST_PHOTOS_KEY) || "[]")); }
@@ -1020,21 +1247,21 @@ function guestPhotoCards(photos, saved = false) {
   return photos.length ? photos.map((photo) => `
     <article class="private-photo ${saved ? "is-saved" : "is-new"}">
       <a href="${escapeAdminHtml(photo.signedUrl)}" target="_blank" rel="noopener" download>
-      <img src="${escapeAdminHtml(photo.signedUrl)}" alt="하객이 업로드한 사진" loading="lazy">
+      ${isGuestVideo(photo) ? '<span class="private-video-file"><strong>VIDEO</strong><small>저장해서 확인하기</small></span>' : `<img src="${escapeAdminHtml(photo.signedUrl)}" alt="하객이 업로드한 사진" loading="lazy">`}
       <span>${escapeAdminHtml(formatDate(photo.created_at))}</span>
       </a>
       <div class="private-photo-actions">
-        <a class="icon-btn" href="${escapeAdminHtml(photo.signedUrl)}" download aria-label="사진 한 장 저장" title="저장"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5zM8 4v6h8V4m-7 11h6v5H9z"/></svg></a>
-        <button class="icon-btn" type="button" data-admin-remove-photo="${escapeAdminHtml(photo.path)}" aria-label="사진 삭제" title="삭제">×</button>
+        <a class="icon-btn" href="${escapeAdminHtml(photo.signedUrl)}" download aria-label="파일 하나 저장" title="저장"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h12l2 2v14H5zM8 4v6h8V4m-7 11h6v5H9z"/></svg></a>
+        <button class="icon-btn" type="button" data-admin-remove-photo="${escapeAdminHtml(photo.path)}" aria-label="파일 삭제" title="삭제">×</button>
       </div>
-    </article>`).join("") : `<p class="admin-message">${saved ? "아직 저장 처리한 사진이 없습니다." : "새로 저장할 사진이 없습니다."}</p>`;
+    </article>`).join("") : `<p class="admin-message">${saved ? "아직 저장 처리한 파일이 없습니다." : "새로 저장할 파일이 없습니다."}</p>`;
 }
 
 async function downloadGuestPhotos(photos, button) {
-  if (!photos.length) return alert("저장할 사진이 없습니다.");
+  if (!photos.length) return alert("저장할 파일이 없습니다.");
   button.disabled = true;
   const original = button.textContent;
-  button.textContent = `${photos.length}장 저장 중...`;
+  button.textContent = `${photos.length}개 저장 중...`;
   photos.forEach((photo, index) => {
     setTimeout(() => {
       const link = document.createElement("a");
@@ -1055,8 +1282,8 @@ async function renderGuestPhotos() {
   adminApp.innerHTML = `
     ${adminHeader("photos")}
     <section class="admin-card">
-      <h2>하객 사진</h2>
-      <p class="admin-message">하객이 보내준 사진을 불러오고 있습니다.</p>
+      <h2>하객 사진·영상</h2>
+      <p class="admin-message">하객이 보내준 파일을 불러오고 있습니다.</p>
     </section>`;
   bindAdminNavigation();
   try {
@@ -1067,21 +1294,21 @@ async function renderGuestPhotos() {
     adminApp.innerHTML = `
       ${adminHeader("photos")}
       <section class="admin-card">
-        <div class="admin-toolbar"><h2>하객 사진</h2><span class="badge">${photos.length}장</span></div>
-        <p class="admin-message">저장 여부는 이 관리자 브라우저에 기록됩니다. 다른 기기에서는 새 사진으로 표시될 수 있습니다.</p>
+        <div class="admin-toolbar"><h2>하객 사진·영상</h2><span class="badge">${photos.length}개</span></div>
+        <p class="admin-message">저장 여부는 이 관리자 브라우저에 기록됩니다. 다른 기기에서는 새 파일로 표시될 수 있습니다.</p>
         <div class="guest-photo-admin-actions">
-          <button class="btn btn-primary" type="button" data-download-new-guest-photos>새 사진만 전체 저장 (${newPhotos.length})</button>
-          <button class="btn" type="button" data-download-all-guest-photos>모든 사진 전체 저장 (${photos.length})</button>
+          <button class="btn btn-primary" type="button" data-download-new-guest-photos>새 파일만 전체 저장 (${newPhotos.length})</button>
+          <button class="btn" type="button" data-download-all-guest-photos>모든 파일 전체 저장 (${photos.length})</button>
         </div>
-        <section class="guest-photo-admin-group"><h3>새로 업로드된 사진 <span class="badge">${newPhotos.length}장</span></h3><div class="private-photo-grid">${guestPhotoCards(newPhotos)}</div></section>
-        <section class="guest-photo-admin-group"><h3>이미 저장한 사진 <span class="badge">${savedPhotos.length}장</span></h3><div class="private-photo-grid">${guestPhotoCards(savedPhotos, true)}</div></section>
+        <section class="guest-photo-admin-group"><h3>새로 업로드된 파일 <span class="badge">${newPhotos.length}개</span></h3><div class="private-photo-grid">${guestPhotoCards(newPhotos)}</div></section>
+        <section class="guest-photo-admin-group"><h3>이미 저장한 파일 <span class="badge">${savedPhotos.length}개</span></h3><div class="private-photo-grid">${guestPhotoCards(savedPhotos, true)}</div></section>
       </section>`;
     bindAdminNavigation();
     document.querySelector("[data-download-new-guest-photos]")?.addEventListener("click", (event) => downloadGuestPhotos(newPhotos, event.currentTarget));
     document.querySelector("[data-download-all-guest-photos]")?.addEventListener("click", (event) => downloadGuestPhotos(photos, event.currentTarget));
     document.querySelectorAll("[data-admin-remove-photo]").forEach((button) => {
       button.addEventListener("click", async () => {
-        if (!confirm("이 사진을 삭제할까요?")) return;
+        if (!confirm("이 파일을 삭제할까요?")) return;
         button.disabled = true;
         button.textContent = "…";
         try {
@@ -1090,14 +1317,14 @@ async function renderGuestPhotos() {
         } catch {
           button.disabled = false;
           button.textContent = "×";
-          alert("사진을 삭제하지 못했습니다.");
+          alert("파일을 삭제하지 못했습니다.");
         }
       });
     });
   } catch {
     adminApp.innerHTML = `
       ${adminHeader("photos")}
-      <section class="admin-card"><p class="admin-message">사진을 불러오지 못했습니다. Storage 정책을 확인해 주세요.</p></section>`;
+      <section class="admin-card"><p class="admin-message">파일을 불러오지 못했습니다. Storage 정책을 확인해 주세요.</p></section>`;
     bindAdminNavigation();
   }
 }

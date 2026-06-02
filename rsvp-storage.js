@@ -169,6 +169,25 @@ async function uploadInvitationImage(file, slot) {
   return client.storage.from("invitation-media").getPublicUrl(path).data.publicUrl;
 }
 
+async function uploadInvitationMedia(file, slot) {
+  if (file.type.startsWith("image/")) return uploadInvitationImage(file, slot);
+  const client = getSupabaseClient();
+  if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
+  if (!["video/mp4", "video/webm", "video/quicktime"].includes(file.type) || file.size > 50 * 1024 * 1024) {
+    throw new Error("50MB 이하 MP4, WebM 또는 MOV 영상만 업로드할 수 있습니다.");
+  }
+  const extension = file.type === "video/webm" ? "webm" : file.type === "video/quicktime" ? "mov" : "mp4";
+  const path = `${slot}/${Date.now()}-${crypto.randomUUID?.() || "video"}.${extension}`;
+  const { error } = await client.storage.from("invitation-media").upload(path, file, { cacheControl: "31536000", contentType: file.type });
+  if (error) {
+    if (/mime type|not supported/i.test(error.message || "")) {
+      throw new Error("영상 MIME 정책이 적용되지 않았습니다. Supabase SQL Editor에서 supabase-guest-photo-policy-fix.sql을 다시 실행해 주세요.");
+    }
+    throw error;
+  }
+  return client.storage.from("invitation-media").getPublicUrl(path).data.publicUrl;
+}
+
 async function uploadDesignAsset(file, slot = "asset") {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
@@ -192,8 +211,9 @@ async function uploadGuestPhotos(files) {
   const uploadSlug = invitation.guestPhotos?.uploadSlug || "wedding-day";
   const uploaded = [];
   for (const file of files) {
-    if (!file.type.startsWith("image/") || file.size > 50 * 1024 * 1024) {
-      throw new Error("사진은 파일당 50MB 이하 이미지만 업로드할 수 있습니다.");
+    const isSupported = file.type.startsWith("image/") || ["video/mp4", "video/webm", "video/quicktime"].includes(file.type);
+    if (!isSupported || file.size > 50 * 1024 * 1024) {
+      throw new Error("사진 또는 영상은 파일당 50MB 이하 이미지, MP4, WebM, MOV만 업로드할 수 있습니다.");
     }
     const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const path = `${uploadSlug}/${session.user.id}/${Date.now()}-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}.${extension}`;
@@ -201,8 +221,8 @@ async function uploadGuestPhotos(files) {
       .from("guest-photos")
       .upload(path, file, { cacheControl: "3600", contentType: file.type });
     if (error) {
-      if (/row-level security|rls/i.test(error.message || "")) {
-        throw new Error("사진 업로드 권한 정책이 적용되지 않았습니다. Supabase SQL Editor에서 supabase-guest-photo-policy-fix.sql을 실행해 주세요.");
+      if (/row-level security|rls|mime type|not supported/i.test(error.message || "")) {
+        throw new Error("사진·영상 업로드 권한 정책이 적용되지 않았습니다. Supabase SQL Editor에서 supabase-guest-photo-policy-fix.sql을 실행해 주세요.");
       }
       throw error;
     }
@@ -216,7 +236,7 @@ async function ensureGuestPhotoSession(client) {
   if (data.session) return data.session;
   const { data: signedIn, error } = await client.auth.signInAnonymously();
   if (error || !signedIn.session) {
-    throw new Error("익명 사진 업로드 세션을 만들지 못했습니다. Supabase Authentication > Providers에서 Anonymous Sign-Ins가 활성화되어 있는지 확인해 주세요.");
+    throw new Error("익명 파일 업로드 세션을 만들지 못했습니다. Supabase Authentication > Providers에서 Anonymous Sign-Ins가 활성화되어 있는지 확인해 주세요.");
   }
   return signedIn.session;
 }
@@ -296,4 +316,5 @@ window.RSVP_STORAGE = {
   uploadGuestPhotos,
   uploadDesignAsset,
   uploadInvitationImage,
+  uploadInvitationMedia,
 };

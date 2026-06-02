@@ -131,18 +131,18 @@ with check (
 );
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('invitation-media', 'invitation-media', true, 20971520, array['image/svg+xml', 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'])
+values ('invitation-media', 'invitation-media', true, 52428800, array['image/svg+xml', 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'video/mp4', 'video/webm', 'video/quicktime'])
 on conflict (id) do update set
   public = true,
-  file_size_limit = 20971520,
-  allowed_mime_types = array['image/svg+xml', 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
+  file_size_limit = 52428800,
+  allowed_mime_types = array['image/svg+xml', 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'video/mp4', 'video/webm', 'video/quicktime'];
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('guest-photos', 'guest-photos', false, 52428800, array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'])
+values ('guest-photos', 'guest-photos', false, 52428800, array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'video/mp4', 'video/webm', 'video/quicktime'])
 on conflict (id) do update set
   public = false,
   file_size_limit = 52428800,
-  allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
+  allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif', 'video/mp4', 'video/webm', 'video/quicktime'];
 
 drop policy if exists "registered admins can upload invitation images" on storage.objects;
 create policy "registered admins can upload invitation images"

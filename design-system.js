@@ -53,7 +53,7 @@
     system.assets.textThemes = system.assets.textThemes.filter((asset) => !legacyTextThemeIds.includes(asset.id));
     // Color presets always use the neutral invitation defaults. Movie presets
     // may still provide their own frame and text layout.
-    system.colorDefaults = { heroDecoration: "none", heroTextTheme: "default_center" };
+    system.colorDefaults = { heroDecoration: "none", heroTextTheme: "default_center", ...(system.colorDefaults || {}) };
     system.aiSettings = { enabled: true, mockMode: true, provider: "OpenAI", model: "server-managed", endpoint: "/api/ai-design", removeWhiteBackground: true, whiteTolerance: 24, convertSvg: false, savePng: true, ...(system.aiSettings || {}) };
     system.aiLibrary = Array.isArray(system.aiLibrary) ? system.aiLibrary : [];
     const legacyCustom = !data.appearance.design && ((data.appearance.heroDecoration && data.appearance.heroDecoration !== "none") || (data.appearance.heroTextTheme && data.appearance.heroTextTheme !== "auto"));
@@ -73,6 +73,19 @@
     data.accounts = Array.isArray(data.accounts) ? data.accounts.map((account) => ({ ...account, relation: account.relation || "" })) : [];
     data.galleryDisplayMode = data.galleryDisplayMode === "original" ? "original" : "portrait";
     data.guestPhotos = { eventDate: "2026-10-04", previewVisible: true, uploadSlug: "wedding-day", ...(data.guestPhotos || {}) };
+    const sectionTitles = {
+      invitation: { en: "Invitation", ko: "" },
+      aboutUs: { en: "About Us", ko: "저희를 소개합니다" },
+      weddingDay: { en: "Wedding Day", ko: "" },
+      location: { en: "Location", ko: "오시는 길" },
+      gallery: { en: "Gallery", ko: "갤러리" },
+      information: { en: "Information", ko: "식장 안내" },
+      attendance: { en: "Rsvp", ko: "참석 의사 전달" },
+      weddingSnap: { en: "Guest Album", ko: "예쁘게 빛난 순간, 같이 공유해요!" },
+      account: { en: "Account", ko: "마음 전하는 곳" },
+      guestbook: { en: "Guestbook", ko: "축하 메시지" },
+    };
+    data.sectionTitles = Object.fromEntries(Object.entries(sectionTitles).map(([key, value]) => [key, { ...value, ...(data.sectionTitles?.[key] || {}) }]));
     return data;
   }
 
@@ -83,7 +96,7 @@
       || data.designSystem.themes.find((item) => item.id === "sky");
     const base = theme.type === "movie"
       ? { heroDecoration: theme.heroDecoration || "none", heroTextTheme: migrateTextThemeId(theme.heroTextTheme || "default_center") }
-      : { heroDecoration: "none", heroTextTheme: "default_center" };
+      : { heroDecoration: data.designSystem.colorDefaults.heroDecoration || "none", heroTextTheme: migrateTextThemeId(data.designSystem.colorDefaults.heroTextTheme || "default_center") };
     const heroDecoration = design.heroDecoration && design.heroDecoration !== "inherit" ? design.heroDecoration : base.heroDecoration;
     const heroTextTheme = design.heroTextTheme && design.heroTextTheme !== "inherit" ? design.heroTextTheme : base.heroTextTheme;
     return {
@@ -91,7 +104,10 @@
       palette: theme.palette || {},
       heroDecoration,
       heroTextTheme,
-      heroDecorationAsset: data.designSystem.assets.frames.find((item) => item.id === heroDecoration),
+      heroDecorationAsset: (() => {
+        const asset = data.designSystem.assets.frames.find((item) => item.id === heroDecoration);
+        return asset ? { ...asset, tintColor: design.heroDecorationTint || asset.tintColor || "#ffffff" } : asset;
+      })(),
       heroTextThemeAsset: data.designSystem.assets.textThemes.find((item) => item.id === heroTextTheme),
       sectionIcon: theme.type === "movie" ? theme.sectionIcon || "" : "",
       backgroundDecoration: theme.type === "movie" ? theme.backgroundDecoration || "" : "",
@@ -110,9 +126,13 @@
     root.dataset.heroTextTheme = resolved.heroTextTheme || "auto";
     root.dataset.heroTextLayout = resolved.heroTextThemeAsset?.layout || "default";
     root.classList?.toggle("has-custom-hero-decoration", Boolean(resolved.heroDecorationAsset?.url));
+    root.classList?.toggle("custom-decoration-outer", resolved.heroDecorationAsset?.mode === "outer");
     root.classList?.toggle("has-custom-hero-text-theme", Boolean(resolved.heroTextThemeAsset && !builtInAssets.textThemes.some((item) => item.id === resolved.heroTextThemeAsset.id)));
     root.classList?.toggle("custom-hero-no-shadow", resolved.heroTextThemeAsset?.shadow === false);
     root.classList?.toggle("custom-hero-box", Boolean(resolved.heroTextThemeAsset?.boxEnabled));
+    root.classList?.toggle("hide-hero-eyebrow", data.appearance.design.heroEyebrowEnabled === false);
+    root.classList?.toggle("hide-hero-names", data.appearance.design.heroNamesEnabled === false);
+    root.classList?.toggle("hide-hero-date", data.appearance.design.heroDateEnabled === false);
     root.classList?.toggle("custom-hero-positioned", Number.isFinite(Number(resolved.heroTextThemeAsset?.xPercent)) && Number.isFinite(Number(resolved.heroTextThemeAsset?.yPercent)));
     root.classList?.toggle("has-custom-background-decoration", Boolean(resolved.backgroundDecoration));
     const vars = { background: ["--paper", "--body-bg"], card: ["--card"], ink: ["--ink"], muted: ["--muted"], accent: ["--accent", "--accent-dark"], line: ["--line"] };
@@ -125,6 +145,7 @@
     root.style.setProperty("--custom-decoration-position", `${resolved.heroDecorationAsset?.xPercent ?? 50}% ${resolved.heroDecorationAsset?.yPercent ?? 50}%`);
     root.style.setProperty("--custom-decoration-size", `${resolved.heroDecorationAsset?.sizePercent ?? 100}% auto`);
     root.style.setProperty("--custom-decoration-tint", resolved.heroDecorationAsset?.tintColor || "transparent");
+    root.style.setProperty("--custom-outer-scale", String(Math.max(0.2, Math.min(1.4, Number(resolved.heroDecorationAsset?.sizePercent ?? 100) / 100))));
     root.style.setProperty("--custom-hero-align", resolved.heroTextThemeAsset?.align || "center");
     root.style.setProperty("--custom-hero-name-size", `${resolved.heroTextThemeAsset?.nameSize || 34}px`);
     root.style.setProperty("--custom-hero-date-size", `${resolved.heroTextThemeAsset?.dateSize || 12}px`);
@@ -134,13 +155,15 @@
     root.style.setProperty("--custom-hero-y", `${resolved.heroTextThemeAsset?.yPercent ?? 76}%`);
     root.style.setProperty("--custom-hero-width", `${resolved.heroTextThemeAsset?.widthPercent ?? 88}%`);
     root.style.setProperty("--custom-hero-gap", `${resolved.heroTextThemeAsset?.gap ?? 5}px`);
+    root.style.setProperty("--custom-hero-eyebrow-name-gap", `${resolved.heroTextThemeAsset?.eyebrowNameGap ?? resolved.heroTextThemeAsset?.gap ?? 5}px`);
+    root.style.setProperty("--custom-hero-name-date-gap", `${resolved.heroTextThemeAsset?.nameDateGap ?? resolved.heroTextThemeAsset?.gap ?? 5}px`);
     root.style.setProperty("--custom-hero-eyebrow-size", `${resolved.heroTextThemeAsset?.eyebrowSize ?? 10}px`);
     root.style.setProperty("--custom-hero-shadow-opacity", String(resolved.heroTextThemeAsset?.shadowOpacity ?? (resolved.heroTextThemeAsset?.shadow === false ? 0 : 0.34)));
     root.style.setProperty("--custom-hero-shadow-blur", `${resolved.heroTextThemeAsset?.shadowBlur ?? 8}px`);
     root.style.setProperty("--custom-hero-card-color", resolved.heroTextThemeAsset?.cardColor || "#ffffff");
-    root.style.setProperty("--custom-hero-card-opacity", String(resolved.heroTextThemeAsset?.cardOpacity ?? 0.82));
+    root.style.setProperty("--custom-hero-card-opacity", String(resolved.heroTextThemeAsset?.cardBackgroundEnabled === false ? 0 : resolved.heroTextThemeAsset?.cardOpacity ?? 0.82));
     root.style.setProperty("--custom-hero-card-border-color", resolved.heroTextThemeAsset?.cardBorderColor || "#ffffff");
-    root.style.setProperty("--custom-hero-card-border-width", `${resolved.heroTextThemeAsset?.cardBorderWidth ?? 0}px`);
+    root.style.setProperty("--custom-hero-card-border-width", `${resolved.heroTextThemeAsset?.cardBorderEnabled === false ? 0 : resolved.heroTextThemeAsset?.cardBorderWidth ?? 0}px`);
     root.style.setProperty("--custom-hero-card-border-style", resolved.heroTextThemeAsset?.cardBorderStyle || "solid");
     root.style.setProperty("--custom-hero-card-radius", `${resolved.heroTextThemeAsset?.cardRadius ?? 8}px`);
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", getComputedStyle(root).getPropertyValue("--body-bg").trim());

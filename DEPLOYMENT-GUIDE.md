@@ -12,7 +12,7 @@
 
 Publishable key는 브라우저에 들어가도 되는 키입니다. `service_role` 또는 Secret key는 브라우저 파일에 넣으면 안 됩니다.
 
-기존 프로젝트를 업데이트하는 경우에도 최신 `supabase-setup.sql`을 다시 실행합니다. 방명록 숨김 관리, 모바일 사진 업로드, 참석 여부 권한 보완이 함께 적용됩니다.
+기존 프로젝트를 업데이트하는 경우에도 최신 `supabase-setup.sql`을 다시 실행합니다. 방명록 숨김 관리, 하객 사진·영상 업로드, 참석 여부 권한 보완과 메인 MP4/WebM/MOV 영상 업로드 허용이 함께 적용됩니다. 운영 중인 프로젝트에서 `mime type video/mp4 is not supported` 오류가 보이면 `supabase-guest-photo-policy-fix.sql`만 다시 실행해도 두 영상 버킷 정책을 빠르게 갱신할 수 있습니다.
 git config --global user.name "jeonjiyeon"
 ## 2. Vercel CLI 설치
 

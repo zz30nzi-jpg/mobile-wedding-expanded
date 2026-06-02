@@ -36,6 +36,14 @@ function designFramePicker(frames, selected) {
   return `<fieldset class="hero-decoration-field"><legend>메인 이미지 꾸밈</legend><div class="hero-decoration-list">${option({ id: "inherit", name: "프리셋 기본값 사용" })}${frames.map(option).join("")}</div></fieldset>`;
 }
 
+function designTextThemePicker(themes, selected) {
+  return `<div class="text-theme-choice-grid">${themes.filter((theme) => theme.enabled !== false).map((theme) => `
+    <button class="text-theme-choice ${selected === theme.id ? "is-selected" : ""}" type="button" data-design-text-theme="${escapeAdminHtml(theme.id)}">
+      ${typeof textThemeSample === "function" ? textThemeSample(theme) : ""}
+      <span>${escapeAdminHtml(theme.name || theme.id)}</span>
+    </button>`).join("")}</div>`;
+}
+
 function textThemeLocksPosition(id) {
   return ["minimal_center"].includes(id);
 }
@@ -61,9 +69,25 @@ function renderDesignApplication(message = "") {
         </fieldset>
         <fieldset><legend>커스텀 디자인 설정</legend>
           <p class="admin-message">여기에서 고른 값은 현재 청첩장에만 적용됩니다. 프리셋 구성을 그대로 쓰려면 프리셋 기본값 사용을 선택하세요.</p>
+          <div class="design-frame-live-preview" data-design-frame-live-preview></div>
+          <section class="design-custom-group">
+            <h3>1. 메인 이미지 꾸밈</h3>
           ${designFramePicker(system.assets.frames, design.heroDecoration)}
-          ${designSelect("heroTextTheme", "메인 문구 테마", system.assets.textThemes, design.heroTextTheme, "프리셋 기본값 사용")}
+          </section>
+          <section class="design-custom-group">
+            <h3>2. 메인 문구 테마</h3>
+          ${designSelect("heroTextTheme", "선택한 문구 테마", system.assets.textThemes, design.heroTextTheme, "프리셋 기본값 사용")}
+          ${designTextThemePicker(system.assets.textThemes, design.heroTextTheme)}
+          <div class="decoration-tint-controls">
+            ${input("heroDecorationTint", "꾸밈 색상", design.heroDecorationTint || "#ffffff", "color")}
+          </div>
+          <div class="hero-copy-toggle-grid">
+            <label class="consent"><input type="checkbox" name="heroEyebrowEnabled" ${design.heroEyebrowEnabled !== false ? "checked" : ""}> <span>영문 문구 표시</span></label>
+            <label class="consent"><input type="checkbox" name="heroNamesEnabled" ${design.heroNamesEnabled !== false ? "checked" : ""}> <span>메인 문구(이름) 표시</span></label>
+            <label class="consent"><input type="checkbox" name="heroDateEnabled" ${design.heroDateEnabled !== false ? "checked" : ""}> <span>날짜 표시</span></label>
+          </div>
           ${select("contentPosition", "메인 사진 문구 위치", invitationData.hero.contentPosition || "bottom", [["top", "상단"], ["middle", "중간"], ["bottom", "하단"]])}
+          </section>
         </fieldset>
         <button class="btn btn-primary">디자인 저장</button>
       </form>
@@ -73,10 +97,12 @@ function renderDesignApplication(message = "") {
   const applyDesignPreview = () => {
     const fields = new FormData(form);
     const selected = system.themes.find((theme) => theme.id === fields.get("presetId"));
-    invitationData.appearance.design = { presetId: fields.get("presetId"), heroDecoration: fields.get("heroDecoration"), heroTextTheme: fields.get("heroTextTheme") };
+    invitationData.appearance.design = { presetId: fields.get("presetId"), heroDecoration: fields.get("heroDecoration"), heroDecorationTint: fields.get("heroDecorationTint"), heroTextTheme: fields.get("heroTextTheme"), heroEyebrowEnabled: fields.get("heroEyebrowEnabled") === "on", heroNamesEnabled: fields.get("heroNamesEnabled") === "on", heroDateEnabled: fields.get("heroDateEnabled") === "on" };
     invitationData.appearance.theme = selected?.type === "color" ? selected.id : (invitationData.appearance.theme || "sky");
     invitationData.appearance.movieConcept = selected?.type === "movie" ? selected.id : "none";
     window.WEDDING_DESIGN.apply(invitationData);
+    const resolved = window.WEDDING_DESIGN.resolve(invitationData);
+    document.querySelector("[data-design-frame-live-preview]").innerHTML = typeof designCombinedHeroPreview === "function" ? designCombinedHeroPreview({ frame: resolved.heroDecorationAsset, textTheme: resolved.heroTextThemeAsset, tintColor: fields.get("heroDecorationTint"), eyebrowEnabled: fields.get("heroEyebrowEnabled") === "on", namesEnabled: fields.get("heroNamesEnabled") === "on", dateEnabled: fields.get("heroDateEnabled") === "on", position: form.elements.contentPosition.value }) : "";
   };
   const updateContentPositionState = () => {
     const textTheme = form.elements.heroTextTheme.value;
@@ -86,14 +112,27 @@ function renderDesignApplication(message = "") {
   };
   form.querySelectorAll("select").forEach((field) => field.addEventListener("change", () => { updateContentPositionState(); applyDesignPreview(); }));
   form.querySelectorAll('input[name="heroDecoration"]').forEach((field) => field.addEventListener("change", applyDesignPreview));
+  form.elements.heroDecorationTint.addEventListener("input", applyDesignPreview);
+  form.querySelectorAll("[data-design-text-theme]").forEach((button) => button.addEventListener("click", () => {
+    form.elements.heroTextTheme.value = button.dataset.designTextTheme;
+    form.querySelectorAll("[data-design-text-theme]").forEach((item) => item.classList.toggle("is-selected", item === button));
+    updateContentPositionState();
+    applyDesignPreview();
+  }));
+  form.querySelectorAll(".hero-copy-toggle-grid input").forEach((field) => field.addEventListener("change", applyDesignPreview));
   updateContentPositionState();
+  applyDesignPreview();
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const fields = new FormData(event.currentTarget);
     invitationData.appearance.design = {
       presetId: fields.get("presetId"),
       heroDecoration: fields.get("heroDecoration"),
+      heroDecorationTint: fields.get("heroDecorationTint"),
       heroTextTheme: fields.get("heroTextTheme"),
+      heroEyebrowEnabled: fields.get("heroEyebrowEnabled") === "on",
+      heroNamesEnabled: fields.get("heroNamesEnabled") === "on",
+      heroDateEnabled: fields.get("heroDateEnabled") === "on",
     };
     invitationData.hero.contentPosition = event.currentTarget.elements.contentPosition.value;
     const selected = system.themes.find((theme) => theme.id === fields.get("presetId"));
@@ -363,8 +402,7 @@ function assetDraftFromAI(type, result) {
 
 function updateAssetModalPreview() {
   const root = document.querySelector("[data-asset-modal-preview]");
-  if (!root) return;
-  root.innerHTML = assetPreview(root.dataset.assetModalPreview, window.assetSourceDraft || {});
+  if (root) root.innerHTML = assetPreview(root.dataset.assetModalPreview, window.assetSourceDraft || {});
   const framePreview = document.querySelector("[data-frame-live-preview]");
   if (framePreview && typeof frameEditorSample === "function") framePreview.innerHTML = frameEditorSample(window.assetSourceDraft || {});
 }

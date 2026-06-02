@@ -6,7 +6,11 @@ const escapeHtml = (value = "") =>
   String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 const mediaStyle = (src) => src ? `style="background-image:url('${escapeHtml(src)}')"` : "";
 const lazyMediaStyle = (src) => src ? `data-lazy-background="${escapeHtml(src)}"` : "";
+const heroMediaMarkup = () => data.hero.video
+  ? `<video class="hero-video" src="${escapeHtml(data.hero.video)}" poster="${escapeHtml(data.hero.image)}" autoplay muted loop playsinline preload="metadata" onerror="this.hidden=true"></video>`
+  : "";
 const tel = (number) => `tel:${String(number).replace(/[^0-9+]/g, "")}`;
+const isVideoMedia = (value = "") => /\.(mp4|webm|mov)(?:$|[?#])/i.test(value);
 const mapLinksForAddress = (address = "") => {
   const query = encodeURIComponent(address.trim());
   return [
@@ -78,6 +82,22 @@ function updateSocialMeta() {
 
 function sectionHeader(label, title) {
   return `<p class="section-label">${escapeHtml(label)}</p><h2 class="section-title single-line-fit">${escapeHtml(title)}</h2>`;
+}
+
+function sectionCopy(key, label, title) {
+  const configured = data.sectionTitles?.[key] || {};
+  return sectionHeader(configured.en || label, configured.ko || title);
+}
+
+function venueParts() {
+  const venue = String(data.wedding.venue || "").trim();
+  const configuredHall = String(data.wedding.hall || "").trim();
+  if (configuredHall) {
+    const cleanVenue = venue.replace(new RegExp(`\\s*${configuredHall.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*$`, "i"), "").trim();
+    return { venue: cleanVenue || venue, hall: configuredHall };
+  }
+  const match = venue.match(/^(.*?)(?:\s+)((?:B?\d+\s*F|지하\s*\d+층|\d+층)\b.*)$/i);
+  return match ? { venue: match[1], hall: match[2] } : { venue, hall: "" };
 }
 
 function fitSingleLineText() {
@@ -181,8 +201,7 @@ function activeSectionOrder() {
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
   const mode = today < eventDate ? "preWedding" : "weddingDay";
   const configured = data.sectionSettings?.[mode];
-  const order = Array.isArray(configured) ? configured : defaultSectionSettings[mode];
-  return order.includes("guestbook") ? order : [...order, "guestbook"];
+  return Array.isArray(configured) ? configured : defaultSectionSettings[mode];
 }
 
 function applySectionOrder() {
@@ -196,7 +215,7 @@ function applySectionOrder() {
   });
   order.forEach((id) => article.insertBefore(sections.get(id), ending));
 
-  const nav = article.querySelector(".quick-nav");
+  const nav = article.querySelector(".bottom-tabbar");
   if (!nav) return;
   const links = new Map([...nav.querySelectorAll("a")].map((link) => [link.getAttribute("href").slice(1), link]));
   links.forEach((link, id) => {
@@ -211,11 +230,19 @@ function render() {
   const { groom, bride } = data.couple;
   const guestPhotos = guestPhotoStatus();
   const gallery = galleryImages();
+  const location = venueParts();
   galleryPreviewImages = shuffledGalleryPreview(gallery);
   app.innerHTML = `
+    <div class="invitation-intro" data-invitation-intro>
+      <div class="invitation-intro-copy">
+        <p>${escapeHtml(data.hero.introEyebrow || data.hero.eyebrow || "our wedding day")}</p>
+        <strong data-intro-name></strong>
+        <span>${escapeHtml(data.hero.introDate || data.wedding.displayDate)}</span>
+      </div>
+    </div>
     <article class="invitation">
       <header class="hero">
-        <div class="media hero-media" ${mediaStyle(data.hero.image)}></div>
+        <div class="media hero-media" ${mediaStyle(data.hero.image)}>${heroMediaMarkup()}</div>
         <div class="hero-content hero-content-${escapeHtml(data.hero.contentPosition || "bottom")}">
           <p class="hero-eyebrow">${escapeHtml(data.hero.eyebrow)}</p>
           <h1 class="hero-names">${escapeHtml(groom.name)} <span>·</span> ${escapeHtml(bride.name)}</h1>
@@ -224,7 +251,7 @@ function render() {
       </header>
 
       <section class="section" id="invitation">
-        ${sectionHeader("Invitation", data.invitation.title)}
+        ${sectionCopy("invitation", "Invitation", data.invitation.title)}
         ${data.invitation.paragraphs.map((text) => `<p class="invitation-copy">${escapeHtml(text)}</p>`).join("")}
         <p class="parents">${escapeHtml(groom.parents)} ${escapeHtml(groom.relation)} <strong>${escapeHtml(groom.name)}</strong><br>${escapeHtml(bride.parents)} ${escapeHtml(bride.relation)} <strong>${escapeHtml(bride.name)}</strong></p>
         <div class="contact-row">
@@ -234,7 +261,7 @@ function render() {
       </section>
 
       <section class="section" id="about-us">
-        ${sectionHeader("About Us", "저희를 소개합니다")}
+        ${sectionCopy("aboutUs", "About Us", "저희를 소개합니다")}
         <div class="profile-grid">
           ${[["신랑", groom], ["신부", bride]].map(([role, person]) => `
             <article class="profile-card">
@@ -251,15 +278,16 @@ function render() {
       </section>
 
       <section class="section" id="wedding-day">
-        ${sectionHeader("Wedding Day", data.wedding.displayDate)}
+        ${sectionCopy("weddingDay", "Wedding Day", data.wedding.displayDate)}
         ${renderCalendar()}
         <div class="countdown" id="countdown"></div>
         <p class="subtle" id="countdown-message"></p>
       </section>
 
       <section class="section" id="location">
-        ${sectionHeader("Location", "오시는 길")}
-        <h3>${escapeHtml(data.wedding.venue)}</h3>
+        ${sectionCopy("location", "Location", "오시는 길")}
+        <h3 class="location-venue single-line-fit">${escapeHtml(location.venue)}</h3>
+        ${location.hall ? `<p class="location-hall">${escapeHtml(location.hall)}</p>` : ""}
         <p class="location-address">${escapeHtml(data.wedding.address)}</p>
         <div class="map-links">
           <button class="btn copy-btn" data-copy="${escapeHtml(data.wedding.address)}">주소 복사</button>
@@ -271,7 +299,7 @@ function render() {
       </section>
 
       <section class="section" id="gallery">
-        ${sectionHeader("Gallery", "갤러리")}
+        ${sectionCopy("gallery", "Gallery", "갤러리")}
         <div class="gallery-grid">
           ${galleryPreviewImages.map((image, index) => `<button class="gallery-item" data-gallery="${gallery.indexOf(image)}" aria-label="사진 ${index + 1} 크게 보기"><span class="media" ${lazyMediaStyle(image)}></span></button>`).join("")}
         </div>
@@ -280,33 +308,34 @@ function render() {
 
       ${guestPhotos.showSection ? `
         <section class="section guest-photo-section" id="wedding-snap">
-          ${sectionHeader("Wedding Snap", "오늘의 순간을 보내주세요")}
-          <p class="subtle">${guestPhotos.canUpload ? "직접 찍어주신 사진을 신랑 신부에게 선물해 주세요.<br>업로드된 사진은 신랑 신부만 확인할 수 있습니다." : "이 휴대폰에서 보낸 사진을 확인하거나 삭제할 수 있습니다."}</p>
+          ${sectionCopy("weddingSnap", "Guest Album", "예쁘게 빛난 순간, 같이 공유해요!")}
+          <p class="subtle">${guestPhotos.canUpload ? "오늘의 추억은 여러분의 한 장에서 완성돼요.<br>예식 당일, 아래 버튼으로 가볍게 공유해주세요!" : "이 휴대폰에서 보낸 사진과 영상을 확인하거나 삭제할 수 있습니다."}</p>
           <div class="guest-photo-actions">
-            ${guestPhotos.canUpload ? '<button class="btn btn-primary" id="guest-photo-open">사진 업로드</button>' : ""}
-            <button class="btn" id="guest-photo-manage">내가 보낸 사진</button>
+            ${guestPhotos.canUpload ? '<button class="btn btn-primary" id="guest-photo-open">사진·영상 업로드</button>' : ""}
+            <button class="btn" id="guest-photo-manage">내가 보낸 파일</button>
           </div>
+          ${guestPhotos.canUpload ? '<p class="action-footnote">결혼식 당일부터 업로드 가능합니다.</p>' : ""}
         </section>` : ""}
 
       ${(data.notices || []).filter((notice) => !notice.hidden).length ? `<section class="section" id="information">
-        ${sectionHeader("Information", "식장 안내")}
-        ${data.notices.filter((notice) => !notice.hidden).map((notice) => `<article class="notice"><h3>${escapeHtml(notice.title)}</h3><p>${escapeHtml(notice.text)}</p></article>`).join("")}
+        ${sectionCopy("information", "Information", "식장 안내")}
+        ${informationSliderMarkup()}
       </section>` : ""}
 
       <section class="section" id="attendance">
-        ${sectionHeader("Attendance", "참석 여부 알려주기")}
-        <p class="subtle">교통편과 숙소 준비를 위해<br>참석 정보를 남겨 주세요.</p>
-        <button class="btn btn-primary" id="attendance-open">참석 정보 입력</button>
+        ${sectionCopy("attendance", "Rsvp", "참석 의사 전달")}
+        <p class="subtle">신랑, 신부에게 참석의사를<br>미리 전달할 수 있어요.</p>
+        <button class="btn btn-primary" id="attendance-open">전달하기</button>
       </section>
 
       <section class="section" id="account">
-        ${sectionHeader("Account", "마음 전하는 곳")}
+        ${sectionCopy("account", "Account", "마음 전하는 곳")}
         <p class="subtle">참석이 어려우신 분들을 위해<br>계좌번호를 안내해 드립니다.</p>
         <div class="account-groups">${renderAccounts("신랑측")}${renderAccounts("신부측")}</div>
       </section>
 
       <section class="section" id="guestbook">
-        ${sectionHeader("Guestbook", "축하 메시지")}
+        ${sectionCopy("guestbook", "Guestbook", "축하 메시지")}
         <p class="subtle">따뜻한 마음을 짧게 남겨 주세요.</p>
         <form class="guestbook-form" id="guestbook-form">
           <label class="field"><span>성함</span><input name="guest_name" required maxlength="30" autocomplete="name" placeholder="성함을 입력해 주세요."></label>
@@ -360,12 +389,10 @@ function shareModal() {
   const url = sharePageUrl();
   return `
     <h2>청첩장 공유하기</h2>
-    <p class="form-guide">원하는 방법을 선택해 주세요. 휴대폰의 앱 공유를 누르면 설치된 앱 목록이 열립니다.</p>
     <div class="share-choice-grid">
-      <button class="share-choice" type="button" data-kakao-share><strong>카카오톡으로 공유</strong><span>세로형 사진 카드로 바로 공유</span></button>
-      <button class="share-choice" type="button" data-native-share><strong>앱으로 공유</strong><span>카카오톡·문자·SNS 선택</span></button>
-      <button class="share-choice" type="button" data-copy-link><strong>링크 복사</strong><span>청첩장 주소 복사</span></button>
-      <a class="share-choice" href="${escapeHtml(`sms:?&body=${encodeURIComponent(`${data.meta.title}\n${url}`)}`)}"><strong>문자로 공유</strong><span>문자 앱 바로 열기</span></a>
+      <button class="share-choice" type="button" data-native-share><strong>앱으로 공유</strong></button>
+      <button class="share-choice" type="button" data-copy-link><strong>링크 복사</strong></button>
+      <a class="share-choice" href="${escapeHtml(`sms:?&body=${encodeURIComponent(`${data.meta.title}\n${url}`)}`)}"><strong>문자로 공유</strong></a>
     </div>
     <div class="modal-actions"><button class="btn" type="button" data-close>닫기</button></div>`;
 }
@@ -381,6 +408,7 @@ function shareWithKakaoTalk() {
   if (!initializeKakaoShare()) return false;
 
   const shareUrl = "https://mobile-wedding-expanded.vercel.app/";
+  const locationUrl = `https://map.kakao.com/link/search/${encodeURIComponent(data.wedding.address || data.wedding.venue)}`;
   const imageUrl = data.meta.shareImage || data.hero.image;
 
   if (!imageUrl) {
@@ -411,14 +439,49 @@ function shareWithKakaoTalk() {
       {
         title: "위치 보기",
         link: {
-          mobileWebUrl: shareUrl + "#location",
-          webUrl: shareUrl + "#location",
+          mobileWebUrl: locationUrl,
+          webUrl: locationUrl,
         },
       },
     ],
   });
 
   return true;
+}
+
+function playInvitationIntro() {
+  const intro = document.querySelector("[data-invitation-intro]");
+  const target = document.querySelector("[data-intro-name]");
+  if (!intro || !target) return;
+  const scrollTop = window.scrollY;
+  const preventIntroAction = (event) => event.preventDefault();
+  const preventIntroKey = (event) => {
+    if (["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " ", "Tab"].includes(event.key)) event.preventDefault();
+  };
+  document.body.classList.add("intro-open");
+  document.body.style.top = `-${scrollTop}px`;
+  window.addEventListener("wheel", preventIntroAction, { passive: false });
+  window.addEventListener("touchmove", preventIntroAction, { passive: false });
+  window.addEventListener("keydown", preventIntroKey);
+  const unlock = () => {
+    document.body.classList.remove("intro-open");
+    document.body.style.top = "";
+    window.scrollTo(0, scrollTop);
+    window.removeEventListener("wheel", preventIntroAction);
+    window.removeEventListener("touchmove", preventIntroAction);
+    window.removeEventListener("keydown", preventIntroKey);
+  };
+  const text = `${data.couple.groom.name} · ${data.couple.bride.name}`;
+  let index = 0;
+  const typeNext = () => {
+    target.textContent = text.slice(0, index += 1);
+    if (index < text.length) setTimeout(typeNext, 95);
+    else setTimeout(() => {
+      intro.classList.add("is-finished");
+      setTimeout(unlock, 720);
+    }, 850);
+  };
+  setTimeout(typeNext, 350);
 }
 
 function sharePageUrl() {
@@ -482,6 +545,47 @@ function attendanceForm() {
     </form>`;
 }
 
+function informationSliderMarkup() {
+  const notices = data.notices.filter((notice) => !notice.hidden);
+  return `
+    <div class="information-slider" data-information-index="0">
+      <div class="information-dots">${notices.map((_, index) => `<i class="${index === 0 ? "is-active" : ""}"></i>`).join("")}</div>
+      <div class="information-slide-wrap">
+        <div data-information-slide></div>
+        <button class="information-arrow information-prev" type="button" data-information-move="-1" aria-label="이전 안내">‹</button>
+        <button class="information-arrow information-next" type="button" data-information-move="1" aria-label="다음 안내">›</button>
+      </div>
+    </div>`;
+}
+
+function bindInformationSlider() {
+  const slider = document.querySelector(".information-slider");
+  if (!slider) return;
+  const notices = data.notices.filter((notice) => !notice.hidden);
+  let touchStartX = 0;
+  const renderSlide = () => {
+    const index = Number(slider.dataset.informationIndex);
+    const notice = notices[index];
+    slider.querySelector("[data-information-slide]").innerHTML = `
+      <article class="information-slide">
+        <h3>${escapeHtml(notice.title)}</h3>
+        <p>${escapeHtml(notice.text)}</p>
+      </article>`;
+    slider.querySelectorAll(".information-dots i").forEach((dot, dotIndex) => dot.classList.toggle("is-active", dotIndex === index));
+  };
+  const move = (step) => {
+    slider.dataset.informationIndex = String((Number(slider.dataset.informationIndex) + step + notices.length) % notices.length);
+    renderSlide();
+  };
+  slider.querySelectorAll("[data-information-move]").forEach((button) => button.addEventListener("click", () => move(Number(button.dataset.informationMove))));
+  slider.addEventListener("touchstart", (event) => { touchStartX = event.changedTouches[0].clientX; }, { passive: true });
+  slider.addEventListener("touchend", (event) => {
+    const distance = event.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(distance) > 45) move(distance > 0 ? -1 : 1);
+  }, { passive: true });
+  renderSlide();
+}
+
 function companionLines(value) {
   return value.split("\n").map((line) => line.trim()).filter(Boolean);
 }
@@ -528,43 +632,50 @@ function openGallerySlider(index = 0) {
 
 function guestPhotoForm() {
   return `
-    <h2>결혼식 사진 업로드</h2>
-    <p class="form-guide">휴대폰 갤러리에서 사진을 선택해 주세요. 여러 장을 한 번에 선택할 수 있습니다.</p>
-    <form class="form-grid" id="guest-photo-form">
-      <label class="consent"><input type="checkbox" required> <span>신랑 신부에게 사진을 전달하기 위해 파일을 업로드하는 것에 동의합니다.</span></label>
-      <label class="btn guest-photo-picker">
-        <span>갤러리에서 사진 선택</span>
-        <input type="file" id="guest-photo-files" accept="image/*" multiple required>
-      </label>
-      <p class="upload-selection" id="guest-photo-selection">선택된 사진이 없습니다.</p>
-      <div class="guest-photo-selection-grid" id="guest-photo-selection-grid"></div>
-      <div class="modal-actions"><button class="btn" type="button" data-close>취소</button><button class="btn btn-primary" id="guest-photo-submit">업로드</button></div>
+    <div class="snap-modal-head">
+      <div class="snap-modal-hero" ${mediaStyle(data.hero.image)}>
+        <span>하객 앨범</span><small>${escapeHtml(data.couple.groom.name)} · ${escapeHtml(data.couple.bride.name)}</small>
+        <h2>소중한 추억을 함께 남겨주세요</h2>
+      </div>
+      <div class="snap-modal-guide"><strong>여러분의 사진첩이 우리 앨범이 됩니다.</strong><p>1. 두 사람의 설렘 가득한 스냅<br>2. 멋진 입장 &amp; 환한 행진<br>3. 가족·친구와의 찰칵 한 컷<br>4. 당신의 시선으로 포착한 장면들</p><em>작은 한 컷이 우리에게 큰 선물이 돼요.</em></div>
+    </div>
+    <form class="form-grid snap-upload-form" id="guest-photo-form">
+      <label class="field"><span>이름(폴더명)</span><input name="guest_name" required maxlength="20" placeholder="예: 홍길동"></label>
+      <label class="consent"><input type="checkbox" required> <span>신랑 신부에게 사진과 영상을 전달하기 위해 파일을 업로드하는 것에 동의합니다.</span></label>
+      <section class="snap-upload-box">
+        <strong>사진·영상 업로드</strong>
+        <p class="upload-selection" id="guest-photo-selection">예식 당일 함께한 사진과 영상을 업로드해 주세요.</p>
+        <label class="btn guest-photo-picker"><span>파일 첨부하기</span><input type="file" id="guest-photo-files" accept="image/*,video/mp4,video/webm,video/quicktime" multiple required></label>
+        <div class="guest-photo-selection-grid" id="guest-photo-selection-grid"></div>
+      </section>
+      <ul class="snap-upload-notes"><li>파일은 장당 50MB 이하만 올릴 수 있어요.</li><li>사진과 영상을 한 번에 여러 개 선택할 수 있어요.</li><li>추가 업로드도 같은 이름으로 남겨 주세요.</li></ul>
+      <div class="modal-actions"><button class="btn" type="button" data-close>취소</button><button class="btn btn-primary" id="guest-photo-submit">신랑 신부에게 공유하기</button></div>
     </form>`;
 }
 
 function ownGuestPhotoGallery(photos) {
   return `
-    <h2>내가 보낸 사진</h2>
-    <p class="form-guide">이 휴대폰 브라우저에서 업로드한 사진입니다. 잘못 올린 사진은 삭제할 수 있습니다.</p>
+    <h2>내가 보낸 파일</h2>
+    <p class="form-guide">이 휴대폰 브라우저에서 업로드한 사진과 영상입니다. 잘못 올린 파일은 삭제할 수 있습니다.</p>
     <div class="own-photo-grid">
       ${photos.length ? photos.map((photo) => `
         <article class="own-photo">
-          <a href="${escapeHtml(photo.signedUrl)}" target="_blank" rel="noopener"><img src="${escapeHtml(photo.signedUrl)}" alt="내가 보낸 사진" loading="lazy"></a>
+          <a href="${escapeHtml(photo.signedUrl)}" target="_blank" rel="noopener">${isVideoMedia(photo.name || photo.path) ? `<span class="guest-video-file"><strong>VIDEO</strong><small>저장해서 확인하기</small></span>` : `<img src="${escapeHtml(photo.signedUrl)}" alt="내가 보낸 사진" loading="lazy">`}</a>
           <button class="btn" type="button" data-remove-guest-photo="${escapeHtml(photo.path)}">삭제</button>
-        </article>`).join("") : '<p class="subtle">아직 이 휴대폰에서 보낸 사진이 없습니다.</p>'}
+        </article>`).join("") : '<p class="subtle">아직 이 휴대폰에서 보낸 파일이 없습니다.</p>'}
     </div>
-    <p class="form-guide">브라우저 데이터 삭제, 시크릿 모드 종료, 휴대폰 변경 후에는 기존 사진을 직접 관리할 수 없습니다.</p>
+    <p class="form-guide">브라우저 데이터 삭제, 시크릿 모드 종료, 휴대폰 변경 후에는 기존 파일을 직접 관리할 수 없습니다.</p>
     <div class="modal-actions"><button class="btn" type="button" data-close>닫기</button></div>`;
 }
 
 async function openOwnGuestPhotos() {
-  openModal('<h2>내가 보낸 사진</h2><p class="form-guide">사진을 불러오고 있습니다.</p><div class="modal-actions"><button class="btn" type="button" data-close>닫기</button></div>');
+  openModal('<h2>내가 보낸 파일</h2><p class="form-guide">파일을 불러오고 있습니다.</p><div class="modal-actions"><button class="btn" type="button" data-close>닫기</button></div>');
   try {
     const photos = await window.RSVP_STORAGE.listOwnGuestPhotos();
     openModal(ownGuestPhotoGallery(photos));
     document.querySelectorAll("[data-remove-guest-photo]").forEach((button) => {
       button.addEventListener("click", async () => {
-        if (!confirm("이 사진을 삭제할까요?")) return;
+        if (!confirm("이 파일을 삭제할까요?")) return;
         button.disabled = true;
         button.textContent = "삭제 중...";
         try {
@@ -573,12 +684,12 @@ async function openOwnGuestPhotos() {
         } catch {
           button.disabled = false;
           button.textContent = "삭제";
-          alert("사진을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.");
+          alert("파일을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.");
         }
       });
     });
   } catch {
-    openModal('<h2>내가 보낸 사진</h2><p class="form-guide">사진을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p><div class="modal-actions"><button class="btn" type="button" data-close>닫기</button></div>');
+    openModal('<h2>내가 보낸 파일</h2><p class="form-guide">파일을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p><div class="modal-actions"><button class="btn" type="button" data-close>닫기</button></div>');
   }
 }
 
@@ -600,6 +711,8 @@ function bindEvents() {
   });
 
   document.querySelector("#gallery-more")?.addEventListener("click", () => openGallerySlider());
+
+  bindInformationSlider();
 
   document.querySelector("#attendance-open")?.addEventListener("click", () => {
     openModal(attendanceForm());
@@ -662,15 +775,14 @@ function bindEvents() {
     const renderSelectedPhotos = () => {
       const checkedCount = selectedPhotos.filter((photo) => photo.checked).length;
       selection.textContent = selectedPhotos.length
-        ? `${selectedPhotos.length}장 중 ${checkedCount}장을 업로드합니다. 제외할 사진은 체크를 해제해 주세요.`
-        : "선택된 사진이 없습니다.";
+        ? `${selectedPhotos.length}개 중 ${checkedCount}개를 업로드합니다. 제외할 파일은 체크를 해제해 주세요.`
+        : "선택된 파일이 없습니다.";
       selectionGrid.innerHTML = selectedPhotos.map((photo, index) => `
         <label class="guest-photo-selection-card">
-          <img src="${escapeHtml(photo.previewUrl)}" alt="선택한 사진 ${index + 1} 미리보기">
+          ${photo.file.type.startsWith("video/") ? '<span class="guest-video-file"><strong>VIDEO</strong><small>업로드할 영상</small></span>' : `<img src="${escapeHtml(photo.previewUrl)}" alt="선택한 사진 ${index + 1} 미리보기">`}
           <span><input type="checkbox" data-guest-photo-choice="${index}" ${photo.checked ? "checked" : ""}> 업로드 선택</span>
         </label>`).join("");
     };
-    files.click();
     files.addEventListener("change", () => {
       selectedPhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
       selectedPhotos = [...files.files].map((file) => ({ file, checked: true, previewUrl: URL.createObjectURL(file) }));
@@ -686,22 +798,22 @@ function bindEvents() {
       event.preventDefault();
       const uploadFiles = selectedPhotos.filter((photo) => photo.checked).map((photo) => photo.file);
       if (!uploadFiles.length) {
-        alert("업로드할 사진을 한 장 이상 선택해 주세요.");
+        alert("업로드할 사진 또는 영상을 하나 이상 선택해 주세요.");
         return;
       }
       const button = document.querySelector("#guest-photo-submit");
       button.disabled = true;
       button.textContent = "업로드 중...";
-      selection.textContent = `${uploadFiles.length}장의 사진을 전송하고 있습니다. 창을 닫지 말아 주세요.`;
+      selection.textContent = `${uploadFiles.length}개의 파일을 전송하고 있습니다. 창을 닫지 말아 주세요.`;
       try {
         await window.RSVP_STORAGE.uploadGuestPhotos(uploadFiles);
         selectedPhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
         closeModal();
-        alert("사진을 전달했습니다. 소중한 순간을 남겨주셔서 감사합니다.");
+        alert("사진과 영상을 전달했습니다. 소중한 순간을 남겨주셔서 감사합니다.");
       } catch (error) {
         button.disabled = false;
         button.textContent = "업로드";
-        selection.textContent = error.message || "사진을 업로드하지 못했습니다.";
+        selection.textContent = error.message || "파일을 업로드하지 못했습니다.";
       }
     });
   });
@@ -749,6 +861,7 @@ async function start() {
   document.querySelector('meta[name="description"]')?.setAttribute("content", data.meta.description);
   updateSocialMeta();
   render();
+  playInvitationIntro();
   fitSingleLineText();
   loadLazyBackgrounds();
   updateCountdown();
