@@ -4,5 +4,5 @@
  * 배포 주소는 JavaScript SDK 도메인과 제품 링크 관리의 웹 도메인에도 등록하세요.
  */
 window.KAKAO_SHARE_CONFIG = {
-  javascriptKey: "82ba40507867fe0b792846e8a690c5f3",
+  javascriptKey: '82ba40507867fe0b792846e8a690c5f3',
 };
