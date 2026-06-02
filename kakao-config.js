@@ -5,4 +5,6 @@
  */
 window.KAKAO_SHARE_CONFIG = {
   javascriptKey: '82ba40507867fe0b792846e8a690c5f3',
+  // 배포 도메인이 여러 개인 경우에만 명시하세요. 비우면 현재 접속 도메인을 사용합니다.
+  shareBaseUrl: '',
 };

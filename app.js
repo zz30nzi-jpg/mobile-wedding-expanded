@@ -224,6 +224,18 @@ function applySectionOrder() {
   order.forEach((id) => {
     if (links.has(id)) nav.appendChild(links.get(id));
   });
+  nav.style.setProperty("--tab-count", String(nav.querySelectorAll("a").length || 1));
+}
+
+function sortedTransport() {
+  const priorities = ["지하철", "버스", "자가용"];
+  return [...data.transport].sort((left, right) => {
+    const rank = (item) => {
+      const index = priorities.findIndex((keyword) => String(item.title).includes(keyword));
+      return index < 0 ? priorities.length : index;
+    };
+    return rank(left) - rank(right);
+  });
 }
 
 function render() {
@@ -294,7 +306,7 @@ function render() {
           ${mapLinksForAddress(data.wedding.address).map((link) => `<a class="btn" href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a>`).join("")}
         </div>
         <div class="transport">
-          ${data.transport.filter((item) => !item.hidden).map((item) => `<div><strong>${escapeHtml(item.title)}</strong>${escapeHtml(item.text)}</div>`).join("")}
+          ${sortedTransport().filter((item) => !item.hidden).map((item) => `<div><strong>${escapeHtml(item.title)}</strong>${escapeHtml(item.text)}</div>`).join("")}
         </div>
       </section>
 
@@ -385,6 +397,21 @@ function openModal(content) {
 }
 function closeModal() { modalRoot.innerHTML = ""; }
 
+function showUploadStatus({ completed = 0, total = 1, percent = 0, state = "uploading", message = "" } = {}) {
+  let status = document.querySelector("[data-upload-status]");
+  if (!status) {
+    status = document.createElement("aside");
+    status.className = "upload-status";
+    status.dataset.uploadStatus = "";
+    document.body.append(status);
+  }
+  clearTimeout(status.removeTimer);
+  status.classList.toggle("is-complete", state === "complete");
+  status.classList.toggle("is-error", state === "error");
+  status.innerHTML = `<div><strong>${state === "complete" ? "업로드 완료" : state === "error" ? "업로드 확인 필요" : "사진·영상 업로드 중"}</strong><span>${message || `${completed} / ${total} · ${percent}%`}</span></div><progress max="100" value="${percent}"></progress>`;
+  if (state !== "uploading") status.removeTimer = setTimeout(() => status.remove(), 3600);
+}
+
 function shareModal() {
   const url = sharePageUrl();
   return `
@@ -407,8 +434,9 @@ function initializeKakaoShare() {
 function shareWithKakaoTalk() {
   if (!initializeKakaoShare()) return false;
 
-  const shareUrl = "https://mobile-wedding-expanded.vercel.app/";
-  const locationUrl = `https://map.kakao.com/link/search/${encodeURIComponent(data.wedding.address || data.wedding.venue)}`;
+  const configuredShareUrl = window.KAKAO_SHARE_CONFIG?.shareBaseUrl?.trim();
+  const shareUrl = configuredShareUrl || `${location.origin}/`;
+  const locationUrl = `${shareUrl.replace(/\/$/, "")}/#location`;
   const imageUrl = data.meta.shareImage || data.hero.image;
 
   if (!imageUrl) {
@@ -645,7 +673,7 @@ function guestPhotoForm() {
       <section class="snap-upload-box">
         <strong>사진·영상 업로드</strong>
         <p class="upload-selection" id="guest-photo-selection">예식 당일 함께한 사진과 영상을 업로드해 주세요.</p>
-        <label class="btn guest-photo-picker"><span>파일 첨부하기</span><input type="file" id="guest-photo-files" accept="image/*,video/mp4,video/webm,video/quicktime" multiple required></label>
+        <label class="btn guest-photo-picker"><span>파일 첨부하기</span><input type="file" id="guest-photo-files" accept="image/*,video/mp4,video/webm,video/quicktime" multiple></label>
         <div class="guest-photo-selection-grid" id="guest-photo-selection-grid"></div>
       </section>
       <ul class="snap-upload-notes"><li>파일은 장당 50MB 이하만 올릴 수 있어요.</li><li>사진과 영상을 한 번에 여러 개 선택할 수 있어요.</li><li>추가 업로드도 같은 이름으로 남겨 주세요.</li></ul>
@@ -784,8 +812,8 @@ function bindEvents() {
         </label>`).join("");
     };
     files.addEventListener("change", () => {
-      selectedPhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
-      selectedPhotos = [...files.files].map((file) => ({ file, checked: true, previewUrl: URL.createObjectURL(file) }));
+      selectedPhotos.push(...[...files.files].map((file) => ({ file, checked: true, previewUrl: URL.createObjectURL(file) })));
+      files.value = "";
       renderSelectedPhotos();
     });
     selectionGrid.addEventListener("change", (event) => {
@@ -801,20 +829,12 @@ function bindEvents() {
         alert("업로드할 사진 또는 영상을 하나 이상 선택해 주세요.");
         return;
       }
-      const button = document.querySelector("#guest-photo-submit");
-      button.disabled = true;
-      button.textContent = "업로드 중...";
-      selection.textContent = `${uploadFiles.length}개의 파일을 전송하고 있습니다. 창을 닫지 말아 주세요.`;
-      try {
-        await window.RSVP_STORAGE.uploadGuestPhotos(uploadFiles);
-        selectedPhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
-        closeModal();
-        alert("사진과 영상을 전달했습니다. 소중한 순간을 남겨주셔서 감사합니다.");
-      } catch (error) {
-        button.disabled = false;
-        button.textContent = "업로드";
-        selection.textContent = error.message || "파일을 업로드하지 못했습니다.";
-      }
+      selectedPhotos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
+      closeModal();
+      showUploadStatus({ total: uploadFiles.length });
+      window.RSVP_STORAGE.uploadGuestPhotos(uploadFiles, showUploadStatus)
+        .then(() => showUploadStatus({ completed: uploadFiles.length, total: uploadFiles.length, percent: 100, state: "complete", message: "신랑 신부에게 소중한 순간을 전달했습니다." }))
+        .catch((error) => showUploadStatus({ total: uploadFiles.length, state: "error", message: error.message || "파일을 업로드하지 못했습니다." }));
     });
   });
 

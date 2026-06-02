@@ -87,6 +87,10 @@ function renderDesignApplication(message = "") {
             <label class="consent"><input type="checkbox" name="heroDateEnabled" ${design.heroDateEnabled !== false ? "checked" : ""}> <span>날짜 표시</span></label>
           </div>
           ${select("contentPosition", "메인 사진 문구 위치", invitationData.hero.contentPosition || "bottom", [["top", "상단"], ["middle", "중간"], ["bottom", "하단"]])}
+          <div class="text-layout-editor">
+            <label class="text-layout-control"><span>문구 좌우 위치</span><input name="heroTextXPercent" type="range" min="10" max="90" value="${escapeAdminHtml(design.heroTextXPercent ?? 50)}"><output>${escapeAdminHtml(design.heroTextXPercent ?? 50)}</output></label>
+            <label class="text-layout-control"><span>문구 위아래 위치</span><input name="heroTextYPercent" type="range" min="10" max="90" value="${escapeAdminHtml(design.heroTextYPercent ?? 76)}"><output>${escapeAdminHtml(design.heroTextYPercent ?? 76)}</output></label>
+          </div>
           </section>
         </fieldset>
         <button class="btn btn-primary">디자인 저장</button>
@@ -97,12 +101,12 @@ function renderDesignApplication(message = "") {
   const applyDesignPreview = () => {
     const fields = new FormData(form);
     const selected = system.themes.find((theme) => theme.id === fields.get("presetId"));
-    invitationData.appearance.design = { presetId: fields.get("presetId"), heroDecoration: fields.get("heroDecoration"), heroDecorationTint: fields.get("heroDecorationTint"), heroTextTheme: fields.get("heroTextTheme"), heroEyebrowEnabled: fields.get("heroEyebrowEnabled") === "on", heroNamesEnabled: fields.get("heroNamesEnabled") === "on", heroDateEnabled: fields.get("heroDateEnabled") === "on" };
+    invitationData.appearance.design = { presetId: fields.get("presetId"), heroDecoration: fields.get("heroDecoration"), heroDecorationTint: fields.get("heroDecorationTint"), heroTextTheme: fields.get("heroTextTheme"), heroTextXPercent: Number(fields.get("heroTextXPercent")), heroTextYPercent: Number(fields.get("heroTextYPercent")), heroEyebrowEnabled: fields.get("heroEyebrowEnabled") === "on", heroNamesEnabled: fields.get("heroNamesEnabled") === "on", heroDateEnabled: fields.get("heroDateEnabled") === "on" };
     invitationData.appearance.theme = selected?.type === "color" ? selected.id : (invitationData.appearance.theme || "sky");
     invitationData.appearance.movieConcept = selected?.type === "movie" ? selected.id : "none";
     window.WEDDING_DESIGN.apply(invitationData);
     const resolved = window.WEDDING_DESIGN.resolve(invitationData);
-    document.querySelector("[data-design-frame-live-preview]").innerHTML = typeof designCombinedHeroPreview === "function" ? designCombinedHeroPreview({ frame: resolved.heroDecorationAsset, textTheme: resolved.heroTextThemeAsset, tintColor: fields.get("heroDecorationTint"), eyebrowEnabled: fields.get("heroEyebrowEnabled") === "on", namesEnabled: fields.get("heroNamesEnabled") === "on", dateEnabled: fields.get("heroDateEnabled") === "on", position: form.elements.contentPosition.value }) : "";
+    document.querySelector("[data-design-frame-live-preview]").innerHTML = typeof designCombinedHeroPreview === "function" ? designCombinedHeroPreview({ frame: resolved.heroDecorationAsset, textTheme: resolved.heroTextThemeAsset, tintColor: fields.get("heroDecorationTint"), eyebrowEnabled: fields.get("heroEyebrowEnabled") === "on", namesEnabled: fields.get("heroNamesEnabled") === "on", dateEnabled: fields.get("heroDateEnabled") === "on", position: form.elements.contentPosition.value, xPercent: fields.get("heroTextXPercent"), yPercent: fields.get("heroTextYPercent") }) : "";
   };
   const updateContentPositionState = () => {
     const textTheme = form.elements.heroTextTheme.value;
@@ -113,6 +117,10 @@ function renderDesignApplication(message = "") {
   form.querySelectorAll("select").forEach((field) => field.addEventListener("change", () => { updateContentPositionState(); applyDesignPreview(); }));
   form.querySelectorAll('input[name="heroDecoration"]').forEach((field) => field.addEventListener("change", applyDesignPreview));
   form.elements.heroDecorationTint.addEventListener("input", applyDesignPreview);
+  form.querySelectorAll('input[name="heroTextXPercent"], input[name="heroTextYPercent"]').forEach((field) => field.addEventListener("input", () => {
+    field.nextElementSibling.textContent = field.value;
+    applyDesignPreview();
+  }));
   form.querySelectorAll("[data-design-text-theme]").forEach((button) => button.addEventListener("click", () => {
     form.elements.heroTextTheme.value = button.dataset.designTextTheme;
     form.querySelectorAll("[data-design-text-theme]").forEach((item) => item.classList.toggle("is-selected", item === button));
@@ -130,6 +138,8 @@ function renderDesignApplication(message = "") {
       heroDecoration: fields.get("heroDecoration"),
       heroDecorationTint: fields.get("heroDecorationTint"),
       heroTextTheme: fields.get("heroTextTheme"),
+      heroTextXPercent: Number(fields.get("heroTextXPercent")),
+      heroTextYPercent: Number(fields.get("heroTextYPercent")),
       heroEyebrowEnabled: fields.get("heroEyebrowEnabled") === "on",
       heroNamesEnabled: fields.get("heroNamesEnabled") === "on",
       heroDateEnabled: fields.get("heroDateEnabled") === "on",

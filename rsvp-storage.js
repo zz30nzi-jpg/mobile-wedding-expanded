@@ -1,5 +1,6 @@
 const RSVP_LOCAL_KEY = "wedding-attendance-responses";
 const GUESTBOOK_LOCAL_KEY = "wedding-guestbook-entries";
+const INVITATION_LOCAL_KEY = "wedding-invitation-preview-draft";
 
 function getSupabaseClient() {
   const config = window.RSVP_CONFIG || {};
@@ -32,6 +33,16 @@ function mergeInvitationData(fallback, saved) {
 
 function normalizeInvitationData(fallback, saved) {
   const merged = mergeInvitationData(fallback, saved);
+  const legacyTransport = new Set([
+    "창원중앙역에서 호텔까지 차량으로 약 15분",
+    "호텔 인근 정류장과 예식 당일 셔틀 운행 여부를 확인해 주세요.",
+    "내비게이션에 호텔명 또는 주소를 입력해 주세요.",
+  ]);
+  merged.transport = (merged.transport || fallback.transport || []).map((item) => {
+    if (!legacyTransport.has(item.text)) return item;
+    const keyword = item.title.includes("버스") ? "버스" : item.title.includes("자가용") ? "자가용" : "지하철";
+    return fallback.transport.find((fallbackItem) => fallbackItem.title.includes(keyword)) || item;
+  });
   const accounts = Array.isArray(merged.accounts) ? merged.accounts : [];
   const defaultAccounts = Array.isArray(fallback.accounts) ? fallback.accounts : [];
   const orderedAccounts = defaultAccounts.map((defaultAccount) => ({
@@ -111,7 +122,10 @@ async function submitGuestbookEntry(entry) {
 
 async function loadInvitationData(fallback) {
   const client = getSupabaseClient();
-  if (!client) return window.WEDDING_DESIGN.normalize(fallback);
+  if (!client) {
+    const saved = JSON.parse(localStorage.getItem(INVITATION_LOCAL_KEY) || "null");
+    return normalizeInvitationData(fallback, saved);
+  }
   const { data, error } = await client
     .from("invitation_settings")
     .select("content")
@@ -123,7 +137,10 @@ async function loadInvitationData(fallback) {
 
 async function saveInvitationData(content) {
   const client = getSupabaseClient();
-  if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
+  if (!client) {
+    localStorage.setItem(INVITATION_LOCAL_KEY, JSON.stringify(content));
+    return;
+  }
   const { error } = await client
     .from("invitation_settings")
     .upsert({ id: "main", content, updated_at: new Date().toISOString() });
@@ -155,11 +172,18 @@ async function optimizeInvitationImage(file) {
 
 async function uploadInvitationImage(file, slot) {
   const client = getSupabaseClient();
-  if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
   if (!file.type.startsWith("image/") || file.size > 20 * 1024 * 1024) {
     throw new Error("20MB 이하 이미지 파일만 업로드할 수 있습니다.");
   }
   const optimized = await optimizeInvitationImage(file);
+  if (!client) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("미리보기 이미지를 읽지 못했습니다."));
+      reader.readAsDataURL(optimized);
+    });
+  }
   const extension = optimized.type === "image/webp" ? "webp" : file.name.split(".").pop()?.toLowerCase() || "jpg";
   const path = `${slot}/${Date.now()}-${crypto.randomUUID?.() || "image"}.${extension}`;
   const { error } = await client.storage
@@ -203,14 +227,15 @@ async function uploadDesignAsset(file, slot = "asset") {
   return client.storage.from("invitation-media").getPublicUrl(path).data.publicUrl;
 }
 
-async function uploadGuestPhotos(files) {
+async function uploadGuestPhotos(files, onProgress = () => {}) {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
   const session = await ensureGuestPhotoSession(client);
   const invitation = await loadInvitationData(window.INVITATION_DATA);
   const uploadSlug = invitation.guestPhotos?.uploadSlug || "wedding-day";
   const uploaded = [];
-  for (const file of files) {
+  for (let index = 0; index < files.length; index += 1) {
+    const file = files[index];
     const isSupported = file.type.startsWith("image/") || ["video/mp4", "video/webm", "video/quicktime"].includes(file.type);
     if (!isSupported || file.size > 50 * 1024 * 1024) {
       throw new Error("사진 또는 영상은 파일당 50MB 이하 이미지, MP4, WebM, MOV만 업로드할 수 있습니다.");
@@ -227,6 +252,7 @@ async function uploadGuestPhotos(files) {
       throw error;
     }
     uploaded.push(path);
+    onProgress({ completed: index + 1, total: files.length, percent: Math.round(((index + 1) / files.length) * 100), path });
   }
   return uploaded;
 }

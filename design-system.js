@@ -108,7 +108,10 @@
         const asset = data.designSystem.assets.frames.find((item) => item.id === heroDecoration);
         return asset ? { ...asset, tintColor: design.heroDecorationTint || asset.tintColor || "#ffffff" } : asset;
       })(),
-      heroTextThemeAsset: data.designSystem.assets.textThemes.find((item) => item.id === heroTextTheme),
+      heroTextThemeAsset: (() => {
+        const asset = data.designSystem.assets.textThemes.find((item) => item.id === heroTextTheme);
+        return asset ? { ...asset, xPercent: design.heroTextXPercent ?? asset.xPercent, yPercent: design.heroTextYPercent ?? asset.yPercent } : asset;
+      })(),
       sectionIcon: theme.type === "movie" ? theme.sectionIcon || "" : "",
       backgroundDecoration: theme.type === "movie" ? theme.backgroundDecoration || "" : "",
     };

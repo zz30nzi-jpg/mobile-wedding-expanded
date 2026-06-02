@@ -45,15 +45,20 @@ function frameEditorSample(item = {}) {
   </div>`;
 }
 
-function designCombinedHeroPreview({ frame = {}, textTheme = {}, tintColor = "#ffffff", eyebrowEnabled = true, namesEnabled = true, dateEnabled = true, position = "bottom" } = {}) {
+function designCombinedHeroPreview({ frame = {}, textTheme = {}, tintColor = "#ffffff", eyebrowEnabled = true, namesEnabled = true, dateEnabled = true, position = "bottom", xPercent, yPercent } = {}) {
   const source = frame?.url || frame?.previewUrl || "";
   const align = ["left", "center", "right"].includes(textTheme?.align) ? textTheme.align : "center";
   const nameSize = Math.max(20, Math.min(54, Number(textTheme?.nameSize) || 34));
   const dateSize = Math.max(9, Math.min(18, Number(textTheme?.dateSize) || 12));
   const eyebrowSize = Math.max(6, Math.min(24, Number(textTheme?.eyebrowSize) || 10));
-  return `<div class="design-combined-preview" style="${invitationData.hero.image ? `background-image:url('${escapeAdminHtml(invitationData.hero.image)}')` : ""}">
+  const hasFreePosition = Number.isFinite(Number(xPercent)) && Number.isFinite(Number(yPercent));
+  const positionClass = hasFreePosition ? "is-free-position" : `position-${escapeAdminHtml(position)}`;
+  const freePositionStyle = hasFreePosition
+    ? `;left:${Number(xPercent)}%;right:auto;top:${Number(yPercent)}%;width:${Number(textTheme?.widthPercent || 88)}%;transform:translate(-50%,-50%)`
+    : "";
+  return `<div class="design-combined-preview mode-${frame?.mode === "outer" ? "outer" : "overlay"}" style="${invitationData.hero.image ? `background-image:url('${escapeAdminHtml(invitationData.hero.image)}')` : ""}">
     ${source ? `<span class="frame-editor-decoration" style="--frame-opacity:${frame.opacity ?? 1};--frame-blend-mode:${frame.blendMode || "normal"};--frame-x:${frame.xPercent ?? 50}%;--frame-y:${frame.yPercent ?? 50}%;--frame-size:${frame.sizePercent ?? 100}%;--frame-tint:${tintColor};--frame-image:url('${escapeAdminHtml(source)}')"><img src="${escapeAdminHtml(source)}" alt=""></span>` : ""}
-    <div class="design-combined-copy position-${escapeAdminHtml(position)}" style="text-align:${align};--combined-name-size:${nameSize}px;--combined-date-size:${dateSize}px;--combined-eyebrow-size:${eyebrowSize}px">
+    <div class="design-combined-copy ${positionClass}" style="text-align:${align};--combined-name-size:${nameSize}px;--combined-date-size:${dateSize}px;--combined-eyebrow-size:${eyebrowSize}px${freePositionStyle}">
       ${eyebrowEnabled ? `<small>${escapeAdminHtml(invitationData.hero.eyebrow || "our wedding day")}</small>` : ""}
       ${namesEnabled ? `<strong>${escapeAdminHtml(invitationData.couple.groom.name)} · ${escapeAdminHtml(invitationData.couple.bride.name)}</strong>` : ""}
       ${dateEnabled ? `<span>${escapeAdminHtml(invitationData.wedding.displayDate)}</span>` : ""}

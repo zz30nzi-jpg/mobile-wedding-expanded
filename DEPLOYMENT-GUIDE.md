@@ -127,6 +127,9 @@ Vercel Access Token 자체를 노출한 경우에는 [Vercel Tokens](https://ver
 2. `앱 > 플랫폼 키 > JavaScript 키`에서 JavaScript 키를 확인합니다.
 3. 같은 화면의 `JavaScript SDK 도메인`과 `제품 링크 관리 > 웹 도메인`에 확장형 Vercel 주소를 등록합니다.
 4. `kakao-config.js`의 `javascriptKey`에 JavaScript 키를 입력합니다.
-5. 확장형을 다시 배포합니다.
+5. 별도 공유 도메인을 사용한다면 `shareBaseUrl`에 공개 청첩장 주소를 입력합니다. 비워 두면 현재 접속 도메인을 사용합니다.
+6. 확장형을 다시 배포합니다.
 
 JavaScript 키는 브라우저에서 사용하는 공개 키입니다. REST API 키, Admin 키, OpenAI API Key를 입력하면 안 됩니다.
+
+카카오 카드의 `위치 보기` 버튼은 공개 청첩장의 `#location` 섹션으로 이동합니다. 오시는 길 안의 지도 버튼에서 원하는 지도 앱을 선택할 수 있습니다.

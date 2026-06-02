@@ -62,11 +62,11 @@ function superOverview() {
 
 function adminHeader(active) {
   const generalMenu = `<div class="admin-menu-group"><strong>일반 관리자</strong><nav class="admin-tabs">
-      <button class="btn ${active === "editor" ? "btn-primary" : ""}" data-admin-view="editor">청첩장 편집</button>
-      <button class="btn ${active === "design" ? "btn-primary" : ""}" data-admin-view="design">디자인 적용</button>
-      <button class="btn ${active === "responses" ? "btn-primary" : ""}" data-admin-view="responses">참석 현황</button>
-      <button class="btn ${active === "photos" ? "btn-primary" : ""}" data-admin-view="photos">하객 사진·영상</button>
-      <button class="btn ${active === "guestbook" ? "btn-primary" : ""}" data-admin-view="guestbook">방명록</button>
+      <button class="btn ${active === "editor" ? "btn-primary" : ""}" data-admin-view="editor">기본 설정</button>
+      <button class="btn ${active === "design" ? "btn-primary" : ""}" data-admin-view="design">디자인</button>
+      <button class="btn ${active === "copy" ? "btn-primary" : ""}" data-admin-view="copy-editor">편집</button>
+      <button class="btn ${["content", "photos", "guestbook"].includes(active) ? "btn-primary" : ""}" data-admin-view="content">콘텐츠</button>
+      <button class="btn" data-admin-view="share-settings">공유</button>
     </nav></div>`;
   const superMenu = `<div class="admin-menu-group admin-menu-super"><strong>슈퍼관리자</strong><nav class="admin-tabs">
       <button class="btn ${active === "themes" ? "btn-primary" : ""}" data-admin-view="themes">테마 생성 및 수정</button>
@@ -102,6 +102,7 @@ function adminHeader(active) {
 
 function bindAdminNavigation() {
   document.querySelector("#admin-logout")?.addEventListener("click", async () => {
+    if (!supabaseClient) return renderEditor("현재는 Supabase 연결 전 미리보기 모드입니다.");
     await supabaseClient.auth.signOut();
     renderLogin();
   });
@@ -109,6 +110,9 @@ function bindAdminNavigation() {
     button.addEventListener("click", () => {
       if (button.dataset.adminView === "editor") renderEditor();
       else if (button.dataset.adminView === "design") renderDesignApplication();
+      else if (button.dataset.adminView === "copy-editor") renderEditor("", "copy");
+      else if (button.dataset.adminView === "share-settings") renderEditor("", "share");
+      else if (button.dataset.adminView === "content") renderContentHub();
       else if (button.dataset.adminView === "themes") renderThemeManager();
       else if (button.dataset.adminView === "assets") renderDesignAssets();
       else if (button.dataset.adminView === "ai-settings") renderAISettings();
@@ -123,6 +127,27 @@ function bindAdminNavigation() {
     applySuperSearch();
   });
   applySuperSearch();
+}
+
+function renderContentHub() {
+  adminApp.innerHTML = `${adminHeader("content")}
+    <section class="admin-card admin-hub">
+      <p class="section-label">Content</p><h2>콘텐츠 관리</h2>
+      <p class="admin-message">자주 확인하고 관리하는 콘텐츠를 한곳에 모았습니다.</p>
+      <div class="admin-hub-grid">
+        <button type="button" data-content-open="gallery"><strong>갤러리</strong><span>청첩장 사진 순서와 확대 방식을 관리합니다.</span></button>
+        <button type="button" data-content-open="responses"><strong>참석 현황</strong><span>하객이 전달한 참석 여부와 동행 정보를 확인합니다.</span></button>
+        <button type="button" data-content-open="photos"><strong>하객 사진·영상</strong><span>하객이 공유한 원본 파일을 저장하고 정리합니다.</span></button>
+        <button type="button" data-content-open="guestbook"><strong>방명록</strong><span>축하 메시지를 확인하고 숨김 처리합니다.</span></button>
+      </div>
+    </section>`;
+  bindAdminNavigation();
+  document.querySelectorAll("[data-content-open]").forEach((button) => button.addEventListener("click", () => {
+    if (button.dataset.contentOpen === "gallery") renderEditor("", "gallery");
+    else if (button.dataset.contentOpen === "responses") renderResponses();
+    else if (button.dataset.contentOpen === "photos") renderGuestPhotos();
+    else renderGuestbookEntries();
+  }));
 }
 
 function applySuperSearch() {
@@ -146,17 +171,10 @@ function renderLogin(message = "") {
   document.querySelector("#admin-login-form").addEventListener("submit", login);
 }
 
-function renderSetupNotice() {
-  const responses = window.RSVP_STORAGE.readLocalResponses();
-  adminApp.innerHTML = `
-    <section class="admin-card">
-      <p class="section-label">Wedding Admin</p>
-      <h1>미리보기 관리자 화면</h1>
-      <p class="admin-message">현재 Supabase가 연결되지 않았습니다.
-같은 브라우저에서 테스트로 입력한 응답만 표시됩니다.
-모바일 편집과 실제 응답 수집을 시작하려면 README의 Supabase 설정을 완료해 주세요.</p>
-    </section>
-    ${responsesView(responses, true)}`;
+async function renderSetupNotice() {
+  await loadInvitationData();
+  if (adminArea === "super") return renderThemeManager();
+  renderEditor("현재는 Supabase 연결 전 미리보기 모드입니다. 변경 내용은 이 브라우저에 저장되며 공개 청첩장을 새로고침하면 반영됩니다.");
 }
 
 function responsesView(responses, isPreview = false) {
@@ -263,7 +281,7 @@ function heroDecorationField(value = "none") {
 function imageField(name, label, value = "") {
   const isProfile = ["couple.groom.photo", "couple.bride.photo"].includes(name);
   return `
-    <div class="image-field">
+    <div class="image-field ${isProfile ? "image-field-profile" : ""}">
       <input name="${name}" type="hidden" value="${escapeAdminHtml(value)}">
       <div class="image-preview" data-image-preview="${name}">
         ${value ? `<img src="${escapeAdminHtml(value)}" alt="${label} 미리보기">` : '<span>등록된 사진이 없습니다.</span>'}
@@ -411,11 +429,16 @@ function galleryManagerPreview(images) {
 }
 
 function copyEditorVisual(key) {
+  if (key === "invitation") return `<div class="copy-editor-notice">${invitationData.invitation.paragraphs.map((text) => `<p>${escapeAdminHtml(text)}</p>`).join("")}</div>`;
   if (key === "aboutUs") return `<div class="copy-editor-profile-grid">${[invitationData.couple.groom, invitationData.couple.bride].map((person) => `<img src="${escapeAdminHtml(person.photo)}" alt="">`).join("")}</div>`;
   if (key === "gallery") return `<div class="copy-editor-gallery">${invitationData.gallery.filter(Boolean).slice(0, 4).map((photo) => `<img src="${escapeAdminHtml(photo)}" alt="">`).join("")}</div>`;
   if (key === "location") return `<div class="copy-editor-location"><strong>${escapeAdminHtml(invitationData.wedding.venue)}</strong><span>${escapeAdminHtml(invitationData.wedding.hall || "")}</span><small>${escapeAdminHtml(invitationData.wedding.address)}</small></div>`;
   if (key === "weddingDay") return `<p class="copy-editor-date">${escapeAdminHtml(invitationData.wedding.displayDate)}</p>`;
   if (key === "information") return `<div class="copy-editor-notice">${invitationData.notices.filter((notice) => !notice.hidden).slice(0, 1).map((notice) => `<strong>${escapeAdminHtml(notice.title)}</strong><p>${escapeAdminHtml(notice.text)}</p>`).join("")}</div>`;
+  if (key === "weddingSnap") return '<div class="copy-editor-notice"><strong>Guest Album</strong><p>예식 당일 함께한 사진과 영상을 공유해 주세요.</p></div>';
+  if (key === "attendance") return '<div class="copy-editor-notice"><p>신랑, 신부에게 참석 의사를 미리 전달할 수 있어요.</p></div>';
+  if (key === "account") return `<div class="copy-editor-notice">${invitationData.accounts.slice(0, 2).map((account) => `<p><strong>${escapeAdminHtml(account.side)}</strong> ${escapeAdminHtml(account.bank)} ${escapeAdminHtml(account.number)}</p>`).join("")}</div>`;
+  if (key === "guestbook") return '<div class="copy-editor-notice"><p>따뜻한 축하 메시지를 남겨 주세요.</p></div>';
   return "";
 }
 
@@ -448,9 +471,9 @@ const venuePresets = [
     names: ["그랜드 머큐어 앰배서더 창원", "창원 그랜드머큐어 호텔웨딩", "그랜드머큐어 창원"],
     address: "경상남도 창원시 성산구 원이대로 332",
     transport: [
-      { title: "창원중앙역", text: "호텔까지 차량으로 약 15분" },
-      { title: "창원역", text: "호텔까지 차량으로 약 17분" },
-      { title: "자가용 · 주차", text: "호텔 건물 전용 주차장을 무료로 이용할 수 있습니다. 만차 여부와 추가 주차장 안내는 예식 전 호텔에 확인해 주세요." },
+      { title: "지하철 · 기차", text: "KTX 창원중앙역 또는 창원역에서 호텔까지 차량으로 약 10분입니다." },
+      { title: "버스", text: "창원고속버스터미널에서 호텔까지 차량으로 약 10분입니다. 버스 노선은 변동될 수 있으니 지도 앱에서 최신 경로를 확인해 주세요." },
+      { title: "자가용 · 주차", text: "내비게이션에 '그랜드 머큐어 앰배서더 창원' 또는 주소를 입력해 주세요. 주차 안내는 예식 전 호텔에 확인해 주세요." },
     ],
   },
 ];
@@ -682,7 +705,7 @@ function accountManager(accounts = []) {
     </div></section>`;
 }
 
-function renderEditor(message = "") {
+function renderEditor(message = "", focus = "") {
   window.WEDDING_DESIGN?.normalize(invitationData);
   invitationData.accounts = ensureAccountRows(invitationData.accounts);
   const { groom, bride } = invitationData.couple;
@@ -691,12 +714,20 @@ function renderEditor(message = "") {
   const recommendations = recommendationSets(groom, bride);
   const gallery = Array.from({ length: 20 }, (_, index) => invitationData.gallery[index] || "");
   adminApp.innerHTML = `
-    ${adminHeader("editor")}
+    ${adminHeader(focus === "copy" ? "copy" : "editor")}
     <section class="admin-card">
-      <h2>청첩장 편집</h2>
+      <div class="admin-editor-intro">
+        <div><p class="section-label">Wedding Workspace</p><h2>청첩장 편집</h2></div>
+        <span class="admin-mode-badge">모바일 편집</span>
+      </div>
       <p class="admin-message">${escapeAdminHtml(message || "수정 후 맨 아래 저장 버튼을 눌러 주세요. 사진은 선택하면 즉시 업로드됩니다.")}</p>
+      <nav class="admin-quick-actions" aria-label="빠른 편집">
+        <button type="button" data-editor-jump="couple-settings"><strong>기본 정보</strong><span>두 사람과 예식 정보</span></button>
+        <button type="button" data-editor-jump="transport-settings"><strong>오시는 길</strong><span>지하철·버스·자가용</span></button>
+        <button type="button" data-editor-jump="share-settings"><strong>공유 설정</strong><span>대표 이미지와 SEO</span></button>
+      </nav>
       <form class="editor-form" id="invitation-editor">
-        <fieldset><legend>가장 먼저 입력해 주세요</legend>
+        <fieldset id="couple-settings"><legend>가장 먼저 입력해 주세요</legend>
           <p class="admin-message">여기에서 입력한 이름, 부모님 성함, 식장과 예식 일시는 아래 세부 설정에 자동으로 반영됩니다.</p>
           <div class="quick-input-grid">
             ${quickInput("couple.groom.name", "신랑 이름", groom.name)}
@@ -712,7 +743,7 @@ function renderEditor(message = "") {
             ${quickInput("wedding.date", "예식 일시", weddingDateInputValue(invitationData.wedding.date), "datetime-local")}
           </div>
         </fieldset>
-        <fieldset><legend>기본 정보</legend>
+        <fieldset id="share-settings"><legend>공유와 대표 이미지</legend>
           ${recommendationEditor("hero.eyebrow", "메인 영문 문구", invitationData.hero.eyebrow, recommendations.hero)}
           ${recommendationEditor("meta.title", "페이지 제목", invitationData.meta.title, recommendations.title)}
           ${imageField("hero.image", "메인 사진", invitationData.hero.image)}
@@ -763,40 +794,36 @@ function renderEditor(message = "") {
           </div>
           <p class="admin-message" data-venue-status>등록된 식장은 이름을 입력하면 주소가 자동으로 채워집니다. 다른 식장은 지도에서 확인 후 주소를 직접 입력해 주세요.</p>
         </fieldset>
-        <section class="copy-editor-launch">
-          <button class="btn btn-primary" type="button" data-copy-editor-open>문구 수정</button>
-          <p class="admin-message micro-help">공개 청첩장과 비슷한 화면에서 수정할 문구 영역을 직접 눌러 편집합니다.</p>
-        </section>
+        <fieldset id="transport-settings"><legend>오시는 길</legend>
+          <p class="admin-message">공개 청첩장에는 지하철·기차, 버스, 자가용 순서로 표시됩니다. 실제 하객에게 필요한 문구를 항목별로 수정해 주세요.</p>
+          ${transportManager(invitationData.transport)}
+        </fieldset>
         <div class="copy-editor-overlay" data-copy-editor-overlay hidden>
           <div class="copy-editor-page">
             <div class="copy-editor-toolbar"><strong>문구 수정</strong><button class="btn" type="button" data-copy-editor-close>닫기</button></div>
-            <p class="admin-message">각 카드의 문구를 수정한 뒤 아래 최종 저장을 눌러 주세요.</p>
+            <p class="admin-message">공개 청첩장처럼 보이는 화면에서 수정할 영역을 눌러 주세요. 선택한 영역만 편집 도구가 열립니다.</p>
             <header class="copy-editor-hero" style="background-image:url('${escapeAdminHtml(invitationData.hero.image)}')">
               <div><small>${escapeAdminHtml(invitationData.hero.eyebrow || "")}</small><strong>${escapeAdminHtml(groom.name)} · ${escapeAdminHtml(bride.name)}</strong><span>${escapeAdminHtml(invitationData.wedding.displayDate)}</span></div>
             </header>
-            <section class="copy-editor-section">
+            <section class="copy-editor-section" data-copy-focus="hero.introEyebrow">
               <p class="section-label">Intro</p><h2>진입 화면</h2>
           ${input("hero.introEyebrow", "진입 화면 영문 문구", invitationData.hero.introEyebrow || invitationData.hero.eyebrow || "")}
           ${input("hero.introDate", "진입 화면 날짜 문구 · 비우면 예식 일시 사용", invitationData.hero.introDate || "")}
             </section>
           ${Object.entries(invitationData.sectionTitles || {}).map(([key, title]) => `
-            <section class="copy-editor-section">
+            <section class="copy-editor-section" data-copy-focus="sectionTitles.${escapeAdminHtml(key)}.ko">
               <p class="section-label">${escapeAdminHtml(title.en || key)}</p><h2>${escapeAdminHtml(title.ko || key)}</h2>
               ${copyEditorVisual(key)}
               <div class="quick-input-grid">
               ${input(`sectionTitles.${key}.en`, `${key} 영문 타이틀`, title.en || "")}
               ${input(`sectionTitles.${key}.ko`, `${key} 국문 타이틀`, title.ko || "")}
               </div>
+              ${key === "invitation" ? `${recommendationEditor("invitation.title", "초대 문구 제목", invitationData.invitation.title, recommendations.invitationTitle)}
+              ${recommendationEditor("invitation.paragraphs", "초대 문구", invitationData.invitation.paragraphs.join("\n\n"), recommendations.invitationParagraphs, true, true)}` : ""}
             </section>`).join("")}
-            <section class="copy-editor-section">
-              <p class="section-label">Invitation</p><h2>초대 문구</h2>
-          ${recommendationEditor("invitation.title", "초대 문구 제목", invitationData.invitation.title, recommendations.invitationTitle)}
-          ${recommendationEditor("invitation.paragraphs", "초대 문구", invitationData.invitation.paragraphs.join("\n\n"), recommendations.invitationParagraphs, true, true)}
-            </section>
-            <section class="copy-editor-section">
+            <section class="copy-editor-section" data-copy-focus="notice.0.text">
               <p class="section-label">Details</p><h2>안내 세부 설정</h2>
           <p class="admin-message micro-help">교통 안내는 항목별로 수정하거나 숨길 수 있습니다. 식장을 바꾸면 등록된 기본 교통 정보로 교체됩니다.</p>
-          ${transportManager(invitationData.transport)}
           ${noticeManager(invitationData.notices)}
           <p class="admin-message">식장 안내는 최대 3개까지 표시됩니다. 추천을 고른 뒤 문구를 자유롭게 수정할 수 있습니다.</p>
           ${accountManager(invitationData.accounts)}
@@ -806,7 +833,7 @@ function renderEditor(message = "") {
             <button class="btn btn-primary editor-save copy-editor-save" type="submit">최종 저장</button>
           </div>
         </div>
-        <details class="editor-details"><summary>갤러리</summary><div class="editor-details-body">
+        <details class="editor-details" id="gallery-settings"><summary>갤러리</summary><div class="editor-details-body">
           <p class="admin-message">최대 20장까지 등록할 수 있습니다. 공개 화면에는 접속할 때마다 등록 사진 중 무작위 6장이 미리보기로 표시됩니다.</p>
           ${select("galleryDisplayMode", "사진 확대 화면 표시 방식", invitationData.galleryDisplayMode || "portrait", [["portrait", "세로형 화면에 맞추기"], ["original", "원본 사진 비율 유지"]])}
           ${galleryManager(gallery)}
@@ -832,6 +859,16 @@ function renderEditor(message = "") {
     </section>`;
   bindAdminNavigation();
   bindEditor();
+  if (focus === "copy") {
+    document.querySelector("[data-copy-editor-overlay]").hidden = false;
+    document.body.classList.add("copy-editor-open");
+  }
+  if (focus === "share") document.querySelector("#share-settings")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (focus === "gallery") {
+    const gallerySettings = document.querySelector("#gallery-settings");
+    gallerySettings.open = true;
+    gallerySettings.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 function setNested(target, path, value) {
@@ -894,14 +931,24 @@ function editorData(form) {
 function bindEditor() {
   const form = document.querySelector("#invitation-editor");
   const copyEditor = form.querySelector("[data-copy-editor-overlay]");
-  form.querySelector("[data-copy-editor-open]")?.addEventListener("click", () => {
-    copyEditor.hidden = false;
-    document.body.classList.add("copy-editor-open");
-  });
   form.querySelector("[data-copy-editor-close]")?.addEventListener("click", () => {
     copyEditor.hidden = true;
     document.body.classList.remove("copy-editor-open");
   });
+  copyEditor.querySelectorAll("[data-copy-focus]").forEach((section) => {
+    section.addEventListener("click", (event) => {
+      if (event.target.closest("input, textarea, select, button, a, label")) return;
+      const target = form.elements[section.dataset.copyFocus];
+      if (!target) return;
+      copyEditor.querySelectorAll(".is-editing").forEach((item) => item.classList.remove("is-editing"));
+      section.classList.add("is-editing");
+      target.focus();
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  });
+  document.querySelectorAll("[data-editor-jump]").forEach((button) => button.addEventListener("click", () => {
+    document.querySelector(`#${button.dataset.editorJump}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }));
   const syncParentNames = () => {
     form.elements["couple.groom.parents"].value = `${form.querySelector('[data-quick="groomFather"]').value} · ${form.querySelector('[data-quick="groomMother"]').value}`;
     form.elements["couple.bride.parents"].value = `${form.querySelector('[data-quick="brideFather"]').value} · ${form.querySelector('[data-quick="brideMother"]').value}`;
@@ -1220,6 +1267,11 @@ async function loadInvitationData() {
 }
 
 async function renderResponses() {
+  if (!supabaseClient) {
+    adminApp.innerHTML = `${adminHeader("responses")}${responsesView(window.RSVP_STORAGE.readLocalResponses(), true)}`;
+    bindAdminNavigation();
+    return;
+  }
   const { data, error } = await supabaseClient
     .from("attendance_responses")
     .select("*")
