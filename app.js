@@ -380,7 +380,7 @@ function initializeKakaoShare() {
 function shareWithKakaoTalk() {
   if (!initializeKakaoShare()) return false;
 
-  const shareUrl = location.origin + "/";
+  const shareUrl = "https://mobile-wedding-expanded.vercel.app/";
   const imageUrl = data.meta.shareImage || data.hero.image;
 
   if (!imageUrl) {
