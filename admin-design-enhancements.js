@@ -56,7 +56,8 @@ function designCombinedHeroPreview({ frame = {}, textTheme = {}, tintColor = "#f
   const freePositionStyle = hasFreePosition
     ? `;left:${Number(xPercent)}%;right:auto;top:${Number(yPercent)}%;width:${Number(textTheme?.widthPercent || 88)}%;transform:translate(-50%,-50%)`
     : "";
-  return `<div class="design-combined-preview mode-${frame?.mode === "outer" ? "outer" : "overlay"}" style="${invitationData.hero.image ? `background-image:url('${escapeAdminHtml(invitationData.hero.image)}')` : ""}">
+  return `<div class="design-combined-preview mode-${frame?.mode === "outer" ? "outer" : "overlay"}">
+    ${invitationData.hero.image ? `<img class="design-combined-background" src="${escapeAdminHtml(invitationData.hero.image)}" alt="">` : ""}
     ${source ? `<span class="frame-editor-decoration" style="--frame-opacity:${frame.opacity ?? 1};--frame-blend-mode:${frame.blendMode || "normal"};--frame-x:${frame.xPercent ?? 50}%;--frame-y:${frame.yPercent ?? 50}%;--frame-size:${frame.sizePercent ?? 100}%;--frame-tint:${tintColor};--frame-image:url('${escapeAdminHtml(source)}')"><img src="${escapeAdminHtml(source)}" alt=""></span>` : ""}
     <div class="design-combined-copy ${positionClass}" style="text-align:${align};--combined-name-size:${nameSize}px;--combined-date-size:${dateSize}px;--combined-eyebrow-size:${eyebrowSize}px${freePositionStyle}">
       ${eyebrowEnabled ? `<small>${escapeAdminHtml(invitationData.hero.eyebrow || "our wedding day")}</small>` : ""}
@@ -315,9 +316,9 @@ function openAssetCreateModal(type = "frame", assetId = "") {
   const source = assetId ? findAsset(type, assetId) || {} : {};
   window.assetSourceDraft = JSON.parse(JSON.stringify(source));
   const category = assetCategories[type];
-  document.querySelector("#asset-create-modal").innerHTML = `<div class="admin-modal-backdrop"><section class="admin-modal asset-create-modal">
-    <div class="admin-toolbar"><h2>${assetId ? "디자인 소스 수정" : "새 디자인 소스 만들기"}</h2><button class="btn" type="button" data-asset-close>닫기</button></div>
-    <form class="editor-form" id="asset-source-form">
+  document.querySelector("#asset-create-modal").innerHTML = `<div class="admin-modal-backdrop asset-studio-backdrop"><section class="admin-modal asset-create-modal asset-studio">
+    <div class="admin-toolbar asset-studio-topbar"><h2>${assetId ? "디자인 소스 수정" : "새 디자인 소스 만들기"}</h2><button class="btn" type="button" data-asset-close>닫기</button></div>
+    <form class="editor-form asset-studio-form" id="asset-source-form">
       <div class="asset-type-tabs">${Object.entries(assetCategories).map(([value, item]) => `<button class="${value === type ? "is-active" : ""}" type="button" data-asset-type-tab="${value}">${item.label}</button>`).join("")}</div>
       <input type="hidden" name="assetType" value="${type}">
       ${input("assetName", "디자인 소스 이름", source.name || "")}

@@ -4,6 +4,7 @@ const modalRoot = document.querySelector("#modal-root");
 
 const escapeHtml = (value = "") =>
   String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+const escapeLineHtml = (value = "") => escapeHtml(value).replace(/\n/g, "<br>");
 const mediaStyle = (src) => src ? `style="background-image:url('${escapeHtml(src)}')"` : "";
 const lazyMediaStyle = (src) => src ? `data-lazy-background="${escapeHtml(src)}"` : "";
 const heroMediaMarkup = () => data.hero.video
@@ -204,6 +205,8 @@ function activeSectionOrder() {
   return Array.isArray(configured) ? configured : defaultSectionSettings[mode];
 }
 
+const isCopyEditorPreview = new URLSearchParams(location.search).get("copyEditorPreview") === "1";
+
 function applySectionOrder() {
   const article = document.querySelector(".invitation");
   const ending = article.querySelector(".ending");
@@ -240,13 +243,17 @@ function sortedTransport() {
 
 function render() {
   const { groom, bride } = data.couple;
+  const introDesign = data.hero.introDesign || {};
+  const introAlign = ["left", "center", "right"].includes(introDesign.align) ? introDesign.align : "center";
+  const introNumber = (value, fallback, min, max) => Math.max(min, Math.min(max, Number.isFinite(Number(value)) ? Number(value) : fallback));
+  const introStyle = `--intro-align:${introAlign};--intro-eyebrow-size:${introNumber(introDesign.eyebrowSize, 11, 8, 24)}px;--intro-name-size:${introNumber(introDesign.nameSize, 30, 20, 54)}px;--intro-date-size:${introNumber(introDesign.dateSize, 11, 8, 20)}px;--intro-eyebrow-name-gap:${introNumber(introDesign.eyebrowNameGap, 10, 0, 40)}px;--intro-name-date-gap:${introNumber(introDesign.nameDateGap, 10, 0, 40)}px;--intro-offset-y:${introNumber(introDesign.offsetY, 0, -160, 160)}px`;
   const guestPhotos = guestPhotoStatus();
   const gallery = galleryImages();
   const location = venueParts();
   galleryPreviewImages = shuffledGalleryPreview(gallery);
   app.innerHTML = `
     <div class="invitation-intro" data-invitation-intro>
-      <div class="invitation-intro-copy">
+      <div class="invitation-intro-copy" style="${introStyle}">
         <p>${escapeHtml(data.hero.introEyebrow || data.hero.eyebrow || "our wedding day")}</p>
         <strong data-intro-name></strong>
         <span>${escapeHtml(data.hero.introDate || data.wedding.displayDate)}</span>
@@ -336,19 +343,19 @@ function render() {
 
       <section class="section" id="attendance">
         ${sectionCopy("attendance", "Rsvp", "참석 의사 전달")}
-        <p class="subtle">신랑, 신부에게 참석의사를<br>미리 전달할 수 있어요.</p>
+        <p class="subtle">${escapeLineHtml(data.sectionDescriptions?.attendance || "신랑, 신부에게 참석의사를\n미리 전달할 수 있어요.")}</p>
         <button class="btn btn-primary" id="attendance-open">전달하기</button>
       </section>
 
       <section class="section" id="account">
         ${sectionCopy("account", "Account", "마음 전하는 곳")}
-        <p class="subtle">참석이 어려우신 분들을 위해<br>계좌번호를 안내해 드립니다.</p>
+        <p class="subtle">${escapeLineHtml(data.sectionDescriptions?.account || "참석이 어려우신 분들을 위해\n계좌번호를 안내해 드립니다.")}</p>
         <div class="account-groups">${renderAccounts("신랑측")}${renderAccounts("신부측")}</div>
       </section>
 
       <section class="section" id="guestbook">
         ${sectionCopy("guestbook", "Guestbook", "축하 메시지")}
-        <p class="subtle">따뜻한 마음을 짧게 남겨 주세요.</p>
+        <p class="subtle">${escapeLineHtml(data.sectionDescriptions?.guestbook || "따뜻한 마음을 짧게 남겨 주세요.")}</p>
         <form class="guestbook-form" id="guestbook-form">
           <label class="field"><span>성함</span><input name="guest_name" required maxlength="30" autocomplete="name" placeholder="성함을 입력해 주세요."></label>
           <label class="field"><span>축하 메시지</span><textarea name="message" required maxlength="300" rows="3" placeholder="축하 메시지를 남겨 주세요."></textarea></label>
@@ -499,7 +506,7 @@ function playInvitationIntro() {
     window.removeEventListener("touchmove", preventIntroAction);
     window.removeEventListener("keydown", preventIntroKey);
   };
-  const text = `${data.couple.groom.name} · ${data.couple.bride.name}`;
+  const text = data.hero.introName || `${data.couple.groom.name} · ${data.couple.bride.name}`;
   let index = 0;
   const typeNext = () => {
     target.textContent = text.slice(0, index += 1);
@@ -881,7 +888,12 @@ async function start() {
   document.querySelector('meta[name="description"]')?.setAttribute("content", data.meta.description);
   updateSocialMeta();
   render();
-  playInvitationIntro();
+  if (isCopyEditorPreview) {
+    document.body.classList.add("copy-editor-public-preview");
+    document.querySelector("[data-invitation-intro]")?.remove();
+  } else {
+    playInvitationIntro();
+  }
   fitSingleLineText();
   loadLazyBackgrounds();
   updateCountdown();

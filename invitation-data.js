@@ -56,6 +56,14 @@ window.INVITATION_DATA = {
     eyebrow: "our wedding day",
     introEyebrow: "our wedding day",
     introDate: "",
+    introDesign: {
+      align: "center",
+      eyebrowSize: 11,
+      nameSize: 30,
+      dateSize: 11,
+      eyebrowNameGap: 10,
+      nameDateGap: 10,
+    },
     image: "",
     video: "",
     contentPosition: "top",
@@ -79,6 +87,11 @@ window.INVITATION_DATA = {
     weddingSnap: { en: "Guest Album", ko: "예쁘게 빛난 순간, 같이 공유해요!" },
     account: { en: "Account", ko: "마음 전하는 곳" },
     guestbook: { en: "Guestbook", ko: "축하 메시지" },
+  },
+  sectionDescriptions: {
+    attendance: "신랑, 신부에게 참석의사를\n미리 전달할 수 있어요.",
+    account: "참석이 어려우신 분들을 위해\n계좌번호를 안내해 드립니다.",
+    guestbook: "따뜻한 마음을 짧게 남겨 주세요.",
   },
   transport: [
     { title: "지하철 · 기차", text: "KTX 창원중앙역 또는 창원역에서 호텔까지 차량으로 약 10분입니다." },

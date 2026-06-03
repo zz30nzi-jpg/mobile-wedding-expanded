@@ -63,10 +63,9 @@ function superOverview() {
 function adminHeader(active) {
   const generalMenu = `<div class="admin-menu-group"><strong>일반 관리자</strong><nav class="admin-tabs">
       <button class="btn ${active === "editor" ? "btn-primary" : ""}" data-admin-view="editor">기본 설정</button>
-      <button class="btn ${active === "design" ? "btn-primary" : ""}" data-admin-view="design">디자인</button>
-      <button class="btn ${active === "copy" ? "btn-primary" : ""}" data-admin-view="copy-editor">편집</button>
-      <button class="btn ${["content", "photos", "guestbook"].includes(active) ? "btn-primary" : ""}" data-admin-view="content">콘텐츠</button>
-      <button class="btn" data-admin-view="share-settings">공유</button>
+      <button class="btn ${active === "copy" ? "btn-primary" : ""}" data-admin-view="copy-editor">편집 기능</button>
+      <button class="btn ${["content", "responses", "photos", "guestbook"].includes(active) ? "btn-primary" : ""}" data-admin-view="content">콘텐츠</button>
+      <button class="btn ${active === "share" ? "btn-primary" : ""}" data-admin-view="share-settings">공유</button>
     </nav></div>`;
   const superMenu = `<div class="admin-menu-group admin-menu-super"><strong>슈퍼관리자</strong><nav class="admin-tabs">
       <button class="btn ${active === "themes" ? "btn-primary" : ""}" data-admin-view="themes">테마 생성 및 수정</button>
@@ -97,7 +96,7 @@ function adminHeader(active) {
     </div>
     ${generalMenu}
     ${active === "editor" ? '<button class="admin-floating-save" type="submit" form="invitation-editor"><span>✓</span> 변경사항 저장</button>' : ""}
-    ${active === "design" ? '<button class="admin-floating-save" type="submit" form="design-application-form"><span>✓</span> 디자인 저장</button>' : ""}`;
+    ${active === "copy" ? '<button class="admin-floating-save" type="submit" form="invitation-editor"><span>✓</span> 편집 저장</button>' : ""}`;
 }
 
 function bindAdminNavigation() {
@@ -109,7 +108,7 @@ function bindAdminNavigation() {
   document.querySelectorAll("[data-admin-view]").forEach((button) => {
     button.addEventListener("click", () => {
       if (button.dataset.adminView === "editor") renderEditor();
-      else if (button.dataset.adminView === "design") renderDesignApplication();
+      else if (button.dataset.adminView === "design") renderEditor("", "copy");
       else if (button.dataset.adminView === "copy-editor") renderEditor("", "copy");
       else if (button.dataset.adminView === "share-settings") renderEditor("", "share");
       else if (button.dataset.adminView === "content") renderContentHub();
@@ -126,6 +125,7 @@ function bindAdminNavigation() {
     superSearchQuery = event.currentTarget.value.trim().toLowerCase();
     applySuperSearch();
   });
+  document.querySelector("[data-content-back]")?.addEventListener("click", renderContentHub);
   applySuperSearch();
 }
 
@@ -148,6 +148,13 @@ function renderContentHub() {
     else if (button.dataset.contentOpen === "photos") renderGuestPhotos();
     else renderGuestbookEntries();
   }));
+}
+
+function contentBackBar(title) {
+  return `<div class="admin-subpage-bar">
+    <button class="btn" type="button" data-content-back>← 콘텐츠 관리</button>
+    <strong>${escapeAdminHtml(title)}</strong>
+  </div>`;
 }
 
 function applySuperSearch() {
@@ -224,6 +231,34 @@ function select(name, label, value, options) {
   return `<label class="field"><span>${label}</span><select name="${name}">${options.map(([optionValue, text]) => `<option value="${escapeAdminHtml(optionValue)}" ${String(value) === optionValue ? "selected" : ""}>${text}</option>`).join("")}</select></label>`;
 }
 
+function introRange(name, label, value, min, max) {
+  return `<label class="text-layout-control"><span>${label}</span><input name="hero.introDesign.${name}" type="range" min="${min}" max="${max}" value="${escapeAdminHtml(value)}" data-intro-design="${name}"><output>${escapeAdminHtml(value)}</output></label>`;
+}
+
+function introDesignEditor(groom, bride) {
+  const design = invitationData.hero.introDesign || {};
+  const introName = invitationData.hero.introName || `${groom.name} · ${bride.name}`;
+  return `
+    <div class="copy-editor-intro-preview" data-intro-design-preview>
+      <small data-intro-preview-eyebrow>${escapeAdminHtml(invitationData.hero.introEyebrow || invitationData.hero.eyebrow || "our wedding day")}</small>
+      <strong data-intro-preview-name>${escapeAdminHtml(introName)}</strong>
+      <span data-intro-preview-date>${escapeAdminHtml(invitationData.hero.introDate || invitationData.wedding.displayDate)}</span>
+    </div>
+    <p class="admin-message micro-help">기본값은 신랑·신부 이름 조합입니다. 필요하면 진입화면 전용 문구로 직접 바꿀 수 있습니다.</p>
+    ${input("hero.introEyebrow", "진입 화면 영문 문구", invitationData.hero.introEyebrow || invitationData.hero.eyebrow || "")}
+    ${input("hero.introName", "진입 화면 메인 문구", introName)}
+    ${input("hero.introDate", "진입 화면 날짜 문구 · 비우면 예식 일시 사용", invitationData.hero.introDate || "")}
+    ${select("hero.introDesign.align", "문구 정렬", design.align || "center", [["left", "왼쪽"], ["center", "가운데"], ["right", "오른쪽"]])}
+    <div class="text-layout-editor">
+      ${introRange("eyebrowSize", "영문 문구 크기", design.eyebrowSize ?? 11, 8, 24)}
+      ${introRange("nameSize", "이름 크기", design.nameSize ?? 30, 20, 54)}
+      ${introRange("dateSize", "날짜 크기", design.dateSize ?? 11, 8, 20)}
+      ${introRange("eyebrowNameGap", "영문 ↔ 이름 간격", design.eyebrowNameGap ?? 10, 0, 40)}
+      ${introRange("nameDateGap", "이름 ↔ 날짜 간격", design.nameDateGap ?? 10, 0, 40)}
+      ${introRange("offsetY", "전체 위아래 위치", design.offsetY ?? 0, -160, 160)}
+    </div>`;
+}
+
 function appearancePresetValue(appearance = {}) {
   return appearance.movieConcept && appearance.movieConcept !== "none"
     ? `movie:${appearance.movieConcept}`
@@ -291,7 +326,7 @@ function imageField(name, label, value = "") {
         <span class="micro-help">휴대폰 갤러리에서 한 장을 선택해 주세요.</span>
         <div class="image-actions">
           <label class="btn image-upload">${value ? "변경" : "＋ 선택"}<input type="file" accept="image/*" data-image-target="${name}"></label>
-          ${isProfile && value ? `<button class="btn" type="button" data-image-crop-edit="${name}">영역 맞추기</button>` : ""}
+          ${isProfile ? `<button class="btn" type="button" data-image-crop-edit="${name}">영역 맞추기</button>` : ""}
           <button class="btn" type="button" data-image-remove="${name}">× 제거</button>
         </div>
       </div>
@@ -314,6 +349,149 @@ function videoField(name, label, value = "") {
         </div>
       </div>
     </div>`;
+}
+
+function editorPresetValue(appearance = {}) {
+  return appearance.movieConcept && appearance.movieConcept !== "none"
+    ? appearance.movieConcept
+    : (appearance.design?.presetId || appearance.theme || "sky");
+}
+
+function editorDesignOptions(items, selected) {
+  return items.filter((item) => item.enabled !== false).map((item) =>
+    `<option value="${escapeAdminHtml(item.id)}" ${item.id === selected ? "selected" : ""}>${escapeAdminHtml(item.name)}</option>`).join("");
+}
+
+function editorPresetSelect(name, label, themes, selected) {
+  const group = (type, groupLabel) => `<optgroup label="${groupLabel}">${editorDesignOptions(themes.filter((theme) => theme.type === type), selected)}</optgroup>`;
+  return `<label class="field"><span>${label}</span><select name="${name}">${group("color", "컬러테마")}${group("movie", "영화테마")}</select></label>`;
+}
+
+function editorDesignFramePicker(frames, selected) {
+  const option = (frame) => `<label class="hero-decoration-option">
+    <input type="radio" name="appearance.design.heroDecoration" value="${escapeAdminHtml(frame.id)}" ${selected === frame.id ? "checked" : ""}>
+    <span class="hero-decoration-preview" data-decoration-preview="${escapeAdminHtml(frame.id)}"><i></i></span>
+    <span class="hero-decoration-copy"><strong>${escapeAdminHtml(frame.name)}</strong><small>${frame.id === "inherit" ? "선택한 프리셋의 기본 꾸밈을 사용합니다." : frame.mode === "outer" ? "사진 바깥 프레임" : "사진 위 오버레이"}</small></span>
+  </label>`;
+  return `<fieldset class="hero-decoration-field"><legend>메인 이미지 꾸밈</legend><div class="hero-decoration-list">${option({ id: "inherit", name: "프리셋 기본값 사용" })}${frames.map(option).join("")}</div></fieldset>`;
+}
+
+function editorDesignTextThemePicker(themes, selected) {
+  return `<div class="text-theme-choice-grid">${themes.filter((theme) => theme.enabled !== false).map((theme) => `
+    <button class="text-theme-choice ${selected === theme.id ? "is-selected" : ""}" type="button" data-design-text-theme="${escapeAdminHtml(theme.id)}">
+      ${typeof textThemeSample === "function" ? textThemeSample(theme) : ""}
+      <span>${escapeAdminHtml(theme.name || theme.id)}</span>
+    </button>`).join("")}</div>`;
+}
+
+function editorOnboardingPicker(system, selectedPreset, selectedTextTheme) {
+  const themeCard = (theme) => `
+    <button class="editor-start-card ${theme.id === selectedPreset ? "is-selected" : ""}" type="button" data-onboarding-preset="${escapeAdminHtml(theme.id)}">
+      <span class="editor-start-preview" style="--preview-bg:${escapeAdminHtml(theme.palette?.background || "#f7f0e7")};--preview-accent:${escapeAdminHtml(theme.palette?.accent || "#999")}"></span>
+      <strong>${escapeAdminHtml(theme.name || theme.id)}</strong>
+      <small>${theme.type === "movie" ? "영화테마" : "컬러테마"}</small>
+    </button>`;
+  const textCard = (theme) => `
+    <button class="editor-start-card editor-start-text ${theme.id === selectedTextTheme ? "is-selected" : ""}" type="button" data-onboarding-text-theme="${escapeAdminHtml(theme.id)}">
+      <span class="editor-start-text-preview">${typeof textThemeSample === "function" ? textThemeSample(theme) : "<b>Text</b><em>Theme</em>"}</span>
+      <strong>${escapeAdminHtml(theme.name || theme.id)}</strong>
+      <small>메인문구테마</small>
+    </button>`;
+  return `
+    <section class="editor-start-backdrop" data-editor-onboarding>
+      <div class="editor-start-sheet">
+        <button class="editor-start-close" type="button" data-editor-start-close aria-label="편집 시작 창 닫기">×</button>
+        <div class="editor-start-title">
+          <p class="section-label">Start Edit</p>
+          <h2>원하는 테마로<br>청첩장 편집을 시작해보세요</h2>
+        </div>
+        <div class="editor-start-section">
+          <h3>컬러 · 영화테마</h3>
+          <div class="editor-start-grid">${system.themes.filter((theme) => theme.enabled !== false).map(themeCard).join("")}</div>
+        </div>
+        <div class="editor-start-section">
+          <h3>메인 문구 테마</h3>
+          <div class="editor-start-grid">${system.assets.textThemes.filter((theme) => theme.enabled !== false).map(textCard).join("")}</div>
+        </div>
+        <button class="editor-start-apply" type="button" data-editor-start-apply>선택하고 편집하기</button>
+      </div>
+    </section>`;
+}
+
+function editorDesignPanel() {
+  window.WEDDING_DESIGN?.normalize(invitationData);
+  const system = invitationData.designSystem;
+  const design = invitationData.appearance.design || {};
+  const selectedPreset = editorPresetValue(invitationData.appearance || {});
+  const selectedTextTheme = design.heroTextTheme || "auto";
+  const hasPreset = Boolean(invitationData.appearance?.design?.presetId || invitationData.appearance?.theme || invitationData.appearance?.movieConcept);
+  const onboarding = editorOnboardingPicker(system, selectedPreset, selectedTextTheme)
+    .replace('<section class="editor-start-backdrop"', `<section class="editor-start-backdrop"${hasPreset ? " hidden" : ""}`);
+  return `
+    <section class="editor-theme-strip">
+      <span>테마</span>
+      ${editorPresetSelect("editorPresetId", "컬러테마 · 영화테마", system.themes, selectedPreset)}
+      <button class="editor-theme-open" type="button" data-editor-theme-open>전체보기</button>
+    </section>
+    ${onboarding}
+    <div class="editor-design-hidden-fields">
+      <input type="hidden" name="appearance.design.presetId" value="${escapeAdminHtml(selectedPreset)}">
+      <input type="hidden" name="appearance.design.heroTextTheme" value="${escapeAdminHtml(selectedTextTheme)}">
+    </div>
+    <section class="editor-tooldock" data-editor-tool-panel hidden>
+      <div class="editor-tooldock-head">
+        <button class="editor-tooldock-close" type="button" data-tooldock-collapse aria-label="편집 도구 아래로 숨기기"><span aria-hidden="true"></span></button>
+        <div><strong data-tooldock-title>편집 도구</strong><span data-tooldock-help>수정할 영역을 누르면 도구가 바뀝니다.</span></div>
+        <button class="editor-tooldock-done" type="submit" form="invitation-editor" aria-label="저장">✓</button>
+      </div>
+      <nav class="editor-tooldock-tabs" aria-label="편집 도구 탭">
+        <button type="button" data-tooldock-tab="media">미디어</button>
+        <button type="button" data-tooldock-tab="frame">꾸밈</button>
+        <button type="button" data-tooldock-tab="text">문구테마</button>
+        <button type="button" data-tooldock-tab="position">메인 문구위치</button>
+        <button type="button" data-tooldock-tab="style">글자/위치</button>
+        <button type="button" data-tooldock-tab="items">항목관리</button>
+      </nav>
+      <div class="editor-tooldock-pane" data-tooldock-pane="media">
+        <div class="editor-tool-buttons">
+          <button class="editor-tool-button is-primary" type="button" data-tool-action="hero-image" data-tool-context="hero"><span>＋</span>이미지 업로드</button>
+          <button class="editor-tool-button" type="button" data-tool-action="hero-video" data-tool-context="hero"><span>▶</span>영상 업로드</button>
+          <button class="editor-tool-button" type="button" data-tool-action="groom-photo" data-tool-context="profile"><span>人</span>신랑 사진</button>
+          <button class="editor-tool-button" type="button" data-tool-action="bride-photo" data-tool-context="profile"><span>人</span>신부 사진</button>
+          <button class="editor-tool-button" type="button" data-tool-action="profile-crop" data-tool-context="profile"><span>↔</span>영역 맞추기</button>
+        </div>
+      </div>
+      <div class="editor-tooldock-pane" data-tooldock-pane="frame">
+        ${editorDesignFramePicker(system.assets.frames, design.heroDecoration || "inherit")}
+        <div class="editor-color-strip">${input("appearance.design.heroDecorationTint", "꾸밈 색상", design.heroDecorationTint || "#ffffff", "color")}</div>
+      </div>
+      <div class="editor-tooldock-pane" data-tooldock-pane="text">
+        ${editorDesignTextThemePicker(system.assets.textThemes, selectedTextTheme)}
+        <div class="hero-copy-toggle-grid">
+          <label class="consent"><input type="checkbox" name="appearance.design.heroEyebrowEnabled" ${design.heroEyebrowEnabled !== false ? "checked" : ""}> <span>영문</span></label>
+          <label class="consent"><input type="checkbox" name="appearance.design.heroNamesEnabled" ${design.heroNamesEnabled !== false ? "checked" : ""}> <span>이름</span></label>
+          <label class="consent"><input type="checkbox" name="appearance.design.heroDateEnabled" ${design.heroDateEnabled !== false ? "checked" : ""}> <span>날짜</span></label>
+        </div>
+      </div>
+      <div class="editor-tooldock-pane" data-tooldock-pane="position">
+        ${select("hero.contentPosition", "메인 사진 문구 위치", invitationData.hero.contentPosition || "bottom", [["top", "상단"], ["middle", "중간"], ["bottom", "하단"]])}
+        <div class="text-layout-editor">
+          <label class="text-layout-control"><span>좌우 위치</span><input name="appearance.design.heroTextXPercent" type="range" min="10" max="90" value="${escapeAdminHtml(design.heroTextXPercent ?? 50)}"><output>${escapeAdminHtml(design.heroTextXPercent ?? 50)}</output></label>
+          <label class="text-layout-control"><span>위아래 위치</span><input name="appearance.design.heroTextYPercent" type="range" min="10" max="90" value="${escapeAdminHtml(design.heroTextYPercent ?? 76)}"><output>${escapeAdminHtml(design.heroTextYPercent ?? 76)}</output></label>
+        </div>
+      </div>
+      <div class="editor-tooldock-pane" data-tooldock-pane="style">
+        <div class="text-layout-editor">
+          <label class="text-layout-control"><span>선택 문구 크기</span><input type="range" min="10" max="44" value="16" data-preview-text-size><output data-preview-text-size-output>현재 16 · 원래 16</output></label>
+          <label class="text-layout-control"><span>선택 문구 위아래</span><input type="range" min="-40" max="40" value="0" data-preview-text-y><output data-preview-text-y-output>현재 0 · 원래 0</output></label>
+        </div>
+        <button class="editor-tool-button editor-tool-reset" type="button" data-preview-text-reset><span>↺</span>원래값</button>
+      </div>
+      <div class="editor-tooldock-pane editor-tooldock-manager" data-tooldock-pane="items">
+        <div data-tooldock-items="information">${noticeManager(invitationData.notices)}</div>
+        <div data-tooldock-items="location">${transportManager(invitationData.transport)}</div>
+      </div>
+    </section>`;
 }
 
 async function decodeCropImage(file) {
@@ -340,7 +518,7 @@ async function cropProfileImage(file) {
   root.innerHTML = `<section class="image-crop-modal">
     <h2>대표사진 영역 맞추기</h2>
     <p class="micro-help">사진을 확대하고 보여줄 영역을 맞춘 뒤 적용해 주세요.</p>
-    <div class="image-crop-preview" style="--crop-x:50%;--crop-y:50%"><img src="${escapeAdminHtml(previewUrl)}" alt="대표사진 자르기 미리보기"></div>
+    <canvas class="image-crop-preview" width="480" height="600" aria-label="대표사진 자르기 미리보기"></canvas>
     <label class="btn image-upload">새 사진 업로드<input type="file" accept="image/*" data-crop-replace></label>
     <label class="field"><span>확대</span><input type="range" min="100" max="220" value="100" data-crop-zoom></label>
     <label class="field"><span>좌우 중심</span><input type="range" min="0" max="100" value="50" data-crop-x></label>
@@ -349,18 +527,34 @@ async function cropProfileImage(file) {
   </section>`;
   document.body.append(root);
   const preview = root.querySelector(".image-crop-preview");
-  const previewImage = preview.querySelector("img");
   const zoom = root.querySelector("[data-crop-zoom]");
   const x = root.querySelector("[data-crop-x]");
   const y = root.querySelector("[data-crop-y]");
+  const cropSource = () => {
+    const ratio = 4 / 5;
+    const sourceRatio = bitmap.width / bitmap.height;
+    const scale = Number(zoom.value) / 100;
+    const baseWidth = sourceRatio > ratio ? bitmap.height * ratio : bitmap.width;
+    const baseHeight = sourceRatio > ratio ? bitmap.height : bitmap.width / ratio;
+    const cropWidth = baseWidth / scale;
+    const cropHeight = baseHeight / scale;
+    return {
+      x: Math.max(0, Math.min(bitmap.width - cropWidth, (bitmap.width - cropWidth) * Number(x.value) / 100)),
+      y: Math.max(0, Math.min(bitmap.height - cropHeight, (bitmap.height - cropHeight) * Number(y.value) / 100)),
+      width: cropWidth,
+      height: cropHeight,
+    };
+  };
   const update = () => {
-    preview.style.setProperty("--crop-x", `${x.value}%`);
-    preview.style.setProperty("--crop-y", `${y.value}%`);
-    preview.style.setProperty("--crop-zoom", Number(zoom.value) / 100);
+    const source = cropSource();
+    const context = preview.getContext("2d");
+    context.clearRect(0, 0, preview.width, preview.height);
+    context.drawImage(bitmap, source.x, source.y, source.width, source.height, 0, 0, preview.width, preview.height);
   };
   zoom.addEventListener("input", update);
   x.addEventListener("input", update);
   y.addEventListener("input", update);
+  update();
   root.querySelector("[data-crop-replace]").addEventListener("change", async (event) => {
     const replacement = event.currentTarget.files[0];
     if (!replacement) return;
@@ -369,7 +563,6 @@ async function cropProfileImage(file) {
     currentFile = replacement;
     bitmap = await decodeCropImage(currentFile);
     previewUrl = URL.createObjectURL(currentFile);
-    previewImage.src = previewUrl;
     zoom.value = "100";
     x.value = "50";
     y.value = "50";
@@ -384,17 +577,11 @@ async function cropProfileImage(file) {
     };
     root.querySelector("[data-crop-cancel]").addEventListener("click", () => finish(null));
     root.querySelector("[data-crop-apply]").addEventListener("click", async () => {
-      const ratio = 4 / 5;
-      const sourceRatio = bitmap.width / bitmap.height;
-      const scale = Number(zoom.value) / 100;
-      const cropWidth = (sourceRatio > ratio ? bitmap.height * ratio : bitmap.width) / scale;
-      const cropHeight = (sourceRatio > ratio ? bitmap.height : bitmap.width / ratio) / scale;
-      const sourceX = (bitmap.width - cropWidth) * Number(x.value) / 100;
-      const sourceY = (bitmap.height - cropHeight) * Number(y.value) / 100;
+      const source = cropSource();
       const canvas = document.createElement("canvas");
       canvas.width = 960;
       canvas.height = 1200;
-      canvas.getContext("2d").drawImage(bitmap, sourceX, sourceY, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
+      canvas.getContext("2d").drawImage(bitmap, source.x, source.y, source.width, source.height, 0, 0, canvas.width, canvas.height);
       const blob = await new Promise((done) => canvas.toBlob(done, "image/webp", 0.88));
       finish(blob ? new File([blob], `${currentFile.name.replace(/\.[^.]+$/, "")}-crop.webp`, { type: "image/webp" }) : currentFile);
     });
@@ -713,21 +900,23 @@ function renderEditor(message = "", focus = "") {
   const [brideFather = "", brideMother = ""] = parentNames(bride.parents);
   const recommendations = recommendationSets(groom, bride);
   const gallery = Array.from({ length: 20 }, (_, index) => invitationData.gallery[index] || "");
+  const editorTitle = focus === "share" ? "공유 설정" : focus === "gallery" ? "갤러리 설정" : focus === "copy" ? "편집 기능" : "청첩장 기본 설정";
+  const editorActiveMenu = focus === "copy" ? "copy" : focus === "share" ? "share" : focus === "gallery" ? "content" : "editor";
   adminApp.innerHTML = `
-    ${adminHeader(focus === "copy" ? "copy" : "editor")}
-    <section class="admin-card">
+    ${adminHeader(editorActiveMenu)}
+    ${focus === "gallery" ? contentBackBar("갤러리") : ""}
+    <section class="admin-card admin-editor-view view-${escapeAdminHtml(focus || "basic")}">
       <div class="admin-editor-intro">
-        <div><p class="section-label">Wedding Workspace</p><h2>청첩장 편집</h2></div>
+        <div><p class="section-label">Wedding Workspace</p><h2>${editorTitle}</h2></div>
         <span class="admin-mode-badge">모바일 편집</span>
       </div>
       <p class="admin-message">${escapeAdminHtml(message || "수정 후 맨 아래 저장 버튼을 눌러 주세요. 사진은 선택하면 즉시 업로드됩니다.")}</p>
-      <nav class="admin-quick-actions" aria-label="빠른 편집">
+      <nav class="admin-quick-actions basic-pane" aria-label="빠른 편집">
         <button type="button" data-editor-jump="couple-settings"><strong>기본 정보</strong><span>두 사람과 예식 정보</span></button>
         <button type="button" data-editor-jump="transport-settings"><strong>오시는 길</strong><span>지하철·버스·자가용</span></button>
-        <button type="button" data-editor-jump="share-settings"><strong>공유 설정</strong><span>대표 이미지와 SEO</span></button>
       </nav>
       <form class="editor-form" id="invitation-editor">
-        <fieldset id="couple-settings"><legend>가장 먼저 입력해 주세요</legend>
+        <fieldset class="basic-pane" id="couple-settings"><legend>가장 먼저 입력해 주세요</legend>
           <p class="admin-message">여기에서 입력한 이름, 부모님 성함, 식장과 예식 일시는 아래 세부 설정에 자동으로 반영됩니다.</p>
           <div class="quick-input-grid">
             ${quickInput("couple.groom.name", "신랑 이름", groom.name)}
@@ -743,23 +932,23 @@ function renderEditor(message = "", focus = "") {
             ${quickInput("wedding.date", "예식 일시", weddingDateInputValue(invitationData.wedding.date), "datetime-local")}
           </div>
         </fieldset>
-        <fieldset id="share-settings"><legend>공유와 대표 이미지</legend>
-          ${recommendationEditor("hero.eyebrow", "메인 영문 문구", invitationData.hero.eyebrow, recommendations.hero)}
-          ${recommendationEditor("meta.title", "페이지 제목", invitationData.meta.title, recommendations.title)}
+        <fieldset class="basic-pane" id="main-media-settings"><legend>메인 화면</legend>
           ${imageField("hero.image", "메인 사진", invitationData.hero.image)}
           ${videoField("hero.video", "메인 영상 (선택)", invitationData.hero.video || "")}
+        </fieldset>
+        <fieldset class="share-pane" id="share-settings"><legend>카카오톡 공유와 SEO</legend>
           ${imageField("meta.shareImage", "카카오톡 공유 대표 이미지 (선택 · 세로 3:4 권장)", invitationData.meta.shareImage || "")}
           <p class="admin-message micro-help">공유 대표 이미지를 등록하지 않으면 메인 사진이 자동으로 동일하게 적용됩니다. 카카오톡 카드에 별도 세로 사진을 사용하려면 600 x 800px 또는 같은 3:4 비율 이미지를 등록해 주세요.</p>
+          ${recommendationEditor("meta.title", "공유 카드·검색 페이지 제목", invitationData.meta.title, recommendations.title)}
           ${textarea("meta.description", "공유 설명", invitationData.meta.description)}
           <p class="admin-message micro-help">카카오톡으로 링크를 보낼 때 대표 이미지 아래에 함께 표시되는 소개 문구입니다. 청첩장 본문에는 표시되지 않습니다.</p>
         </fieldset>
-        <div class="couple-editor-grid">
+        <div class="couple-editor-grid basic-pane">
         <fieldset class="couple-editor-card"><legend>신랑 정보</legend>
-          <div class="auto-filled-fields">
-          ${input("couple.groom.name", "이름 · 위에서 자동 반영", groom.name)}
-          ${input("couple.groom.parents", "부모님 성함 · 위에서 자동 반영", groom.parents)}
-          ${input("couple.groom.birthday", "생일 · 위에서 자동 반영", birthdayInputValue(groom.birthday), "date")}
-          </div>
+          <input type="hidden" name="couple.groom.name" value="${escapeAdminHtml(groom.name)}">
+          <input type="hidden" name="couple.groom.parents" value="${escapeAdminHtml(groom.parents)}">
+          <input type="hidden" name="couple.groom.birthday" value="${escapeAdminHtml(birthdayInputValue(groom.birthday))}">
+          <div class="auto-filled-fields"><strong>${escapeAdminHtml(groom.name)}</strong><span>${escapeAdminHtml(groom.parents)} · ${escapeAdminHtml(groom.birthday)}</span></div>
           ${input("couple.groom.relation", "부모님 성함 뒤 관계 문구 · 직접 수정", groom.relation)}
           ${input("couple.groom.phone", "연락처", groom.phone)}
           ${input("couple.groom.mbti", "MBTI", groom.mbti)}
@@ -767,11 +956,10 @@ function renderEditor(message = "", focus = "") {
           ${imageField("couple.groom.photo", "신랑 사진", groom.photo)}
         </fieldset>
         <fieldset class="couple-editor-card"><legend>신부 정보</legend>
-          <div class="auto-filled-fields">
-          ${input("couple.bride.name", "이름 · 위에서 자동 반영", bride.name)}
-          ${input("couple.bride.parents", "부모님 성함 · 위에서 자동 반영", bride.parents)}
-          ${input("couple.bride.birthday", "생일 · 위에서 자동 반영", birthdayInputValue(bride.birthday), "date")}
-          </div>
+          <input type="hidden" name="couple.bride.name" value="${escapeAdminHtml(bride.name)}">
+          <input type="hidden" name="couple.bride.parents" value="${escapeAdminHtml(bride.parents)}">
+          <input type="hidden" name="couple.bride.birthday" value="${escapeAdminHtml(birthdayInputValue(bride.birthday))}">
+          <div class="auto-filled-fields"><strong>${escapeAdminHtml(bride.name)}</strong><span>${escapeAdminHtml(bride.parents)} · ${escapeAdminHtml(bride.birthday)}</span></div>
           ${input("couple.bride.relation", "부모님 성함 뒤 관계 문구 · 직접 수정", bride.relation)}
           ${input("couple.bride.phone", "연락처", bride.phone)}
           ${input("couple.bride.mbti", "MBTI", bride.mbti)}
@@ -779,12 +967,11 @@ function renderEditor(message = "", focus = "") {
           ${imageField("couple.bride.photo", "신부 사진", bride.photo)}
         </fieldset>
         </div>
-        <fieldset><legend>예식 정보</legend>
-          <div class="auto-filled-fields">
-          ${input("wedding.date", "예식 일시 · 위에서 자동 반영", weddingDateInputValue(invitationData.wedding.date), "datetime-local")}
-          ${input("wedding.venue", "식장 이름 · 위에서 자동 반영", invitationData.wedding.venue)}
-          ${input("wedding.hall", "홀 정보 · 식장 이름 아래 줄에 표시", invitationData.wedding.hall || "")}
-          </div>
+        <fieldset class="basic-pane"><legend>예식 정보</legend>
+          <input type="hidden" name="wedding.date" value="${escapeAdminHtml(weddingDateInputValue(invitationData.wedding.date))}">
+          <input type="hidden" name="wedding.venue" value="${escapeAdminHtml(invitationData.wedding.venue)}">
+          <input type="hidden" name="wedding.hall" value="${escapeAdminHtml(invitationData.wedding.hall || "")}">
+          <div class="auto-filled-fields"><strong>${escapeAdminHtml(invitationData.wedding.venue)}</strong><span>${escapeAdminHtml(invitationData.wedding.hall || "홀 정보 없음")} · ${escapeAdminHtml(invitationData.wedding.displayDate)}</span></div>
           ${select("wedding.displayDateFormat", "화면 표시 일시 형식", invitationData.wedding.displayDateFormat || "long_ko", [["long_ko", "2026. 10. 04. 일요일 오후 12시 20분"], ["short_ko", "26-10-04 (일) 12시 20분"], ["dot_numeric", "2026.10.04 (일) 12:20"], ["english", "2026. 10. 04. 일요일 · 12:20"], ["custom", "직접 입력"]])}
           ${input("wedding.displayDateCustom", "화면 표시 일시 · 선택 후 수정 가능", invitationData.wedding.displayDateCustom || invitationData.wedding.displayDate)}
           ${input("wedding.address", "주소", invitationData.wedding.address)}
@@ -794,55 +981,51 @@ function renderEditor(message = "", focus = "") {
           </div>
           <p class="admin-message" data-venue-status>등록된 식장은 이름을 입력하면 주소가 자동으로 채워집니다. 다른 식장은 지도에서 확인 후 주소를 직접 입력해 주세요.</p>
         </fieldset>
-        <fieldset id="transport-settings"><legend>오시는 길</legend>
-          <p class="admin-message">공개 청첩장에는 지하철·기차, 버스, 자가용 순서로 표시됩니다. 실제 하객에게 필요한 문구를 항목별로 수정해 주세요.</p>
-          ${transportManager(invitationData.transport)}
+        <fieldset class="basic-pane" id="transport-settings"><legend>오시는 길</legend>
+          <p class="admin-message">교통 안내 항목 추가·삭제와 문구 수정은 편집 기능에서 오시는 길 섹션을 눌러 진행합니다.</p>
+          <button class="btn btn-secondary" type="button" data-admin-view="copy-editor">편집 기능에서 오시는 길 수정</button>
         </fieldset>
-        <div class="copy-editor-overlay" data-copy-editor-overlay hidden>
+        <section class="copy-pane" data-copy-editor-panel>
           <div class="copy-editor-page">
-            <div class="copy-editor-toolbar"><strong>문구 수정</strong><button class="btn" type="button" data-copy-editor-close>닫기</button></div>
-            <p class="admin-message">공개 청첩장처럼 보이는 화면에서 수정할 영역을 눌러 주세요. 선택한 영역만 편집 도구가 열립니다.</p>
-            <header class="copy-editor-hero" style="background-image:url('${escapeAdminHtml(invitationData.hero.image)}')">
-              <div><small>${escapeAdminHtml(invitationData.hero.eyebrow || "")}</small><strong>${escapeAdminHtml(groom.name)} · ${escapeAdminHtml(bride.name)}</strong><span>${escapeAdminHtml(invitationData.wedding.displayDate)}</span></div>
-            </header>
-            <section class="copy-editor-section" data-copy-focus="hero.introEyebrow">
-              <p class="section-label">Intro</p><h2>진입 화면</h2>
-          ${input("hero.introEyebrow", "진입 화면 영문 문구", invitationData.hero.introEyebrow || invitationData.hero.eyebrow || "")}
-          ${input("hero.introDate", "진입 화면 날짜 문구 · 비우면 예식 일시 사용", invitationData.hero.introDate || "")}
+            <div class="copy-editor-toolbar"><div><strong>편집 기능</strong><small>점선 영역을 누르면 아래 도구가 해당 영역에 맞게 바뀝니다.</small></div></div>
+            ${editorDesignPanel()}
+            <p class="admin-message copy-editor-guide">공개 청첩장에서 수정 가능한 영역만 점선으로 표시됩니다.</p>
+            <iframe class="copy-editor-public-frame" src="./index.html?copyEditorPreview=1&v=20260603-ux19" title="공개 청첩장 문구 수정 미리보기" data-copy-editor-frame></iframe>
+            <aside class="copy-editor-drawer" data-copy-editor-drawer>
+            <section class="copy-editor-section copy-editor-intro-settings">
+              <p class="section-label">Intro Overlay</p><h2>진입 화면</h2>
+              <p class="admin-message micro-help">링크 접속 직후 반투명 배경 위에서 이름이 타이핑되는 화면입니다.</p>
+          ${introDesignEditor(groom, bride)}
             </section>
+            </aside>
+            <div class="copy-editor-field-store" hidden>
           ${Object.entries(invitationData.sectionTitles || {}).map(([key, title]) => `
-            <section class="copy-editor-section" data-copy-focus="sectionTitles.${escapeAdminHtml(key)}.ko">
-              <p class="section-label">${escapeAdminHtml(title.en || key)}</p><h2>${escapeAdminHtml(title.ko || key)}</h2>
-              ${copyEditorVisual(key)}
               <div class="quick-input-grid">
               ${input(`sectionTitles.${key}.en`, `${key} 영문 타이틀`, title.en || "")}
               ${input(`sectionTitles.${key}.ko`, `${key} 국문 타이틀`, title.ko || "")}
               </div>
               ${key === "invitation" ? `${recommendationEditor("invitation.title", "초대 문구 제목", invitationData.invitation.title, recommendations.invitationTitle)}
-              ${recommendationEditor("invitation.paragraphs", "초대 문구", invitationData.invitation.paragraphs.join("\n\n"), recommendations.invitationParagraphs, true, true)}` : ""}
-            </section>`).join("")}
-            <section class="copy-editor-section" data-copy-focus="notice.0.text">
-              <p class="section-label">Details</p><h2>안내 세부 설정</h2>
-          <p class="admin-message micro-help">교통 안내는 항목별로 수정하거나 숨길 수 있습니다. 식장을 바꾸면 등록된 기본 교통 정보로 교체됩니다.</p>
-          ${noticeManager(invitationData.notices)}
-          <p class="admin-message">식장 안내는 최대 3개까지 표시됩니다. 추천을 고른 뒤 문구를 자유롭게 수정할 수 있습니다.</p>
+              ${textarea("invitation.paragraphs", "초대 문구", invitationData.invitation.paragraphs.join("\n\n"))}` : ""}`).join("")}
+          ${textarea("sectionDescriptions.attendance", "참석 의사 안내 문구", invitationData.sectionDescriptions?.attendance || "신랑, 신부에게 참석의사를\n미리 전달할 수 있어요.")}
+          ${textarea("sectionDescriptions.account", "계좌 안내 문구", invitationData.sectionDescriptions?.account || "참석이 어려우신 분들을 위해\n계좌번호를 안내해 드립니다.")}
+          ${textarea("sectionDescriptions.guestbook", "방명록 안내 문구", invitationData.sectionDescriptions?.guestbook || "따뜻한 마음을 짧게 남겨 주세요.")}
           ${accountManager(invitationData.accounts)}
           ${textarea("ending.text", "마지막 문구", invitationData.ending.text)}
           ${imageField("ending.image", "마지막 사진", invitationData.ending.image)}
-            </section>
-            <button class="btn btn-primary editor-save copy-editor-save" type="submit">최종 저장</button>
+            </div>
+            <button class="btn btn-primary editor-save copy-editor-save" type="submit">문구 저장</button>
           </div>
-        </div>
-        <details class="editor-details" id="gallery-settings"><summary>갤러리</summary><div class="editor-details-body">
+        </section>
+        <section class="editor-details content-pane content-settings-card" id="gallery-settings"><div class="editor-details-title">갤러리</div><div class="editor-details-body">
           <p class="admin-message">최대 20장까지 등록할 수 있습니다. 공개 화면에는 접속할 때마다 등록 사진 중 무작위 6장이 미리보기로 표시됩니다.</p>
           ${select("galleryDisplayMode", "사진 확대 화면 표시 방식", invitationData.galleryDisplayMode || "portrait", [["portrait", "세로형 화면에 맞추기"], ["original", "원본 사진 비율 유지"]])}
           ${galleryManager(gallery)}
-        </div></details>
-        <details class="editor-details"><summary>하객 사진·영상 업로드</summary><div class="editor-details-body">
+        </div></section>
+        <section class="editor-details content-pane content-settings-card"><div class="editor-details-title">하객 사진·영상 업로드</div><div class="editor-details-body">
           ${input("guestPhotos.eventDate", "업로드 기능이 열리는 날짜", invitationData.guestPhotos?.eventDate || "2026-10-04", "date")}
           ${select("guestPhotos.previewVisible", "날짜와 관계없이 미리보기 표시", String(invitationData.guestPhotos?.previewVisible ?? true), [["true", "표시"], ["false", "숨김"]])}
-        </div></details>
-        <details class="editor-details"><summary>섹션 순서와 노출 설정</summary><div class="editor-details-body">
+        </div></section>
+        <details class="editor-details basic-pane"><summary>섹션 순서와 노출 설정</summary><div class="editor-details-body">
           <p class="admin-message">표시할 섹션을 체크하고 화살표 버튼으로 순서를 정해 주세요.</p>
           <div class="section-order-columns">
             ${sectionOrderEditor("sectionSettings.preWedding", "결혼식 전날까지", invitationData.sectionSettings?.preWedding)}
@@ -859,14 +1042,9 @@ function renderEditor(message = "", focus = "") {
     </section>`;
   bindAdminNavigation();
   bindEditor();
-  if (focus === "copy") {
-    document.querySelector("[data-copy-editor-overlay]").hidden = false;
-    document.body.classList.add("copy-editor-open");
-  }
   if (focus === "share") document.querySelector("#share-settings")?.scrollIntoView({ behavior: "smooth", block: "start" });
   if (focus === "gallery") {
     const gallerySettings = document.querySelector("#gallery-settings");
-    gallerySettings.open = true;
     gallerySettings.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
@@ -885,7 +1063,7 @@ function editorData(form) {
   const next = JSON.parse(JSON.stringify(invitationData));
   const fields = new FormData(form);
   for (const [name, value] of fields.entries()) {
-    if (name === "appearance.preset" || name.startsWith("notice.") || name.startsWith("noticePreset.") || name.startsWith("account.") || name.startsWith("transport.")) {
+    if (name === "appearance.preset" || name === "editorPresetId" || name.startsWith("notice.") || name.startsWith("noticePreset.") || name.startsWith("account.") || name.startsWith("transport.")) {
       continue;
     }
     if (name === "guestPhotos.previewVisible") {
@@ -923,6 +1101,19 @@ function editorData(form) {
     number: fields.get(`account.${index}.number`)?.trim() || "",
     relation: fields.get(`account.${index}.relation`)?.trim() || "",
   }));
+  const selectedPreset = next.designSystem?.themes?.find((theme) => theme.id === fields.get("editorPresetId"));
+  if (selectedPreset) {
+    next.appearance.theme = selectedPreset.type === "color" ? selectedPreset.id : (next.appearance.theme || "sky");
+    next.appearance.movieConcept = selectedPreset.type === "movie" ? selectedPreset.id : "none";
+    next.appearance.design = next.appearance.design || {};
+    next.appearance.design.presetId = selectedPreset.id;
+  }
+  next.appearance.design = next.appearance.design || {};
+  next.appearance.design.heroEyebrowEnabled = fields.get("appearance.design.heroEyebrowEnabled") === "on";
+  next.appearance.design.heroNamesEnabled = fields.get("appearance.design.heroNamesEnabled") === "on";
+  next.appearance.design.heroDateEnabled = fields.get("appearance.design.heroDateEnabled") === "on";
+  next.appearance.design.heroTextXPercent = Number(fields.get("appearance.design.heroTextXPercent") || next.appearance.design.heroTextXPercent || 50);
+  next.appearance.design.heroTextYPercent = Number(fields.get("appearance.design.heroTextYPercent") || next.appearance.design.heroTextYPercent || 76);
   next.wedding.displayDate = form.elements["wedding.displayDateCustom"].value.trim();
   next.wedding.mapLinks = mapLinksFor(next.wedding.venue, next.wedding.address);
   return next;
@@ -930,21 +1121,405 @@ function editorData(form) {
 
 function bindEditor() {
   const form = document.querySelector("#invitation-editor");
-  const copyEditor = form.querySelector("[data-copy-editor-overlay]");
-  form.querySelector("[data-copy-editor-close]")?.addEventListener("click", () => {
-    copyEditor.hidden = true;
-    document.body.classList.remove("copy-editor-open");
-  });
-  copyEditor.querySelectorAll("[data-copy-focus]").forEach((section) => {
-    section.addEventListener("click", (event) => {
-      if (event.target.closest("input, textarea, select, button, a, label")) return;
-      const target = form.elements[section.dataset.copyFocus];
-      if (!target) return;
-      copyEditor.querySelectorAll(".is-editing").forEach((item) => item.classList.remove("is-editing"));
-      section.classList.add("is-editing");
-      target.focus();
-      target.scrollIntoView({ behavior: "smooth", block: "center" });
+  const copyEditor = form.querySelector("[data-copy-editor-panel]");
+  const updateIntroDesignPreview = () => {
+    const preview = copyEditor.querySelector("[data-intro-design-preview]");
+    if (!preview) return;
+    const value = (name, fallback) => form.elements[`hero.introDesign.${name}`]?.value || fallback;
+    preview.style.setProperty("--intro-align", form.elements["hero.introDesign.align"]?.value || "center");
+    preview.style.setProperty("--intro-eyebrow-size", `${value("eyebrowSize", 11)}px`);
+    preview.style.setProperty("--intro-name-size", `${value("nameSize", 30)}px`);
+    preview.style.setProperty("--intro-date-size", `${value("dateSize", 11)}px`);
+    preview.style.setProperty("--intro-eyebrow-name-gap", `${value("eyebrowNameGap", 10)}px`);
+    preview.style.setProperty("--intro-name-date-gap", `${value("nameDateGap", 10)}px`);
+    preview.style.setProperty("--intro-offset-y", `${value("offsetY", 0)}px`);
+    preview.querySelector("[data-intro-preview-eyebrow]").textContent = form.elements["hero.introEyebrow"].value || invitationData.hero.eyebrow || "our wedding day";
+    preview.querySelector("[data-intro-preview-name]").textContent = form.elements["hero.introName"].value || `${form.elements["couple.groom.name"].value} · ${form.elements["couple.bride.name"].value}`;
+    preview.querySelector("[data-intro-preview-date]").textContent = form.elements["hero.introDate"].value || form.elements["wedding.displayDateCustom"].value;
+  };
+  copyEditor.querySelectorAll('[name^="hero.intro"]').forEach((field) => field.addEventListener("input", () => {
+    if (field.type === "range") field.nextElementSibling.textContent = field.value;
+    updateIntroDesignPreview();
+  }));
+  copyEditor.querySelector('[name="hero.introDesign.align"]')?.addEventListener("change", updateIntroDesignPreview);
+  updateIntroDesignPreview();
+  const toolPanel = copyEditor.querySelector("[data-editor-tool-panel]");
+  let activeProfileTarget = "";
+  let activeTextTarget = null;
+  let activeInlineEditor = null;
+  let frameDocumentRef = null;
+  const previewDraft = () => {
+    try {
+      return editorData(form);
+    } catch {
+      return JSON.parse(JSON.stringify(invitationData));
+    }
+  };
+  const refreshFrameAppearance = () => {
+    const frameWindow = copyEditor.querySelector("[data-copy-editor-frame]")?.contentWindow;
+    const frameDocument = frameWindow?.document;
+    if (!frameWindow || !frameDocument?.body) return;
+    const draft = previewDraft();
+    frameWindow.WEDDING_DESIGN?.normalize(draft);
+    frameWindow.WEDDING_DESIGN?.apply(draft, frameDocument.body);
+    const position = draft.hero?.contentPosition || "bottom";
+    const heroContent = frameDocument.querySelector(".hero-content");
+    if (heroContent) {
+      heroContent.classList.remove("hero-content-top", "hero-content-middle", "hero-content-bottom");
+      heroContent.classList.add(`hero-content-${position}`);
+    }
+  };
+  const refreshFrameLists = () => {
+    const frameDocument = frameDocumentRef;
+    if (!frameDocument) return;
+    const draft = previewDraft();
+    const transportWrap = frameDocument.querySelector(".transport");
+    if (transportWrap) {
+      transportWrap.innerHTML = (draft.transport || [])
+        .filter((item) => !item.hidden)
+        .map((item) => `<div><strong>${escapeAdminHtml(item.title)}</strong>${escapeAdminHtml(item.text)}</div>`)
+        .join("");
+    }
+    const notices = (draft.notices || []).filter((notice) => !notice.hidden);
+    const informationSlide = frameDocument.querySelector("[data-information-slide]");
+    if (informationSlide) {
+      informationSlide.innerHTML = notices.length
+        ? `<article class="information-slide"><h3>${escapeAdminHtml(notices[0].title)}</h3><p>${escapeAdminHtml(notices[0].text)}</p></article>`
+        : '<article class="information-slide"><p>표시할 식장 안내가 없습니다.</p></article>';
+    }
+    frameDocument.querySelectorAll(".information-dots i").forEach((dot, index) => {
+      dot.hidden = index >= notices.length;
+      dot.classList.toggle("is-active", index === 0);
     });
+    frameDocument.querySelector(".information-slider")?.setAttribute("data-information-index", "0");
+    frameDocument.querySelectorAll(".transport, .information-slider").forEach((item) => item.classList.add("copy-editable-target"));
+  };
+  const refreshSelectedTextStyle = () => {
+    if (activeInlineEditor?.field?.isConnected) activeInlineEditor.commit();
+    if (!activeTextTarget) return;
+    const sizeField = copyEditor.querySelector("[data-preview-text-size]");
+    const offsetField = copyEditor.querySelector("[data-preview-text-y]");
+    const size = sizeField?.value;
+    const offset = offsetField?.value || "0";
+    if (size) activeTextTarget.style.fontSize = `${size}px`;
+    activeTextTarget.style.transform = `translateY(${offset}px)`;
+    activeTextTarget.style.position = "relative";
+    activeTextTarget.style.zIndex = "18";
+    activeTextTarget.dataset.textSize = size || "";
+    activeTextTarget.dataset.textOffsetY = offset;
+    copyEditor.querySelector("[data-preview-text-size-output]")?.replaceChildren(`현재 ${size} · 원래 ${activeTextTarget.dataset.originalTextSize || size}`);
+    copyEditor.querySelector("[data-preview-text-y-output]")?.replaceChildren(`현재 ${offset} · 원래 ${activeTextTarget.dataset.originalTextOffsetY || 0}`);
+  };
+  const selectedTranslateY = (target) => {
+    const match = /translateY\((-?\d+(?:\.\d+)?)px\)/.exec(target.style.transform || "");
+    return match ? Number(match[1]) : 0;
+  };
+  const prepareTextSliders = (target) => {
+    const computed = frameDocumentRef?.defaultView?.getComputedStyle(target);
+    const currentSize = Math.round(Number.parseFloat(target.style.fontSize || computed?.fontSize || "16"));
+    const currentOffset = Math.round(Number(target.dataset.textOffsetY || selectedTranslateY(target) || 0));
+    target.dataset.originalTextSize ||= String(currentSize);
+    target.dataset.originalTextOffsetY ||= String(currentOffset);
+    const sizeField = copyEditor.querySelector("[data-preview-text-size]");
+    const yField = copyEditor.querySelector("[data-preview-text-y]");
+    if (sizeField) sizeField.value = String(Math.max(Number(sizeField.min), Math.min(Number(sizeField.max), currentSize)));
+    if (yField) yField.value = String(Math.max(Number(yField.min), Math.min(Number(yField.max), currentOffset)));
+    copyEditor.querySelector("[data-preview-text-size-output]")?.replaceChildren(`현재 ${sizeField?.value || currentSize} · 원래 ${target.dataset.originalTextSize}`);
+    copyEditor.querySelector("[data-preview-text-y-output]")?.replaceChildren(`현재 ${yField?.value || currentOffset} · 원래 ${target.dataset.originalTextOffsetY}`);
+  };
+  const resetSelectedTextStyle = () => {
+    if (activeInlineEditor?.field?.isConnected) activeInlineEditor.commit();
+    if (!activeTextTarget) return;
+    const size = activeTextTarget.dataset.originalTextSize || "16";
+    const offset = activeTextTarget.dataset.originalTextOffsetY || "0";
+    const sizeField = copyEditor.querySelector("[data-preview-text-size]");
+    const yField = copyEditor.querySelector("[data-preview-text-y]");
+    if (sizeField) sizeField.value = size;
+    if (yField) yField.value = offset;
+    refreshSelectedTextStyle();
+  };
+  const refreshFrameMedia = (target, url, type = "image") => {
+    if (!frameDocumentRef) return;
+    const mediaStyleText = url ? `url("${url.replace(/"/g, "%22")}")` : "";
+    if (target === "hero.image") {
+      const heroMedia = frameDocumentRef.querySelector(".hero-media");
+      if (!heroMedia) return;
+      heroMedia.innerHTML = "";
+      heroMedia.style.backgroundImage = mediaStyleText;
+    }
+    if (target === "hero.video") {
+      const heroMedia = frameDocumentRef.querySelector(".hero-media");
+      if (!heroMedia) return;
+      heroMedia.innerHTML = url ? `<video src="${escapeAdminHtml(url)}" autoplay muted loop playsinline></video>` : "";
+    }
+    if (target === "couple.groom.photo" || target === "couple.bride.photo") {
+      const index = target === "couple.groom.photo" ? 0 : 1;
+      const profilePhoto = frameDocumentRef.querySelectorAll(".profile-photo")[index];
+      if (profilePhoto) profilePhoto.style.backgroundImage = mediaStyleText;
+    }
+  };
+  const setToolDock = (title, help, activeTab = "media", context = "text") => {
+    if (!toolPanel) return;
+    toolPanel.hidden = false;
+    toolPanel.classList.remove("is-collapsed");
+    toolPanel.dataset.context = context;
+    toolPanel.querySelector("[data-tooldock-title]").textContent = title;
+    toolPanel.querySelector("[data-tooldock-help]").textContent = help;
+    toolPanel.querySelectorAll("[data-tooldock-tab]").forEach((button) => {
+      const tab = button.dataset.tooldockTab;
+      const visible = context === "hero"
+        ? ["media", "frame", "text", "position"].includes(tab)
+        : context === "profile"
+          ? tab === "media"
+          : context === "information" || context === "location"
+            ? tab === "items"
+            : tab === "text-copy"
+              ? tab === "style"
+              : false;
+      button.hidden = !visible;
+      button.classList.toggle("is-active", visible && tab === activeTab);
+    });
+    toolPanel.querySelectorAll("[data-tooldock-pane]").forEach((pane) => {
+      pane.classList.toggle("is-active", pane.dataset.tooldockPane === activeTab);
+    });
+    toolPanel.querySelectorAll("[data-tool-context]").forEach((button) => {
+      button.hidden = button.dataset.toolContext !== context;
+    });
+    toolPanel.querySelectorAll("[data-tooldock-items]").forEach((item) => {
+      item.hidden = item.dataset.tooldockItems !== context;
+    });
+  };
+  const triggerFileInput = (selector) => {
+    const inputElement = form.querySelector(selector);
+    if (!inputElement) return alert("이 항목의 업로드 입력창을 찾지 못했습니다.");
+    inputElement.click();
+  };
+  const triggerButton = (selector) => {
+    const button = form.querySelector(selector);
+    if (!button) return alert("먼저 사진을 업로드한 뒤 영역 맞추기를 사용할 수 있습니다.");
+    button.click();
+  };
+  const bindDesignControls = () => {
+    const preset = form.elements.editorPresetId;
+    const presetHidden = form.elements["appearance.design.presetId"];
+    const textThemeHidden = form.elements["appearance.design.heroTextTheme"];
+    preset?.addEventListener("change", () => {
+      presetHidden.value = preset.value;
+      refreshFrameAppearance();
+    });
+    copyEditor.querySelectorAll("[data-design-text-theme]").forEach((button) => button.addEventListener("click", () => {
+      textThemeHidden.value = button.dataset.designTextTheme;
+      copyEditor.querySelectorAll("[data-design-text-theme]").forEach((item) => item.classList.toggle("is-selected", item === button));
+      setToolDock("메인 문구 테마", "가로로 밀어 문구 레이아웃을 고르고 저장해 주세요.", "text", "hero");
+      refreshFrameAppearance();
+    }));
+    copyEditor.querySelectorAll('.editor-tooldock input[type="range"]').forEach((field) => {
+      field.addEventListener("input", () => {
+        if (field.dataset.previewTextSize || field.dataset.previewTextY) {
+          refreshSelectedTextStyle();
+        } else {
+          field.nextElementSibling.textContent = field.value;
+          refreshFrameAppearance();
+        }
+      });
+    });
+    copyEditor.querySelector("[data-preview-text-reset]")?.addEventListener("click", resetSelectedTextStyle);
+    copyEditor.querySelectorAll(".editor-tooldock select, .editor-tooldock input").forEach((field) => {
+      if (field.type === "file" || field.type === "range") return;
+      field.addEventListener("change", refreshFrameAppearance);
+    });
+    copyEditor.querySelectorAll("[data-tooldock-tab]").forEach((button) => {
+      button.addEventListener("click", () => setToolDock(
+        toolPanel.querySelector("[data-tooldock-title]").textContent || "편집 도구",
+        toolPanel.querySelector("[data-tooldock-help]").textContent || "수정할 항목을 고르세요.",
+        button.dataset.tooldockTab,
+        toolPanel.dataset.context || "text"
+      ));
+    });
+    copyEditor.querySelector("[data-tooldock-collapse]")?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      toolPanel.classList.add("is-collapsed");
+    });
+    toolPanel?.addEventListener("click", (event) => {
+      if (toolPanel.classList.contains("is-collapsed") && event.target.closest(".editor-tooldock-head") && !event.target.closest("button")) {
+        toolPanel.classList.remove("is-collapsed");
+      }
+    });
+    copyEditor.querySelectorAll("[data-tool-action]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const action = button.dataset.toolAction;
+        if (action === "hero-image") triggerFileInput('[data-image-target="hero.image"]');
+        if (action === "hero-video") triggerFileInput('[data-video-target="hero.video"]');
+        if (action === "groom-photo") triggerFileInput('[data-image-target="couple.groom.photo"]');
+        if (action === "bride-photo") triggerFileInput('[data-image-target="couple.bride.photo"]');
+        if (action === "profile-crop" && activeProfileTarget) triggerButton(`[data-image-crop-edit="${activeProfileTarget}"]`);
+      });
+    });
+  };
+  bindDesignControls();
+  const onboarding = copyEditor.querySelector("[data-editor-onboarding]");
+  const closeOnboarding = () => onboarding?.setAttribute("hidden", "");
+  copyEditor.querySelector("[data-editor-start-close]")?.addEventListener("click", closeOnboarding);
+  copyEditor.querySelector("[data-editor-theme-open]")?.addEventListener("click", () => onboarding?.removeAttribute("hidden"));
+    copyEditor.querySelector("[data-editor-start-apply]")?.addEventListener("click", () => {
+      closeOnboarding();
+    });
+  copyEditor.querySelectorAll("[data-onboarding-preset]").forEach((button) => {
+    button.addEventListener("click", () => {
+      form.elements.editorPresetId.value = button.dataset.onboardingPreset;
+      form.elements["appearance.design.presetId"].value = button.dataset.onboardingPreset;
+      copyEditor.querySelectorAll("[data-onboarding-preset]").forEach((item) => item.classList.toggle("is-selected", item === button));
+      refreshFrameAppearance();
+    });
+  });
+  copyEditor.querySelectorAll("[data-onboarding-text-theme]").forEach((button) => {
+    button.addEventListener("click", () => {
+      form.elements["appearance.design.heroTextTheme"].value = button.dataset.onboardingTextTheme;
+      copyEditor.querySelectorAll("[data-onboarding-text-theme]").forEach((item) => item.classList.toggle("is-selected", item === button));
+      copyEditor.querySelectorAll("[data-design-text-theme]").forEach((item) => item.classList.toggle("is-selected", item.dataset.designTextTheme === button.dataset.onboardingTextTheme));
+      refreshFrameAppearance();
+    });
+  });
+  copyEditor.querySelector("[data-copy-editor-frame]")?.addEventListener("load", (event) => {
+    const frameDocument = event.currentTarget.contentDocument;
+    if (!frameDocument) return;
+    frameDocumentRef = frameDocument;
+    refreshFrameAppearance();
+    const sectionIdMap = { invitation: "invitation", "about-us": "aboutUs", "wedding-day": "weddingDay", location: "location", gallery: "gallery", "wedding-snap": "weddingSnap", information: "information", attendance: "attendance", account: "account", guestbook: "guestbook" };
+    const syncField = (name, value) => {
+      form.querySelectorAll(`[name="${name}"]`).forEach((field) => { field.value = value; });
+    };
+    const editableSelector = ".hero-media, .profile-card, .profile-photo, .hero-eyebrow, .hero-names, .hero-date, .section-label, .section-title, .location-venue, .location-hall, .location-address, .transport, .transport div, .information-slider, .information-slide, #attendance .subtle, #account .subtle, #guestbook .subtle, .invitation-copy, .ending-content .preserve";
+    const markEditableAreas = () => {
+      frameDocument.querySelectorAll(".hero-media, .profile-card, .hero-eyebrow, .hero-names, .hero-date, .section-label, .section-title, .location-venue, .location-hall, .location-address, .transport, .information-slider, #attendance .subtle, #account .subtle, #guestbook .subtle, .invitation-copy, .ending-content .preserve").forEach((item) => {
+        item.classList.add("copy-editable-target");
+      });
+      frameDocument.querySelector(".hero-media")?.setAttribute("data-edit-label", "메인 이미지·영상");
+      frameDocument.querySelector(".hero-eyebrow")?.setAttribute("data-edit-label", "메인 영문문구");
+      frameDocument.querySelector(".hero-date")?.setAttribute("data-edit-label", "메인 날짜");
+      frameDocument.querySelectorAll(".section-label").forEach((item) => item.setAttribute("data-edit-label", "영문 타이틀"));
+      frameDocument.querySelectorAll(".section-title").forEach((item) => item.setAttribute("data-edit-label", "국문 타이틀"));
+      frameDocument.querySelectorAll(".invitation-copy").forEach((item) => item.setAttribute("data-edit-label", "초대글"));
+      frameDocument.querySelector(".location-venue")?.setAttribute("data-edit-label", "식장명");
+      frameDocument.querySelector(".location-hall")?.setAttribute("data-edit-label", "홀 정보");
+      frameDocument.querySelector(".location-address")?.setAttribute("data-edit-label", "주소");
+      frameDocument.querySelector(".transport")?.setAttribute("data-edit-label", "교통 안내 항목");
+      frameDocument.querySelector(".information-slider")?.setAttribute("data-edit-label", "식장 안내 항목");
+      frameDocument.querySelector("#attendance .subtle")?.setAttribute("data-edit-label", "참석 안내 문구");
+      frameDocument.querySelector("#account .subtle")?.setAttribute("data-edit-label", "계좌 안내 문구");
+      frameDocument.querySelector("#guestbook .subtle")?.setAttribute("data-edit-label", "방명록 안내 문구");
+      frameDocument.querySelector(".ending-content .preserve")?.setAttribute("data-edit-label", "마지막 문구");
+      frameDocument.querySelectorAll(".profile-card").forEach((card, index) => card.setAttribute("data-edit-label", index === 0 ? "신랑 대표이미지" : "신부 대표이미지"));
+    };
+    markEditableAreas();
+    const inlineTarget = (target) => {
+      const section = target.closest(".section");
+      const key = sectionIdMap[section?.id];
+      if (target.matches(".hero-eyebrow")) return { name: "hero.eyebrow" };
+      if (target.matches(".hero-date")) return { name: "wedding.displayDateCustom" };
+      if (target.matches(".section-label") && key) return { name: `sectionTitles.${key}.en` };
+      if (target.matches(".section-title") && key) return { name: `sectionTitles.${key}.ko` };
+      if (target.matches(".location-venue")) return { name: "wedding.venue" };
+      if (target.matches(".location-hall")) return { name: "wedding.hall" };
+      if (target.matches(".location-address")) return { name: "wedding.address" };
+      if (target.matches("#attendance .subtle")) return { name: "sectionDescriptions.attendance", multiline: true };
+      if (target.matches("#account .subtle")) return { name: "sectionDescriptions.account", multiline: true };
+      if (target.matches("#guestbook .subtle")) return { name: "sectionDescriptions.guestbook", multiline: true };
+      if (target.matches(".ending-content .preserve")) return { name: "ending.text", multiline: true };
+      if (target.matches(".invitation-copy")) return { name: "invitation.paragraphs", multiline: true, paragraphIndex: [...section.querySelectorAll(".invitation-copy")].indexOf(target) };
+      return null;
+    };
+    const mediaTarget = (target) => {
+      const profile = target.closest(".profile-card");
+      if (profile) return [...frameDocument.querySelectorAll(".profile-card")].indexOf(profile) === 0 ? "groom" : "bride";
+      if (target.closest(".hero-media")) return "hero";
+      return "";
+    };
+    const openInlineEditor = (target, config) => {
+      if (activeInlineEditor?.field?.isConnected) activeInlineEditor.commit();
+      else frameDocument.querySelector("[data-copy-inline-editor]")?.dispatchEvent(new Event("blur"));
+      const originalText = target.textContent;
+      const field = frameDocument.createElement(config.multiline ? "textarea" : "input");
+      field.className = "copy-inline-editor";
+      field.dataset.copyInlineEditor = "";
+      field.value = originalText;
+      if (config.multiline) field.rows = Math.max(2, originalText.split("\n").length);
+      target.replaceWith(field);
+      const update = () => {
+        if (Number.isInteger(config.paragraphIndex)) {
+          const paragraphsField = form.elements["invitation.paragraphs"];
+          const paragraphs = paragraphsField.value.split(/\n\s*\n/);
+          paragraphs[config.paragraphIndex] = field.value;
+          syncField(config.name, paragraphs.join("\n\n"));
+        } else {
+          syncField(config.name, field.value);
+        }
+      };
+      field.addEventListener("input", update);
+      const commit = () => {
+        if (!field.isConnected) return;
+        update();
+        target.textContent = field.value;
+        field.replaceWith(target);
+        activeTextTarget = target;
+        refreshSelectedTextStyle();
+        activeInlineEditor = null;
+      };
+      activeInlineEditor = { field, target, commit };
+      field.addEventListener("blur", commit, { once: true });
+      field.focus();
+      field.select();
+    };
+    frameDocument.addEventListener("click", (clickEvent) => {
+      const target = clickEvent.target.closest(editableSelector);
+      if (!target || target.matches("[data-copy-inline-editor]")) {
+        if (!target && toolPanel && !toolPanel.hidden) toolPanel.classList.add("is-collapsed");
+        if (clickEvent.target.closest("a, button, input, select, textarea, label")) {
+          clickEvent.preventDefault();
+          clickEvent.stopImmediatePropagation();
+        }
+        return;
+      }
+      const media = mediaTarget(target);
+      if (media) {
+        clickEvent.preventDefault();
+        clickEvent.stopImmediatePropagation();
+        if (media === "hero") {
+          activeProfileTarget = "";
+          setToolDock("메인 이미지", "이미지, 영상, 꾸밈, 메인문구테마를 아래 탭에서 수정합니다.", "media", "hero");
+        } else {
+          const fieldName = media === "groom" ? "couple.groom.photo" : "couple.bride.photo";
+          activeProfileTarget = fieldName;
+          setToolDock(media === "groom" ? "신랑 대표이미지" : "신부 대표이미지", "사진 업로드 또는 영역 맞추기만 사용할 수 있습니다.", "media", "profile");
+          const primaryAction = media === "groom" ? "groom-photo" : "bride-photo";
+          toolPanel.querySelectorAll("[data-tool-action]").forEach((button) => button.classList.toggle("is-primary", button.dataset.toolAction === primaryAction));
+        }
+        return;
+      }
+      if (target.closest("#information")) {
+        clickEvent.preventDefault();
+        clickEvent.stopImmediatePropagation();
+        activeTextTarget = null;
+        setToolDock("식장 안내", "항목을 추가, 삭제하거나 내용을 수정합니다.", "items", "information");
+        return;
+      }
+      if (target.closest("#location") && target.closest(".transport")) {
+        clickEvent.preventDefault();
+        clickEvent.stopImmediatePropagation();
+        activeTextTarget = null;
+        setToolDock("교통 안내", "오시는 길의 교통 항목을 추가, 삭제하거나 수정합니다.", "items", "location");
+        return;
+      }
+      const config = inlineTarget(target);
+      if (!config) return;
+      clickEvent.preventDefault();
+      clickEvent.stopImmediatePropagation();
+      activeProfileTarget = "";
+      activeTextTarget = target;
+      setToolDock("문구 글자/위치", "문구는 그 자리에서 수정하고, 크기와 위치는 아래에서 미리 조정합니다.", "style", "text-copy");
+      prepareTextSliders(target);
+      openInlineEditor(target, config);
+    }, true);
   });
   document.querySelectorAll("[data-editor-jump]").forEach((button) => button.addEventListener("click", () => {
     document.querySelector(`#${button.dataset.editorJump}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -997,6 +1572,7 @@ function bindEditor() {
   const renderNoticeItems = (items) => {
     noticeList.innerHTML = items.slice(0, 3).map(noticeEditor).join("");
     noticeAdd.disabled = items.length >= 3;
+    refreshFrameLists();
   };
   noticeManagerElement.addEventListener("click", (event) => {
     if (event.target.closest("[data-notice-add]")) {
@@ -1010,6 +1586,8 @@ function bindEditor() {
     items.splice(index, 1);
     renderNoticeItems(items);
   });
+  noticeManagerElement.addEventListener("input", refreshFrameLists);
+  noticeManagerElement.addEventListener("change", refreshFrameLists);
   noticeManagerElement.addEventListener("change", (event) => {
     const preset = event.target.closest('select[name^="noticePreset."]');
     if (!preset) return;
@@ -1018,6 +1596,7 @@ function bindEditor() {
     const editor = preset.closest("[data-notice-editor]");
     editor.querySelector('input[name*=".title"]').value = selected.title;
     editor.querySelector('textarea[name*=".text"]').value = selected.text;
+    refreshFrameLists();
   });
   renderNoticeItems(noticeItems());
   const transportManagerElement = form.querySelector("[data-transport-manager]");
@@ -1027,7 +1606,10 @@ function bindEditor() {
     text: editor.querySelector('textarea[name*=".text"]').value,
     hidden: editor.querySelector('input[name*=".hidden"]').checked,
   }));
-  const renderTransportItems = (items) => { transportList.innerHTML = items.map(transportEditor).join(""); };
+  const renderTransportItems = (items) => {
+    transportList.innerHTML = items.map(transportEditor).join("");
+    refreshFrameLists();
+  };
   transportManagerElement.addEventListener("click", (event) => {
     if (event.target.closest("[data-transport-add]")) renderTransportItems([...transportItems(), { title: "", text: "", hidden: false }]);
     const removeButton = event.target.closest("[data-transport-remove]");
@@ -1036,6 +1618,8 @@ function bindEditor() {
     items.splice([...transportList.querySelectorAll("[data-transport-editor]")].indexOf(removeButton.closest("[data-transport-editor]")), 1);
     renderTransportItems(items);
   });
+  transportManagerElement.addEventListener("input", refreshFrameLists);
+  transportManagerElement.addEventListener("change", refreshFrameLists);
   const updateDisplayDate = (force = false) => {
     const format = form.elements["wedding.displayDateFormat"].value;
     if (format === "custom") return;
@@ -1108,6 +1692,7 @@ function bindEditor() {
         form.elements[fileInput.dataset.imageTarget].value = url;
         const preview = form.querySelector(`[data-image-preview="${fileInput.dataset.imageTarget}"]`);
         preview.innerHTML = `<img src="${escapeAdminHtml(url)}" alt="업로드한 사진 미리보기">`;
+        refreshFrameMedia(fileInput.dataset.imageTarget, url);
         label.firstChild.textContent = "업로드 완료";
       } catch (error) {
         label.firstChild.textContent = "업로드 실패";
@@ -1132,6 +1717,7 @@ function bindEditor() {
         const url = await window.RSVP_STORAGE.uploadInvitationImage(file, target.replace(/\./g, "-"));
         form.elements[target].value = url;
         form.querySelector(`[data-image-preview="${target}"]`).innerHTML = `<img src="${escapeAdminHtml(url)}" alt="업로드한 사진 미리보기">`;
+        refreshFrameMedia(target, url);
       } catch (error) {
         alert(`대표사진 영역을 적용하지 못했습니다.\n${error.message || "잠시 후 다시 시도해 주세요."}`);
       } finally {
@@ -1150,6 +1736,7 @@ function bindEditor() {
         const url = await window.RSVP_STORAGE.uploadInvitationMedia(file, fileInput.dataset.videoTarget.replace(/\./g, "-"));
         form.elements[fileInput.dataset.videoTarget].value = url;
         form.querySelector(`[data-video-preview="${fileInput.dataset.videoTarget}"]`).innerHTML = `<video src="${escapeAdminHtml(url)}" muted controls playsinline></video>`;
+        refreshFrameMedia(fileInput.dataset.videoTarget, url, "video");
         label.firstChild.textContent = "업로드 완료";
       } catch (error) {
         label.firstChild.textContent = "업로드 실패";
@@ -1162,6 +1749,7 @@ function bindEditor() {
       const target = button.dataset.videoRemove;
       form.elements[target].value = "";
       form.querySelector(`[data-video-preview="${target}"]`).innerHTML = "<span>등록된 영상이 없습니다.</span>";
+      refreshFrameMedia(target, "", "video");
     });
   });
   form.querySelectorAll("[data-image-remove]").forEach((button) => {
@@ -1169,6 +1757,7 @@ function bindEditor() {
       const target = button.dataset.imageRemove;
       form.elements[target].value = "";
       form.querySelector(`[data-image-preview="${target}"]`).innerHTML = "<span>등록된 사진이 없습니다.</span>";
+      refreshFrameMedia(target, "");
     });
   });
   const galleryValues = () => Array.from({ length: 20 }, (_, index) => form.elements[`gallery.${index}`].value).filter(Boolean);
@@ -1227,10 +1816,14 @@ function bindEditor() {
       button.textContent = "저장 중...";
     });
     try {
+      const keepFocus = document.querySelector(".admin-editor-view")?.classList.contains("view-copy") ? "copy"
+        : document.querySelector(".admin-editor-view")?.classList.contains("view-share") ? "share"
+          : document.querySelector(".admin-editor-view")?.classList.contains("view-gallery") ? "gallery"
+            : "";
       invitationData = editorData(form);
       applyAppearance(invitationData.appearance);
       await window.RSVP_STORAGE.saveInvitationData(invitationData);
-      renderEditor("저장했습니다. 공개 청첩장을 새로고침하면 변경 내용이 표시됩니다.");
+      renderEditor("저장했습니다. 현재 편집 화면에 계속 머무릅니다.", keepFocus);
     } catch {
       buttons.forEach((button) => {
         button.disabled = false;
@@ -1268,7 +1861,7 @@ async function loadInvitationData() {
 
 async function renderResponses() {
   if (!supabaseClient) {
-    adminApp.innerHTML = `${adminHeader("responses")}${responsesView(window.RSVP_STORAGE.readLocalResponses(), true)}`;
+    adminApp.innerHTML = `${adminHeader("responses")}${contentBackBar("참석 현황")}${responsesView(window.RSVP_STORAGE.readLocalResponses(), true)}`;
     bindAdminNavigation();
     return;
   }
@@ -1277,7 +1870,7 @@ async function renderResponses() {
     .select("*")
     .order("created_at", { ascending: false });
   if (error) return renderLogin("응답을 불러오지 못했습니다. 관리자 권한 설정을 확인해 주세요.");
-  adminApp.innerHTML = `${adminHeader("responses")}${responsesView(data)}`;
+  adminApp.innerHTML = `${adminHeader("responses")}${contentBackBar("참석 현황")}${responsesView(data)}`;
   bindAdminNavigation();
 }
 
@@ -1309,30 +1902,121 @@ function guestPhotoCards(photos, saved = false) {
     </article>`).join("") : `<p class="admin-message">${saved ? "아직 저장 처리한 파일이 없습니다." : "새로 저장할 파일이 없습니다."}</p>`;
 }
 
+const zipCrcTable = (() => {
+  const table = new Uint32Array(256);
+  for (let index = 0; index < 256; index += 1) {
+    let value = index;
+    for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+    table[index] = value >>> 0;
+  }
+  return table;
+})();
+
+function crc32(bytes) {
+  let value = 0xffffffff;
+  bytes.forEach((byte) => { value = zipCrcTable[(value ^ byte) & 0xff] ^ (value >>> 8); });
+  return (value ^ 0xffffffff) >>> 0;
+}
+
+function dosDateTime(date = new Date()) {
+  return {
+    time: (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2),
+    date: ((date.getFullYear() - 1980) << 9) | ((date.getMonth() + 1) << 5) | date.getDate(),
+  };
+}
+
+function writeZipNumber(view, offset, value, bytes) {
+  for (let index = 0; index < bytes; index += 1) view.setUint8(offset + index, (value >>> (index * 8)) & 0xff);
+}
+
+function safeZipName(photo, index) {
+  const fallback = `guest-file-${String(index + 1).padStart(3, "0")}`;
+  return String(photo.name || photo.path?.split("/").pop() || fallback).replace(/[\\/:*?"<>|]+/g, "_") || fallback;
+}
+
+async function createZipBlob(files) {
+  const encoder = new TextEncoder();
+  const localParts = [];
+  const centralParts = [];
+  let offset = 0;
+  files.forEach((file) => {
+    const nameBytes = encoder.encode(file.name);
+    const { time, date } = dosDateTime(file.date);
+    const crc = crc32(file.bytes);
+    const local = new Uint8Array(30 + nameBytes.length);
+    const localView = new DataView(local.buffer);
+    writeZipNumber(localView, 0, 0x04034b50, 4);
+    writeZipNumber(localView, 4, 20, 2);
+    writeZipNumber(localView, 10, time, 2);
+    writeZipNumber(localView, 12, date, 2);
+    writeZipNumber(localView, 14, crc, 4);
+    writeZipNumber(localView, 18, file.bytes.length, 4);
+    writeZipNumber(localView, 22, file.bytes.length, 4);
+    writeZipNumber(localView, 26, nameBytes.length, 2);
+    local.set(nameBytes, 30);
+    localParts.push(local, file.bytes);
+    const central = new Uint8Array(46 + nameBytes.length);
+    const centralView = new DataView(central.buffer);
+    writeZipNumber(centralView, 0, 0x02014b50, 4);
+    writeZipNumber(centralView, 4, 20, 2);
+    writeZipNumber(centralView, 6, 20, 2);
+    writeZipNumber(centralView, 12, time, 2);
+    writeZipNumber(centralView, 14, date, 2);
+    writeZipNumber(centralView, 16, crc, 4);
+    writeZipNumber(centralView, 20, file.bytes.length, 4);
+    writeZipNumber(centralView, 24, file.bytes.length, 4);
+    writeZipNumber(centralView, 28, nameBytes.length, 2);
+    writeZipNumber(centralView, 42, offset, 4);
+    central.set(nameBytes, 46);
+    centralParts.push(central);
+    offset += local.length + file.bytes.length;
+  });
+  const centralSize = centralParts.reduce((sum, part) => sum + part.length, 0);
+  const end = new Uint8Array(22);
+  const endView = new DataView(end.buffer);
+  writeZipNumber(endView, 0, 0x06054b50, 4);
+  writeZipNumber(endView, 8, files.length, 2);
+  writeZipNumber(endView, 10, files.length, 2);
+  writeZipNumber(endView, 12, centralSize, 4);
+  writeZipNumber(endView, 16, offset, 4);
+  return new Blob([...localParts, ...centralParts, end], { type: "application/zip" });
+}
+
 async function downloadGuestPhotos(photos, button) {
   if (!photos.length) return alert("저장할 파일이 없습니다.");
   button.disabled = true;
   const original = button.textContent;
-  button.textContent = `${photos.length}개 저장 중...`;
-  photos.forEach((photo, index) => {
-    setTimeout(() => {
-      const link = document.createElement("a");
-      link.href = photo.signedUrl;
-      link.download = photo.name || `guest-photo-${index + 1}`;
-      link.target = "_blank";
-      link.rel = "noopener";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    }, index * 180);
-  });
-  rememberSavedGuestPhotos(photos);
-  setTimeout(() => renderGuestPhotos(), Math.max(500, photos.length * 180 + 200));
+  button.textContent = `${photos.length}개 묶는 중...`;
+  try {
+    const files = [];
+    for (let index = 0; index < photos.length; index += 1) {
+      button.textContent = `${photos.length}개 중 ${index + 1}개 준비 중...`;
+      const response = await fetch(photos[index].signedUrl);
+      if (!response.ok) throw new Error("파일을 불러오지 못했습니다.");
+      files.push({ name: safeZipName(photos[index], index), bytes: new Uint8Array(await response.arrayBuffer()), date: new Date(photos[index].created_at || Date.now()) });
+    }
+    const zipBlob = await createZipBlob(files);
+    const url = URL.createObjectURL(zipBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `guest-files-${new Date().toISOString().slice(0, 10)}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    rememberSavedGuestPhotos(photos);
+    await renderGuestPhotos();
+  } catch (error) {
+    button.disabled = false;
+    button.textContent = original;
+    alert(`파일을 묶어서 저장하지 못했습니다.\n${error.message || "잠시 후 다시 시도해 주세요."}`);
+  }
 }
 
 async function renderGuestPhotos() {
   adminApp.innerHTML = `
     ${adminHeader("photos")}
+    ${contentBackBar("하객 사진·영상")}
     <section class="admin-card">
       <h2>하객 사진·영상</h2>
       <p class="admin-message">하객이 보내준 파일을 불러오고 있습니다.</p>
@@ -1345,6 +2029,7 @@ async function renderGuestPhotos() {
     const savedPhotos = photos.filter((photo) => savedPaths.has(photo.path));
     adminApp.innerHTML = `
       ${adminHeader("photos")}
+      ${contentBackBar("하객 사진·영상")}
       <section class="admin-card">
         <div class="admin-toolbar"><h2>하객 사진·영상</h2><span class="badge">${photos.length}개</span></div>
         <p class="admin-message">저장 여부는 이 관리자 브라우저에 기록됩니다. 다른 기기에서는 새 파일로 표시될 수 있습니다.</p>
@@ -1376,17 +2061,18 @@ async function renderGuestPhotos() {
   } catch {
     adminApp.innerHTML = `
       ${adminHeader("photos")}
+      ${contentBackBar("하객 사진·영상")}
       <section class="admin-card"><p class="admin-message">파일을 불러오지 못했습니다. Storage 정책을 확인해 주세요.</p></section>`;
     bindAdminNavigation();
   }
 }
 
 async function renderGuestbookEntries() {
-  adminApp.innerHTML = `${adminHeader("guestbook")}<section class="admin-card"><h2>방명록</h2><p class="admin-message">방명록을 불러오고 있습니다.</p></section>`;
+  adminApp.innerHTML = `${adminHeader("guestbook")}${contentBackBar("방명록")}<section class="admin-card"><h2>방명록</h2><p class="admin-message">방명록을 불러오고 있습니다.</p></section>`;
   bindAdminNavigation();
   try {
     const entries = await window.RSVP_STORAGE.loadAdminGuestbookEntries();
-    adminApp.innerHTML = `${adminHeader("guestbook")}<section class="admin-card">
+    adminApp.innerHTML = `${adminHeader("guestbook")}${contentBackBar("방명록")}<section class="admin-card">
       <div class="admin-toolbar"><h2>방명록</h2><span class="badge">${entries.length}개</span></div>
       <p class="admin-message micro-help">부적절한 메시지는 숨길 수 있습니다. 숨긴 메시지는 공개 청첩장에서 보이지 않습니다.</p>
       <div class="response-list">${entries.length ? entries.map((entry) => `
@@ -1409,7 +2095,7 @@ async function renderGuestbookEntries() {
       }
     }));
   } catch (error) {
-    adminApp.innerHTML = `${adminHeader("guestbook")}<section class="admin-card"><p class="admin-message">방명록을 불러오지 못했습니다. 최신 supabase-setup.sql을 다시 실행해 주세요.</p><p class="admin-message micro-help">${escapeAdminHtml(error.message || "방명록 조회 권한을 확인해 주세요.")}</p></section>`;
+    adminApp.innerHTML = `${adminHeader("guestbook")}${contentBackBar("방명록")}<section class="admin-card"><p class="admin-message">방명록을 불러오지 못했습니다. 최신 supabase-setup.sql을 다시 실행해 주세요.</p><p class="admin-message micro-help">${escapeAdminHtml(error.message || "방명록 조회 권한을 확인해 주세요.")}</p></section>`;
     bindAdminNavigation();
   }
 }

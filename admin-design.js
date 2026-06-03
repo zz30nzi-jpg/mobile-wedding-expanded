@@ -33,7 +33,7 @@ function designFramePicker(frames, selected) {
     <span class="hero-decoration-preview" data-decoration-preview="${escapeAdminHtml(frame.id)}"><i></i></span>
     <span class="hero-decoration-copy"><strong>${escapeAdminHtml(frame.name)}</strong><small>${frame.id === "inherit" ? "선택한 프리셋의 기본 꾸밈을 사용합니다." : frame.mode === "outer" ? "사진 바깥 프레임" : "사진 위 오버레이"}</small></span>
   </label>`;
-  return `<fieldset class="hero-decoration-field"><legend>메인 이미지 꾸밈</legend><div class="hero-decoration-list">${option({ id: "inherit", name: "프리셋 기본값 사용" })}${frames.map(option).join("")}</div></fieldset>`;
+  return `<fieldset class="hero-decoration-field"><legend>메인 이미지 꾸밈</legend><div class="hero-decoration-list">${option({ id: "inherit", name: "프리셋 기본값 사용" })}${frames.map(option).join("")}</div><p class="design-scroll-hint">좌우로 밀어 더 보기</p></fieldset>`;
 }
 
 function designTextThemePicker(themes, selected) {
@@ -45,7 +45,7 @@ function designTextThemePicker(themes, selected) {
 }
 
 function textThemeLocksPosition(id) {
-  return ["minimal_center"].includes(id);
+  return false;
 }
 
 function designSelect(name, label, items, selected, inheritLabel = "") {
@@ -59,25 +59,27 @@ function renderDesignApplication(message = "") {
   window.WEDDING_DESIGN.apply(invitationData);
   adminApp.innerHTML = `
     ${adminHeader("design")}
-    <section class="admin-card">
+    <section class="admin-card design-studio">
       <div class="admin-toolbar"><div><p class="section-label">Invitation Design</p><h2>디자인 적용</h2></div></div>
       <p class="admin-message">${escapeAdminHtml(message || "프리셋은 메인 사진을 바꾸지 않습니다. 사진 위의 색상, 프레임, 문구 배열, 아이콘과 배경 장식만 변경합니다.")}</p>
-      <form class="editor-form" id="design-application-form">
-        <fieldset><legend>청첩장 컨셉</legend>
+      <form class="editor-form design-studio-form" id="design-application-form">
+        <fieldset class="design-studio-concept"><legend>청첩장 컨셉</legend>
           ${presetSelect("presetId", "적용할 프리셋", system.themes, design.presetId)}
           <p class="admin-message">컬러테마는 공통 꾸밈을 사용하고 영화테마는 전용 꾸밈을 사용합니다.</p>
         </fieldset>
-        <fieldset><legend>커스텀 디자인 설정</legend>
+        <fieldset class="design-studio-workbench"><legend>커스텀 디자인 설정</legend>
           <p class="admin-message">여기에서 고른 값은 현재 청첩장에만 적용됩니다. 프리셋 구성을 그대로 쓰려면 프리셋 기본값 사용을 선택하세요.</p>
-          <div class="design-frame-live-preview" data-design-frame-live-preview></div>
+          <div class="design-studio-canvas"><div class="design-frame-live-preview" data-design-frame-live-preview></div></div>
+          <div class="design-studio-tools">
           <section class="design-custom-group">
             <h3>1. 메인 이미지 꾸밈</h3>
           ${designFramePicker(system.assets.frames, design.heroDecoration)}
           </section>
           <section class="design-custom-group">
             <h3>2. 메인 문구 테마</h3>
-          ${designSelect("heroTextTheme", "선택한 문구 테마", system.assets.textThemes, design.heroTextTheme, "프리셋 기본값 사용")}
+          <input type="hidden" name="heroTextTheme" value="${escapeAdminHtml(design.heroTextTheme)}">
           ${designTextThemePicker(system.assets.textThemes, design.heroTextTheme)}
+          <p class="design-scroll-hint">좌우로 밀어 문구 테마 더 보기</p>
           <div class="decoration-tint-controls">
             ${input("heroDecorationTint", "꾸밈 색상", design.heroDecorationTint || "#ffffff", "color")}
           </div>
@@ -92,6 +94,7 @@ function renderDesignApplication(message = "") {
             <label class="text-layout-control"><span>문구 위아래 위치</span><input name="heroTextYPercent" type="range" min="10" max="90" value="${escapeAdminHtml(design.heroTextYPercent ?? 76)}"><output>${escapeAdminHtml(design.heroTextYPercent ?? 76)}</output></label>
           </div>
           </section>
+          </div>
         </fieldset>
         <button class="btn btn-primary">디자인 저장</button>
       </form>
