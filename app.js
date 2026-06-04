@@ -132,7 +132,7 @@ function renderCalendar() {
 }
 
 function renderAccounts(side) {
-  const rows = data.accounts.filter((account) => account.side === side);
+  const rows = data.accounts.filter((account) => account.side === side && (account.bank || account.number));
   if (!rows.length) return "";
   return `
     <details>
@@ -145,9 +145,40 @@ function renderAccounts(side) {
     </details>`;
 }
 
+function parentDisplay(person = {}) {
+  const parents = String(person.parents || "").split("·").map((item) => item.trim()).filter(Boolean).join(" · ");
+  if (!parents) return "";
+  const relation = String(person.relation || "").trim();
+  return [parents, relation].filter(Boolean).join(" ");
+}
+
+function invitationParentLine(role, person = {}) {
+  const parentText = parentDisplay(person);
+  if (!parentText) return "";
+  return `<span>${escapeHtml(parentText)} <strong>${escapeHtml(person.name)}</strong></span>`;
+}
+
+function todayInputDate() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
+}
+
+function publicPeriodStatus() {
+  if (isCopyEditorPreview) return { visible: true };
+  const today = todayInputDate();
+  const openDate = String(data.publicPeriod?.openDate || "").slice(0, 10);
+  const closeDate = String(data.publicPeriod?.closeDate || "").slice(0, 10);
+  if (openDate && today < openDate) {
+    return { visible: false, title: "아직 공개 전입니다", text: `청첩장은 ${openDate}부터 확인할 수 있어요.` };
+  }
+  if (closeDate && today > closeDate) {
+    return { visible: false, title: "공개 기간이 종료되었습니다", text: `청첩장 공개 종료일은 ${closeDate}입니다.` };
+  }
+  return { visible: true };
+}
+
 function guestPhotoStatus() {
   const settings = data.guestPhotos || {};
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
+  const today = todayInputDate();
   return {
     canUpload: settings.previewVisible || today === settings.eventDate,
     showSection: settings.previewVisible || today >= settings.eventDate,
@@ -200,7 +231,7 @@ function activeSectionOrder() {
     return Array.isArray(previewOrder) ? previewOrder : defaultSectionSettings[previewMode];
   }
   const eventDate = data.guestPhotos?.eventDate || "2026-10-04";
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date());
+  const today = todayInputDate();
   const mode = today < eventDate ? "preWedding" : "weddingDay";
   const configured = data.sectionSettings?.[mode];
   return Array.isArray(configured) ? configured : defaultSectionSettings[mode];
@@ -244,6 +275,18 @@ function sortedTransport() {
 
 function render() {
   const { groom, bride } = data.couple;
+  const period = publicPeriodStatus();
+  if (!period.visible) {
+    app.innerHTML = `
+      <main class="invitation-closed" role="main">
+        <div>
+          <p class="section-label">Wedding Invitation</p>
+          <h1>${escapeHtml(period.title)}</h1>
+          <p>${escapeHtml(period.text)}</p>
+        </div>
+      </main>`;
+    return;
+  }
   const introDesign = data.hero.introDesign || {};
   const introAlign = ["left", "center", "right"].includes(introDesign.align) ? introDesign.align : "center";
   const introNumber = (value, fallback, min, max) => Math.max(min, Math.min(max, Number.isFinite(Number(value)) ? Number(value) : fallback));
@@ -251,6 +294,10 @@ function render() {
   const guestPhotos = guestPhotoStatus();
   const gallery = galleryImages();
   const location = venueParts();
+  const parentsMarkup = [
+    invitationParentLine("신랑", groom),
+    invitationParentLine("신부", bride),
+  ].filter(Boolean).join("<br>");
   galleryPreviewImages = shuffledGalleryPreview(gallery);
   app.innerHTML = `
     <div class="invitation-intro" data-invitation-intro>
@@ -273,7 +320,7 @@ function render() {
       <section class="section" id="invitation">
         ${sectionCopy("invitation", "Invitation", data.invitation.title)}
         ${data.invitation.paragraphs.map((text) => `<p class="invitation-copy">${escapeHtml(text)}</p>`).join("")}
-        <p class="parents">${escapeHtml(groom.parents)} ${escapeHtml(groom.relation)} <strong>${escapeHtml(groom.name)}</strong><br>${escapeHtml(bride.parents)} ${escapeHtml(bride.relation)} <strong>${escapeHtml(bride.name)}</strong></p>
+        ${parentsMarkup ? `<p class="parents">${parentsMarkup}</p>` : ""}
         <div class="contact-row">
           <a class="btn" href="${tel(groom.phone)}">신랑에게 연락</a>
           <a class="btn" href="${tel(bride.phone)}">신부에게 연락</a>
@@ -288,7 +335,7 @@ function render() {
               <div class="media profile-photo" ${mediaStyle(person.photo)}></div>
               <div class="profile-body">
                 <h3 class="profile-name">${role} ${escapeHtml(person.name)}</h3>
-                <div>${escapeHtml(person.parents)} ${escapeHtml(person.relation)}</div>
+                ${parentDisplay(person) ? `<div>${escapeHtml(parentDisplay(person))}</div>` : ""}
                 <div>${escapeHtml(person.birthday)}</div>
                 <div>${escapeHtml(person.mbti)}</div>
                 <div class="profile-tags">${(person.tags || []).slice(0, 3).map((tag) => `<span class="tag">#${escapeHtml(String(tag).replace(/^#+/, ""))}</span>`).join(" ")}</div>

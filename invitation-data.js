@@ -114,10 +114,16 @@ window.INVITATION_DATA = {
     modalGuideText: "1. 두 사람의 설렘 가득한 스냅\n2. 멋진 입장 & 환한 행진\n3. 가족·친구와의 찰칵 한 컷\n4. 당신의 시선으로 포착한 장면들",
     modalGuideFootnote: "작은 한 컷이 우리에게 큰 선물이 돼요.",
   },
+  publicPeriod: {
+    openDate: "",
+    closeDate: "",
+  },
   rsvp: {
     modalGuide: "기차표와 숙소 준비를 위해 필요한 정보입니다.",
   },
   adminDefaults: {
+    heroFields: ["eyebrow", "names", "date"],
+    signupFields: ["groomName", "brideName", "groomBirthday", "brideBirthday", "weddingDate", "weddingVenue", "weddingHall"],
     fieldLabels: {
       groomName: "신랑 이름",
       brideName: "신부 이름",

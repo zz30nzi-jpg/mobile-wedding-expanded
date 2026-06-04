@@ -85,8 +85,19 @@
       ...(data.guestPhotos || {}),
     };
     data.rsvp = { modalGuide: "기차표와 숙소 준비를 위해 필요한 정보입니다.", ...(data.rsvp || {}) };
+    data.publicPeriod = {
+      openDate: "",
+      closeDate: "",
+      ...(data.publicPeriod || {}),
+    };
     data.adminDefaults = {
       ...(data.adminDefaults || {}),
+      heroFields: Array.isArray(data.adminDefaults?.heroFields) && data.adminDefaults.heroFields.length
+        ? data.adminDefaults.heroFields
+        : ["eyebrow", "names", "date"],
+      signupFields: Array.isArray(data.adminDefaults?.signupFields) && data.adminDefaults.signupFields.length
+        ? data.adminDefaults.signupFields
+        : ["groomName", "brideName", "groomBirthday", "brideBirthday", "weddingDate", "weddingVenue", "weddingHall"],
       fieldLabels: {
         groomName: "신랑 이름",
         brideName: "신부 이름",
