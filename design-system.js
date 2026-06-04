@@ -72,7 +72,29 @@
     delete data.appearance.design.customEnabled;
     data.accounts = Array.isArray(data.accounts) ? data.accounts.map((account) => ({ ...account, relation: account.relation || "" })) : [];
     data.galleryDisplayMode = data.galleryDisplayMode === "original" ? "original" : "portrait";
-    data.guestPhotos = { eventDate: "2026-10-04", previewVisible: true, uploadSlug: "wedding-day", ...(data.guestPhotos || {}) };
+    data.hero ||= {};
+    data.hero.activeMedia = data.hero.activeMedia === "video" && data.hero.video ? "video" : "image";
+    data.guestPhotos = {
+      eventDate: "2026-10-04",
+      previewVisible: true,
+      uploadSlug: "wedding-day",
+      manageDescription: "이 휴대폰에서 보낸 사진과 영상을 확인하거나 삭제할 수 있습니다.",
+      modalGuideTitle: "여러분의 사진첩이 우리 앨범이 됩니다.",
+      modalGuideText: "1. 두 사람의 설렘 가득한 스냅\n2. 멋진 입장 & 환한 행진\n3. 가족·친구와의 찰칵 한 컷\n4. 당신의 시선으로 포착한 장면들",
+      modalGuideFootnote: "작은 한 컷이 우리에게 큰 선물이 돼요.",
+      ...(data.guestPhotos || {}),
+    };
+    data.rsvp = { modalGuide: "기차표와 숙소 준비를 위해 필요한 정보입니다.", ...(data.rsvp || {}) };
+    data.adminDefaults = {
+      ...(data.adminDefaults || {}),
+      fieldLabels: {
+        groomName: "신랑 이름",
+        brideName: "신부 이름",
+        venue: "식장 이름",
+        address: "주소",
+        ...(data.adminDefaults?.fieldLabels || {}),
+      },
+    };
     const sectionTitles = {
       invitation: { en: "Invitation", ko: "" },
       aboutUs: { en: "About Us", ko: "저희를 소개합니다" },
@@ -86,6 +108,13 @@
       guestbook: { en: "Guestbook", ko: "축하 메시지" },
     };
     data.sectionTitles = Object.fromEntries(Object.entries(sectionTitles).map(([key, value]) => [key, { ...value, ...(data.sectionTitles?.[key] || {}) }]));
+    data.sectionDescriptions = {
+      attendance: "신랑, 신부에게 참석의사를\n미리 전달할 수 있어요.",
+      weddingSnap: "오늘의 추억은 여러분의 한 장에서 완성돼요.\n예식 당일, 아래 버튼으로 가볍게 공유해주세요!",
+      account: "참석이 어려우신 분들을 위해\n계좌번호를 안내해 드립니다.",
+      guestbook: "따뜻한 마음을 짧게 남겨 주세요.",
+      ...(data.sectionDescriptions || {}),
+    };
     return data;
   }
 

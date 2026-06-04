@@ -7,7 +7,8 @@ const escapeHtml = (value = "") =>
 const escapeLineHtml = (value = "") => escapeHtml(value).replace(/\n/g, "<br>");
 const mediaStyle = (src) => src ? `style="background-image:url('${escapeHtml(src)}')"` : "";
 const lazyMediaStyle = (src) => src ? `data-lazy-background="${escapeHtml(src)}"` : "";
-const heroMediaMarkup = () => data.hero.video
+const heroActiveMedia = () => data.hero.activeMedia === "video" && data.hero.video ? "video" : "image";
+const heroMediaMarkup = () => heroActiveMedia() === "video"
   ? `<video class="hero-video" src="${escapeHtml(data.hero.video)}" poster="${escapeHtml(data.hero.image)}" autoplay muted loop playsinline preload="metadata" onerror="this.hidden=true"></video>`
   : "";
 const tel = (number) => `tel:${String(number).replace(/[^0-9+]/g, "")}`;
@@ -261,7 +262,7 @@ function render() {
     </div>
     <article class="invitation">
       <header class="hero">
-        <div class="media hero-media" ${mediaStyle(data.hero.image)}>${heroMediaMarkup()}</div>
+        <div class="media hero-media" ${mediaStyle(data.hero.image)} data-active-media="${heroActiveMedia()}">${heroMediaMarkup()}</div>
         <div class="hero-content hero-content-${escapeHtml(data.hero.contentPosition || "bottom")}">
           <p class="hero-eyebrow">${escapeHtml(data.hero.eyebrow)}</p>
           <h1 class="hero-names">${escapeHtml(groom.name)} <span>·</span> ${escapeHtml(bride.name)}</h1>
@@ -290,7 +291,7 @@ function render() {
                 <div>${escapeHtml(person.parents)} ${escapeHtml(person.relation)}</div>
                 <div>${escapeHtml(person.birthday)}</div>
                 <div>${escapeHtml(person.mbti)}</div>
-                <div>${person.tags.map((tag) => `<span class="tag">#${escapeHtml(tag)}</span>`).join(" ")}</div>
+                <div class="profile-tags">${(person.tags || []).slice(0, 3).map((tag) => `<span class="tag">#${escapeHtml(String(tag).replace(/^#+/, ""))}</span>`).join(" ")}</div>
               </div>
             </article>`).join("")}
         </div>
@@ -328,11 +329,12 @@ function render() {
       ${guestPhotos.showSection ? `
         <section class="section guest-photo-section" id="wedding-snap">
           ${sectionCopy("weddingSnap", "Guest Album", "예쁘게 빛난 순간, 같이 공유해요!")}
-          <p class="subtle">${guestPhotos.canUpload ? "오늘의 추억은 여러분의 한 장에서 완성돼요.<br>예식 당일, 아래 버튼으로 가볍게 공유해주세요!" : "이 휴대폰에서 보낸 사진과 영상을 확인하거나 삭제할 수 있습니다."}</p>
+          <p class="subtle">${guestPhotos.canUpload ? escapeLineHtml(data.sectionDescriptions?.weddingSnap || "오늘의 추억은 여러분의 한 장에서 완성돼요.\n예식 당일, 아래 버튼으로 가볍게 공유해주세요!") : escapeLineHtml(data.guestPhotos?.manageDescription || "이 휴대폰에서 보낸 사진과 영상을 확인하거나 삭제할 수 있습니다.")}</p>
           <div class="guest-photo-actions">
             ${guestPhotos.canUpload ? '<button class="btn btn-primary" id="guest-photo-open">사진·영상 업로드</button>' : ""}
             <button class="btn" id="guest-photo-manage">내가 보낸 파일</button>
           </div>
+          ${isCopyEditorPreview ? '<button class="btn copy-preview-detail-edit" type="button" data-preview-detail-edit="wedding-snap">✎ 세부내용 수정</button>' : ""}
           ${guestPhotos.canUpload ? '<p class="action-footnote">결혼식 당일부터 업로드 가능합니다.</p>' : ""}
         </section>` : ""}
 
@@ -345,6 +347,7 @@ function render() {
         ${sectionCopy("attendance", "Rsvp", "참석 의사 전달")}
         <p class="subtle">${escapeLineHtml(data.sectionDescriptions?.attendance || "신랑, 신부에게 참석의사를\n미리 전달할 수 있어요.")}</p>
         <button class="btn btn-primary" id="attendance-open">전달하기</button>
+        ${isCopyEditorPreview ? '<button class="btn copy-preview-detail-edit" type="button" data-preview-detail-edit="rsvp">✎ 세부내용 수정</button>' : ""}
       </section>
 
       <section class="section" id="account">
@@ -560,7 +563,7 @@ function bindShareModal() {
 function attendanceForm() {
   return `
     <h2>참석 정보 입력</h2>
-    <p class="form-guide">기차표와 숙소 준비를 위해 필요한 정보입니다.</p>
+    <p class="form-guide">${escapeLineHtml(data.rsvp?.modalGuide || "기차표와 숙소 준비를 위해 필요한 정보입니다.")}</p>
     <form class="form-grid" id="attendance-form">
       <label class="field"><span>성함</span><input name="guest_name" required maxlength="30" autocomplete="name"></label>
       <label class="field"><span>연락처</span><input name="phone" required maxlength="20" inputmode="tel" autocomplete="tel" placeholder="010-0000-0000"></label>
@@ -637,11 +640,11 @@ function gallerySlider(index = 0) {
       <div class="gallery-slide">
         <button class="gallery-nav gallery-prev" type="button" data-gallery-move="-1" aria-label="이전 사진">‹</button>
         <div class="gallery-slide-photo ${data.galleryDisplayMode === "original" ? "is-original" : "is-portrait"}">
-          <img src="${escapeHtml(images[safeIndex])}" alt="갤러리 사진 ${safeIndex + 1}">
+          <img src="${escapeHtml(images[safeIndex])}" alt="갤러리 사진 ${safeIndex + 1}" data-gallery-image decoding="async">
         </div>
         <button class="gallery-nav gallery-next" type="button" data-gallery-move="1" aria-label="다음 사진">›</button>
       </div>
-      <p class="gallery-page">${safeIndex + 1} / ${images.length}</p>
+      <p class="gallery-page" data-gallery-page>${safeIndex + 1} / ${images.length}</p>
     </div>`;
 }
 
@@ -649,12 +652,28 @@ function openGallerySlider(index = 0) {
   openModal(gallerySlider(index));
   const slider = document.querySelector(".gallery-slider");
   let touchStartX = 0;
+  const preloadAround = (activeIndex) => {
+    const images = galleryImages();
+    [-1, 1].forEach((step) => {
+      const image = new Image();
+      image.src = images[(activeIndex + step + images.length) % images.length];
+    });
+  };
   const move = (step) => {
     const images = galleryImages();
     const current = Number(slider.dataset.galleryIndex);
     const next = (current + step + images.length) % images.length;
-    openGallerySlider(next);
+    const image = slider.querySelector("[data-gallery-image]");
+    const page = slider.querySelector("[data-gallery-page]");
+    slider.dataset.galleryIndex = String(next);
+    image.classList.add("is-loading");
+    image.onload = () => image.classList.remove("is-loading");
+    image.src = images[next];
+    image.alt = `갤러리 사진 ${next + 1}`;
+    page.textContent = `${next + 1} / ${images.length}`;
+    preloadAround(next);
   };
+  preloadAround(Number(slider.dataset.galleryIndex));
   document.querySelectorAll("[data-gallery-move]").forEach((button) => {
     button.addEventListener("click", () => move(Number(button.dataset.galleryMove)));
   });
@@ -672,7 +691,7 @@ function guestPhotoForm() {
         <span>하객 앨범</span><small>${escapeHtml(data.couple.groom.name)} · ${escapeHtml(data.couple.bride.name)}</small>
         <h2>소중한 추억을 함께 남겨주세요</h2>
       </div>
-      <div class="snap-modal-guide"><strong>여러분의 사진첩이 우리 앨범이 됩니다.</strong><p>1. 두 사람의 설렘 가득한 스냅<br>2. 멋진 입장 &amp; 환한 행진<br>3. 가족·친구와의 찰칵 한 컷<br>4. 당신의 시선으로 포착한 장면들</p><em>작은 한 컷이 우리에게 큰 선물이 돼요.</em></div>
+      <div class="snap-modal-guide"><strong>${escapeHtml(data.guestPhotos?.modalGuideTitle || "여러분의 사진첩이 우리 앨범이 됩니다.")}</strong><p>${escapeLineHtml(data.guestPhotos?.modalGuideText || "1. 두 사람의 설렘 가득한 스냅\n2. 멋진 입장 & 환한 행진\n3. 가족·친구와의 찰칵 한 컷\n4. 당신의 시선으로 포착한 장면들")}</p><em>${escapeHtml(data.guestPhotos?.modalGuideFootnote || "작은 한 컷이 우리에게 큰 선물이 돼요.")}</em></div>
     </div>
     <form class="form-grid snap-upload-form" id="guest-photo-form">
       <label class="field"><span>이름(폴더명)</span><input name="guest_name" required maxlength="20" placeholder="예: 홍길동"></label>
