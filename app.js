@@ -132,15 +132,15 @@ function renderCalendar() {
 }
 
 function renderAccounts(side) {
-  const rows = data.accounts.filter((account) => account.side === side && (account.bank || account.number));
+  const rows = data.accounts.filter((account) => account.side === side && (account.name || account.personName || account.relation || account.bank || account.number));
   if (!rows.length) return "";
   return `
     <details>
       <summary>${escapeHtml(side)} 계좌번호</summary>
       ${rows.map((account) => `
         <div class="account-row">
-          <p><strong>${escapeHtml(account.name)}${account.relation ? ` · ${escapeHtml(account.relation)}` : ""}</strong><br>${account.bank && account.number ? `${escapeHtml(account.bank)} ${escapeHtml(account.number)}` : '<span class="account-pending">계좌번호 준비 중</span>'}</p>
-          ${account.bank && account.number ? `<button class="btn copy-btn" data-copy="${escapeHtml(account.bank)} ${escapeHtml(account.number)}">복사</button>` : ""}
+          <p><strong>${escapeHtml(account.name || account.personName || "")}${account.relation ? ` · ${escapeHtml(account.relation)}` : ""}</strong><br>${account.bank && account.number ? `${escapeHtml(account.bank)} ${escapeHtml(account.number)}` : '<span class="account-pending">계좌번호 준비 중</span>'}</p>
+          ${account.bank && account.number ? `<button class="account-copy-btn copy-btn" type="button" data-copy="${escapeHtml(account.bank)} ${escapeHtml(account.number)}" aria-label="계좌번호 복사" title="계좌번호 복사"><span aria-hidden="true">⧉</span></button>` : ""}
         </div>`).join("")}
     </details>`;
 }
@@ -154,8 +154,9 @@ function parentDisplay(person = {}) {
 
 function invitationParentLine(role, person = {}) {
   const parentText = parentDisplay(person);
-  if (!parentText) return "";
-  return `<span>${escapeHtml(parentText)} <strong>${escapeHtml(person.name)}</strong></span>`;
+  const name = String(person.name || "").trim();
+  if (!name) return "";
+  return `<span>${parentText ? `${escapeHtml(parentText)} ` : ""}<strong>${escapeHtml(name)}</strong></span>`;
 }
 
 function todayInputDate() {
@@ -186,7 +187,7 @@ function guestPhotoStatus() {
 }
 
 function galleryImages() {
-  return data.gallery.filter(Boolean).slice(0, 20);
+  return data.gallery.filter(Boolean).slice(0, 30);
 }
 
 function shuffledGalleryPreview(images) {
@@ -275,6 +276,7 @@ function sortedTransport() {
 
 function render() {
   const { groom, bride } = data.couple;
+  const displaySettings = data.displaySettings || {};
   const period = publicPeriodStatus();
   if (!period.visible) {
     app.innerHTML = `
@@ -294,10 +296,10 @@ function render() {
   const guestPhotos = guestPhotoStatus();
   const gallery = galleryImages();
   const location = venueParts();
-  const parentsMarkup = [
-    invitationParentLine("신랑", groom),
-    invitationParentLine("신부", bride),
-  ].filter(Boolean).join("<br>");
+  const hasAnyParents = displaySettings.showInvitationParents !== false && Boolean(parentDisplay(groom) || parentDisplay(bride));
+  const parentsMarkup = hasAnyParents
+    ? [invitationParentLine("신랑", groom), invitationParentLine("신부", bride)].filter(Boolean).join("<br>")
+    : `<span><strong>${escapeHtml(groom.name)}</strong> ♥ <strong>${escapeHtml(bride.name)}</strong></span>`;
   galleryPreviewImages = shuffledGalleryPreview(gallery);
   app.innerHTML = `
     <div class="invitation-intro" data-invitation-intro>
@@ -335,8 +337,8 @@ function render() {
               <div class="media profile-photo" ${mediaStyle(person.photo)}></div>
               <div class="profile-body">
                 <h3 class="profile-name">${role} ${escapeHtml(person.name)}</h3>
-                ${parentDisplay(person) ? `<div>${escapeHtml(parentDisplay(person))}</div>` : ""}
-                <div>${escapeHtml(person.birthday)}</div>
+                ${displaySettings.showProfileParents !== false && parentDisplay(person) ? `<div>${escapeHtml(parentDisplay(person))}</div>` : ""}
+                ${displaySettings.showProfileBirthdays !== false && person.birthday ? `<div>${escapeHtml(person.birthday)}</div>` : ""}
                 <div>${escapeHtml(person.mbti)}</div>
                 <div class="profile-tags">${(person.tags || []).slice(0, 3).map((tag) => `<span class="tag">#${escapeHtml(String(tag).replace(/^#+/, ""))}</span>`).join(" ")}</div>
               </div>
@@ -800,6 +802,11 @@ function bindEvents() {
     if (copyButton) {
       try {
         await navigator.clipboard.writeText(copyButton.dataset.copy);
+        if (copyButton.classList.contains("account-copy-btn")) {
+          copyButton.classList.add("is-copied");
+          setTimeout(() => { copyButton.classList.remove("is-copied"); }, 1200);
+          return;
+        }
         const original = copyButton.textContent;
         copyButton.textContent = "복사 완료";
         setTimeout(() => { copyButton.textContent = original; }, 1200);

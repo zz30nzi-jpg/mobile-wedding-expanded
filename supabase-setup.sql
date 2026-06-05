@@ -265,8 +265,13 @@ create policy "registered admins can read private wedding photos"
 on storage.objects for select
 to authenticated
 using (
-  bucket_id = 'guest-photos' and exists (
-    select 1 from public.rsvp_admins where user_id = (select auth.uid())
+  bucket_id = 'guest-photos' and (
+    exists (select 1 from public.rsvp_admins where user_id = (select auth.uid()))
+    or exists (
+      select 1 from public.invitation_sites
+      where owner_id = (select auth.uid())
+      and slug = (storage.foldername(name))[1]
+    )
   )
 );
 
@@ -275,8 +280,13 @@ create policy "registered admins can delete private wedding photos"
 on storage.objects for delete
 to authenticated
 using (
-  bucket_id = 'guest-photos' and exists (
-    select 1 from public.rsvp_admins where user_id = (select auth.uid())
+  bucket_id = 'guest-photos' and (
+    exists (select 1 from public.rsvp_admins where user_id = (select auth.uid()))
+    or exists (
+      select 1 from public.invitation_sites
+      where owner_id = (select auth.uid())
+      and slug = (storage.foldername(name))[1]
+    )
   )
 );
 

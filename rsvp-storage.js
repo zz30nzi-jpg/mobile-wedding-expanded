@@ -102,7 +102,7 @@ function emptyMediaInvitation(fallback, { slug = "", groomName = "", brideName =
     venue: weddingVenue || next.wedding?.venue || "",
     hall: weddingHall || next.wedding?.hall || "",
   };
-  next.gallery = Array.from({ length: 20 }, () => "");
+  next.gallery = Array.from({ length: 30 }, () => "");
   next.ending = { ...(next.ending || {}), image: "" };
   next.meta = { ...(next.meta || {}), shareImage: "" };
   next.guestPhotos = { ...(next.guestPhotos || {}), uploadSlug: slug || next.guestPhotos?.uploadSlug || "wedding-day" };
@@ -535,7 +535,9 @@ async function listGuestPhotoFolder(client, folder = "") {
 async function listGuestPhotos() {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
-  const photos = (await listGuestPhotoFolder(client)).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  const invitation = await loadInvitationData(window.INVITATION_DATA);
+  const folder = invitation.guestPhotos?.uploadSlug || getActiveInvitationSlug() || "wedding-day";
+  const photos = (await listGuestPhotoFolder(client, folder)).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
   return signedGuestPhotos(client, photos.map((photo) => photo.path), photos, 30 * 24 * 60 * 60);
 }
 

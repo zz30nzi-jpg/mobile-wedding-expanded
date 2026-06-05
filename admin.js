@@ -10,6 +10,26 @@ const heroDecorations = ["none", "doodle_hearts", "organic_heart", "wedding_ring
 const heroTextThemes = ["auto", "default_center", "editorial_left", "minimal_center"];
 let superSearchQuery = "";
 let currentInvitationSite = null;
+const GALLERY_MAX = 30;
+const SAVED_LOGIN_EMAIL_KEY = "wedding-admin-remembered-email";
+const SUPER_ADMIN_VIEW_KEY = "wedding-super-admin-active-view";
+const GENERAL_ADMIN_VIEW_KEY = "wedding-general-admin-active-view";
+const defaultWelcomeOverlay = {
+  eyebrow: "Vivid Vows",
+  text: "결혼을 축하드립니다!\n커스텀하여 청첩장을 꾸며보세요.",
+  textSize: 30,
+  backgroundColor: "#eff7fa",
+  cardColor: "#ffffff",
+  textColor: "#3b6674",
+  overlayOpacity: 94,
+  cardOpacity: 88,
+  borderColor: "#d8e8ee",
+  borderWidth: 1,
+  borderRadius: 30,
+  shadowEnabled: true,
+  shadowColor: "#3b6674",
+  shadowOpacity: 24,
+};
 
 function applyTheme(theme) {
   const selected = themes.includes(theme) ? theme : "sky";
@@ -76,6 +96,37 @@ function addDays(dateValue = "", days = 0) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(date);
 }
 
+function decorateRangeDefaults(root = document) {
+  root.querySelectorAll('input[type="range"]').forEach((range) => {
+    if (!range.dataset.defaultValue) range.dataset.defaultValue = range.defaultValue || range.getAttribute("value") || range.value;
+    const min = Number(range.min || 0);
+    const max = Number(range.max || 100);
+    const defaultValue = Number(range.dataset.defaultValue);
+    const position = max === min ? 0 : ((defaultValue - min) / (max - min)) * 100;
+    range.style.setProperty("--range-default-pos", `${Math.max(0, Math.min(100, position))}%`);
+    range.title = `기본값 ${range.dataset.defaultValue}`;
+    const output = range.parentElement?.querySelector("output");
+    if (output) output.textContent = range.value;
+    setRangeFill(range);
+  });
+}
+
+function setRangeFill(range) {
+  const min = Number(range.min || 0);
+  const max = Number(range.max || 100);
+  const value = Number(range.value || 0);
+  const position = max === min ? 0 : ((value - min) / (max - min)) * 100;
+  range.style.setProperty("--range-current-pos", `${Math.max(0, Math.min(100, position))}%`);
+}
+
+document.addEventListener("input", (event) => {
+  const range = event.target.closest?.('input[type="range"]');
+  if (!range) return;
+  const output = range.parentElement?.querySelector("output");
+  if (output) output.textContent = range.value;
+  setRangeFill(range);
+});
+
 function superOverview() {
   const system = invitationData.designSystem || {};
   const assets = system.assets || {};
@@ -95,6 +146,7 @@ function adminHeader(active) {
       <button class="btn ${active === "editor" ? "btn-primary" : ""}" data-admin-view="editor">기본 설정</button>
       <button class="btn ${active === "copy" ? "btn-primary" : ""}" data-admin-view="copy-editor">편집 기능</button>
       <button class="btn ${["content", "responses", "photos", "guestbook"].includes(active) ? "btn-primary" : ""}" data-admin-view="content">콘텐츠</button>
+      <button class="btn ${active === "sections" ? "btn-primary" : ""}" data-admin-view="sections">섹션 설정</button>
       <button class="btn ${active === "share" ? "btn-primary" : ""}" data-admin-view="share-settings">공유</button>
     </nav></div>`;
   const superMenu = `<div class="admin-menu-group admin-menu-super"><strong>슈퍼관리자</strong><nav class="admin-tabs">
@@ -143,20 +195,7 @@ function bindAdminNavigation() {
   });
   document.querySelectorAll("[data-admin-view]").forEach((button) => {
     button.addEventListener("click", () => {
-      if (button.dataset.adminView === "editor") renderEditor();
-      else if (button.dataset.adminView === "design") renderEditor("", "copy");
-      else if (button.dataset.adminView === "copy-editor") renderEditor("", "copy");
-      else if (button.dataset.adminView === "share-settings") renderEditor("", "share");
-      else if (button.dataset.adminView === "content") renderContentHub();
-      else if (button.dataset.adminView === "themes") renderThemeManager();
-      else if (button.dataset.adminView === "assets") renderDesignAssets();
-      else if (button.dataset.adminView === "defaults") renderDefaultSettings();
-      else if (button.dataset.adminView === "general-admins") renderGeneralAdmins();
-      else if (button.dataset.adminView === "ai-settings") renderAISettings();
-      else if (button.dataset.adminView === "ai-library") renderAILibrary();
-      else if (button.dataset.adminView === "photos") renderGuestPhotos();
-      else if (button.dataset.adminView === "guestbook") renderGuestbookEntries();
-      else renderResponses();
+      renderAdminView(button.dataset.adminView);
     });
   });
   document.querySelector("[data-super-search]")?.addEventListener("input", (event) => {
@@ -178,11 +217,45 @@ function bindAdminNavigation() {
   if (selectedDevice) {
     document.querySelector(`[data-super-device="${selectedDevice}"]`)?.classList.add("btn-primary");
   }
-  document.querySelector("[data-content-back]")?.addEventListener("click", renderContentHub);
+  document.querySelector("[data-content-back]")?.addEventListener("click", () => renderAdminView("content"));
   applySuperSearch();
+  decorateRangeDefaults(adminApp);
+}
+
+function rememberAdminView(view) {
+  if (adminArea === "super") localStorage.setItem(SUPER_ADMIN_VIEW_KEY, view);
+  else localStorage.setItem(GENERAL_ADMIN_VIEW_KEY, view);
+}
+
+function renderAdminView(view = "") {
+  if (adminArea === "super") {
+    const superViews = new Set(["themes", "assets", "defaults", "general-admins", "ai-settings", "ai-library"]);
+    rememberAdminView(superViews.has(view) ? view : "themes");
+  } else {
+    const generalViews = new Set(["editor", "copy-editor", "sections", "share-settings", "content", "gallery", "responses", "photos", "guestbook"]);
+    rememberAdminView(generalViews.has(view) ? view : "editor");
+  }
+  if (view === "editor") renderEditor();
+  else if (view === "design") renderEditor("", "copy");
+  else if (view === "copy-editor") renderEditor("", "copy");
+  else if (view === "sections") renderEditor("", "sections");
+  else if (view === "share-settings") renderEditor("", "share");
+  else if (view === "content") renderContentHub();
+  else if (view === "gallery") renderEditor("", "gallery");
+  else if (view === "responses") renderResponses();
+  else if (view === "themes") renderThemeManager();
+  else if (view === "assets") renderDesignAssets();
+  else if (view === "defaults") renderDefaultSettings();
+  else if (view === "general-admins") renderGeneralAdmins();
+  else if (view === "ai-settings") renderAISettings();
+  else if (view === "ai-library") renderAILibrary();
+  else if (view === "photos") renderGuestPhotos();
+  else if (view === "guestbook") renderGuestbookEntries();
+  else renderResponses();
 }
 
 function renderContentHub() {
+  if (adminArea === "general") rememberAdminView("content");
   adminApp.innerHTML = `${adminHeader("content")}
     <section class="admin-card admin-hub">
       <p class="section-label">Content</p><h2>콘텐츠 관리</h2>
@@ -196,10 +269,7 @@ function renderContentHub() {
     </section>`;
   bindAdminNavigation();
   document.querySelectorAll("[data-content-open]").forEach((button) => button.addEventListener("click", () => {
-    if (button.dataset.contentOpen === "gallery") renderEditor("", "gallery");
-    else if (button.dataset.contentOpen === "responses") renderResponses();
-    else if (button.dataset.contentOpen === "photos") renderGuestPhotos();
-    else renderGuestbookEntries();
+    renderAdminView(button.dataset.contentOpen);
   }));
 }
 
@@ -220,10 +290,22 @@ function renderLogin(message = "") {
   const signupFields = invitationData.adminDefaults?.signupFields || ["groomName", "brideName", "groomBirthday", "brideBirthday", "weddingDate", "weddingVenue", "weddingHall"];
   const signupField = (key, markup) => signupFields.includes(key) ? markup : "";
   const today = dateInputToday();
+  const rememberedEmail = localStorage.getItem(SAVED_LOGIN_EMAIL_KEY) || "";
   const generalSignup = adminArea === "general" ? `
       <div class="admin-signup-panel">
         <button class="btn btn-secondary signup-open" type="button" data-signup-open>회원가입</button>
-        <form class="form-grid signup-form" id="admin-signup-form" hidden>
+        <div class="oauth-grid">
+          <button class="btn" type="button" data-oauth-provider="kakao">카카오로 시작</button>
+          <button class="btn" type="button" data-oauth-provider="custom:naver">네이버로 시작</button>
+        </div>
+        <p class="admin-message micro-help">소셜 가입은 Supabase Authentication에서 Kakao/Naver Provider와 Redirect URL을 먼저 설정해야 작동합니다.</p>
+      </div>
+      <div class="signup-modal-backdrop" data-signup-modal hidden>
+        <form class="form-grid signup-form signup-modal" id="admin-signup-form">
+          <div class="signup-modal-head">
+            <div><p class="section-label">Create Account</p><h2>내 청첩장 만들기</h2></div>
+            <button class="icon-btn" type="button" data-signup-close aria-label="회원가입 닫기">×</button>
+          </div>
           <div class="signup-progress" aria-label="회원가입 단계"><span class="is-active">동의</span><span>계정</span><span>기본정보</span></div>
           <section class="signup-step is-active" data-signup-step="0">
             <h2>서비스 이용 동의</h2>
@@ -257,11 +339,6 @@ function renderLogin(message = "") {
             <div class="signup-actions"><button class="btn" type="button" data-signup-prev>이전</button><button class="btn btn-primary" type="submit">내 청첩장 만들기</button></div>
           </section>
         </form>
-        <div class="oauth-grid">
-          <button class="btn" type="button" data-oauth-provider="kakao">카카오로 시작</button>
-          <button class="btn" type="button" data-oauth-provider="custom:naver">네이버로 시작</button>
-        </div>
-        <p class="admin-message micro-help">소셜 가입은 Supabase Authentication에서 Kakao/Naver Provider와 Redirect URL을 먼저 설정해야 작동합니다.</p>
       </div>` : "";
   adminApp.innerHTML = `
     <section class="admin-card admin-login">
@@ -269,24 +346,34 @@ function renderLogin(message = "") {
       <h1>${adminArea === "super" ? "청첩장 슈퍼관리자" : "청첩장 일반관리자"}</h1>
       <p class="admin-message">${escapeAdminHtml(message || "등록된 관리자 계정으로 로그인해 주세요.")}</p>
       <form class="form-grid" id="admin-login-form">
-        <label class="field"><span>이메일</span><input name="email" type="email" required autocomplete="username"></label>
+        <label class="field"><span>이메일</span><input name="email" type="email" required autocomplete="username" value="${escapeAdminHtml(rememberedEmail)}"></label>
         <label class="field"><span>비밀번호</span><input name="password" type="password" required autocomplete="current-password"></label>
+        <label class="consent remember-login"><input name="rememberEmail" type="checkbox" ${rememberedEmail ? "checked" : ""}> <span>아이디 저장</span></label>
         <button class="btn btn-primary">로그인</button>
+        <div class="login-help-actions">
+          <button class="link-button" type="button" data-find-email>아이디 찾기</button>
+          <button class="link-button" type="button" data-reset-password>비밀번호 찾기</button>
+        </div>
       </form>
       ${generalSignup}
     </section>`;
   document.querySelector("#admin-login-form").addEventListener("submit", login);
   document.querySelector("#admin-signup-form")?.addEventListener("submit", signup);
   const signupForm = document.querySelector("#admin-signup-form");
+  const signupModal = document.querySelector("[data-signup-modal]");
   const setSignupStep = (step) => {
     signupForm?.querySelectorAll("[data-signup-step]").forEach((item) => item.classList.toggle("is-active", Number(item.dataset.signupStep) === step));
     signupForm?.querySelectorAll(".signup-progress span").forEach((item, index) => item.classList.toggle("is-active", index === step));
     if (signupForm) signupForm.dataset.step = String(step);
   };
   document.querySelector("[data-signup-open]")?.addEventListener("click", (event) => {
-    event.currentTarget.hidden = true;
-    signupForm.hidden = false;
+    signupModal.hidden = false;
     setSignupStep(0);
+    signupForm?.querySelector("[data-signup-step='0'] input")?.focus();
+  });
+  document.querySelector("[data-signup-close]")?.addEventListener("click", () => { signupModal.hidden = true; });
+  signupModal?.addEventListener("click", (event) => {
+    if (event.target === signupModal) signupModal.hidden = true;
   });
   signupForm?.addEventListener("click", (event) => {
     if (event.target.closest("[data-signup-next]")) {
@@ -297,7 +384,7 @@ function renderLogin(message = "") {
     }
     if (event.target.closest("[data-signup-prev]")) setSignupStep(Math.max(0, Number(signupForm.dataset.step || 0) - 1));
   });
-  const syncSignupPublicPeriod = () => {
+  const syncSignupPublicPeriod = (forceCloseToWedding = false) => {
     const weddingField = signupForm?.elements.weddingDate;
     const openField = signupForm?.elements.publicOpenDate;
     const closeField = signupForm?.elements.publicCloseDate;
@@ -309,12 +396,31 @@ function renderLogin(message = "") {
     if (weddingDay) {
       closeField.min = openField.value || today;
       closeField.max = addDays(weddingDay, 3);
-      if (!closeField.value || closeField.value < closeField.min || closeField.value > closeField.max) closeField.value = weddingDay;
+      if (forceCloseToWedding || !closeField.value || closeField.value < closeField.min || closeField.value > closeField.max) closeField.value = weddingDay;
     }
   };
-  signupForm?.elements.weddingDate?.addEventListener("change", syncSignupPublicPeriod);
-  signupForm?.elements.publicOpenDate?.addEventListener("change", syncSignupPublicPeriod);
+  signupForm?.elements.weddingDate?.addEventListener("change", () => syncSignupPublicPeriod(true));
+  signupForm?.elements.publicOpenDate?.addEventListener("change", () => syncSignupPublicPeriod(false));
   syncSignupPublicPeriod();
+  document.querySelector("[data-find-email]")?.addEventListener("click", () => {
+    const saved = localStorage.getItem(SAVED_LOGIN_EMAIL_KEY);
+    alert(saved ? `저장된 아이디는 ${saved} 입니다.` : "보안을 위해 전체 가입 이메일 목록은 표시하지 않습니다. 아이디 저장을 사용했거나 관리자에게 가입 이메일을 문의해 주세요.");
+  });
+  document.querySelector("[data-reset-password]")?.addEventListener("click", async () => {
+    const emailField = document.querySelector('#admin-login-form input[name="email"]');
+    const email = emailField?.value?.trim();
+    if (!email) {
+      emailField?.focus();
+      alert("비밀번호를 재설정할 이메일을 먼저 입력해 주세요.");
+      return;
+    }
+    if (!supabaseClient) {
+      alert("Supabase 연결 후 비밀번호 찾기를 사용할 수 있습니다.");
+      return;
+    }
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}${location.pathname}` });
+    alert(error ? `비밀번호 재설정 메일을 보내지 못했습니다.\n${error.message}` : "비밀번호 재설정 메일을 보냈습니다.");
+  });
   document.querySelectorAll("[data-oauth-provider]").forEach((button) => {
     button.addEventListener("click", async () => {
       try {
@@ -328,7 +434,7 @@ function renderLogin(message = "") {
 
 async function renderSetupNotice() {
   await loadInvitationData();
-  if (adminArea === "super") return renderThemeManager();
+  if (adminArea === "super") return renderAdminView(localStorage.getItem(SUPER_ADMIN_VIEW_KEY) || "themes");
   renderEditor("현재는 Supabase 연결 전 미리보기 모드입니다. 변경 내용은 이 브라우저에 저장되며 공개 청첩장을 새로고침하면 반영됩니다.");
 }
 
@@ -375,6 +481,7 @@ function renderDefaultSettings(message = "") {
   const selectedPreset = editorPresetValue(invitationData.appearance || {});
   const selectedTextTheme = invitationData.appearance?.design?.heroTextTheme || "auto";
   const selectedDecoration = invitationData.appearance?.design?.heroDecoration || "inherit";
+  const welcome = { ...defaultWelcomeOverlay, ...(invitationData.adminDefaults?.welcomeOverlay || {}) };
   const heroFieldOptions = [
     ["eyebrow", "영문문구"],
     ["names", "신랑신부 이름"],
@@ -435,6 +542,37 @@ function renderDefaultSettings(message = "") {
           </div>
           <p class="admin-message micro-help">새 일반관리자가 처음 가입했을 때 적용될 기본 디자인 구성입니다. 이후 각 커플은 자기 관리자페이지에서 따로 수정할 수 있습니다.</p>
         </fieldset>
+        <fieldset><legend>일반관리자 첫 로그인 웰컴 화면</legend>
+          <div class="welcome-default-editor">
+            <div class="admin-welcome-card welcome-default-preview" style="--admin-welcome-card-bg:${escapeAdminHtml(hexToRgba(welcome.cardColor, (Number(welcome.cardOpacity) || defaultWelcomeOverlay.cardOpacity) / 100))};--admin-welcome-text:${escapeAdminHtml(welcome.textColor)};--admin-welcome-size:${Number(welcome.textSize) || 30}px;--admin-welcome-border:${Number(welcome.borderWidth ?? defaultWelcomeOverlay.borderWidth) || 0}px solid ${escapeAdminHtml(welcome.borderColor || defaultWelcomeOverlay.borderColor)};--admin-welcome-radius:${Number(welcome.borderRadius ?? defaultWelcomeOverlay.borderRadius) || 0}px;--admin-welcome-shadow:${welcome.shadowEnabled === false ? "none" : `0 28px 80px ${escapeAdminHtml(hexToRgba(welcome.shadowColor || welcome.textColor || defaultWelcomeOverlay.shadowColor, (Number(welcome.shadowOpacity) || defaultWelcomeOverlay.shadowOpacity) / 100))}`};">
+              <span class="section-label">${escapeAdminHtml(welcome.eyebrow || "Vivid Vows")}</span>
+              <p>${escapeAdminHtml(welcome.text || defaultWelcomeOverlay.text)}</p>
+            </div>
+            ${input("adminDefaults.welcomeOverlay.eyebrow", "상단 라벨", welcome.eyebrow || "", "text")}
+            <div class="welcome-color-grid">
+              ${input("adminDefaults.welcomeOverlay.backgroundColor", "오버레이 배경색", welcome.backgroundColor || "#eff7fa", "color")}
+              ${input("adminDefaults.welcomeOverlay.cardColor", "카드 배경색", welcome.cardColor || "#ffffff", "color")}
+              ${input("adminDefaults.welcomeOverlay.textColor", "문구 색상", welcome.textColor || "#3b6674", "color")}
+              ${input("adminDefaults.welcomeOverlay.borderColor", "테두리 색상", welcome.borderColor || defaultWelcomeOverlay.borderColor, "color")}
+              ${input("adminDefaults.welcomeOverlay.shadowColor", "그림자 색상", welcome.shadowColor || welcome.textColor || defaultWelcomeOverlay.shadowColor, "color")}
+            </div>
+            ${select("adminDefaults.welcomeOverlay.shadowEnabled", "배경 그림자", String(welcome.shadowEnabled !== false), [["true", "사용"], ["false", "사용 안 함"]])}
+            ${textarea("adminDefaults.welcomeOverlay.text", "타이핑 문구", welcome.text || defaultWelcomeOverlay.text, 3)}
+            <div class="quick-input-grid">
+              ${rangeInput("adminDefaults.welcomeOverlay.textSize", "문구 크기", Number(welcome.textSize) || 30, 20, 48)}
+              ${rangeInput("adminDefaults.welcomeOverlay.overlayOpacity", "오버레이 투명도", Number(welcome.overlayOpacity) || 94, 0, 100)}
+              ${rangeInput("adminDefaults.welcomeOverlay.cardOpacity", "카드 배경 투명도", Number(welcome.cardOpacity) || 88, 0, 100)}
+              ${rangeInput("adminDefaults.welcomeOverlay.borderWidth", "테두리 두께", Number(welcome.borderWidth ?? defaultWelcomeOverlay.borderWidth), 0, 8)}
+              ${rangeInput("adminDefaults.welcomeOverlay.borderRadius", "모서리 둥글기", Number(welcome.borderRadius ?? defaultWelcomeOverlay.borderRadius), 0, 48)}
+              ${rangeInput("adminDefaults.welcomeOverlay.shadowOpacity", "그림자 투명도", Number(welcome.shadowOpacity) || 24, 0, 70)}
+            </div>
+          </div>
+          <p class="admin-message micro-help">일반관리자가 로그인 직후 처음 보는 화면입니다. 문구와 색상은 각 컬러테마 무드에 맞춰 바꿀 수 있습니다.</p>
+        </fieldset>
+        <fieldset><legend>청첩장페이지 진입 화면</legend>
+          ${introDesignEditor(invitationData.couple?.groom || {}, invitationData.couple?.bride || {})}
+          <p class="admin-message micro-help">청첩장 링크 접속 직후 공개 페이지에서 보이는 타이핑 진입 화면의 기본값입니다.</p>
+        </fieldset>
         <fieldset><legend>기본 안내 문구</legend>
           <div class="settings-subsection">
             <h3>섹션 타이틀</h3>
@@ -464,13 +602,68 @@ function renderDefaultSettings(message = "") {
     </section>`;
   bindAdminNavigation();
   const form = document.querySelector("#super-defaults-form");
+  const updateWelcomePreview = () => {
+    const preview = form.querySelector(".welcome-default-preview");
+    if (!preview) return;
+    const nextWelcome = {
+      eyebrow: form.elements["adminDefaults.welcomeOverlay.eyebrow"]?.value || defaultWelcomeOverlay.eyebrow,
+      text: form.elements["adminDefaults.welcomeOverlay.text"]?.value || defaultWelcomeOverlay.text,
+      textSize: form.elements["adminDefaults.welcomeOverlay.textSize"]?.value || defaultWelcomeOverlay.textSize,
+      cardColor: form.elements["adminDefaults.welcomeOverlay.cardColor"]?.value || defaultWelcomeOverlay.cardColor,
+      textColor: form.elements["adminDefaults.welcomeOverlay.textColor"]?.value || defaultWelcomeOverlay.textColor,
+      cardOpacity: form.elements["adminDefaults.welcomeOverlay.cardOpacity"]?.value || defaultWelcomeOverlay.cardOpacity,
+      borderColor: form.elements["adminDefaults.welcomeOverlay.borderColor"]?.value || defaultWelcomeOverlay.borderColor,
+      borderWidth: form.elements["adminDefaults.welcomeOverlay.borderWidth"]?.value ?? defaultWelcomeOverlay.borderWidth,
+      borderRadius: form.elements["adminDefaults.welcomeOverlay.borderRadius"]?.value ?? defaultWelcomeOverlay.borderRadius,
+      shadowEnabled: form.elements["adminDefaults.welcomeOverlay.shadowEnabled"]?.value !== "false",
+      shadowColor: form.elements["adminDefaults.welcomeOverlay.shadowColor"]?.value || defaultWelcomeOverlay.shadowColor,
+      shadowOpacity: form.elements["adminDefaults.welcomeOverlay.shadowOpacity"]?.value || defaultWelcomeOverlay.shadowOpacity,
+    };
+    preview.style.setProperty("--admin-welcome-card-bg", hexToRgba(nextWelcome.cardColor, Number(nextWelcome.cardOpacity) / 100));
+    preview.style.setProperty("--admin-welcome-text", nextWelcome.textColor);
+    preview.style.setProperty("--admin-welcome-size", `${nextWelcome.textSize}px`);
+    preview.style.setProperty("--admin-welcome-border", `${Number(nextWelcome.borderWidth) || 0}px solid ${nextWelcome.borderColor}`);
+    preview.style.setProperty("--admin-welcome-radius", `${Number(nextWelcome.borderRadius) || 0}px`);
+    preview.style.setProperty("--admin-welcome-shadow", nextWelcome.shadowEnabled
+      ? `0 28px 80px ${hexToRgba(nextWelcome.shadowColor, Number(nextWelcome.shadowOpacity) / 100)}`
+      : "none");
+    preview.querySelector(".section-label").textContent = nextWelcome.eyebrow;
+    preview.querySelector("p").textContent = nextWelcome.text;
+  };
+  const updateDefaultIntroPreview = () => {
+    const preview = form.querySelector("[data-intro-design-preview]");
+    if (!preview) return;
+    const value = (name, fallback) => form.elements[`hero.introDesign.${name}`]?.value || fallback;
+    preview.style.setProperty("--intro-align", form.elements["hero.introDesign.align"]?.value || "center");
+    preview.style.setProperty("--intro-eyebrow-size", `${value("eyebrowSize", 11)}px`);
+    preview.style.setProperty("--intro-name-size", `${value("nameSize", 30)}px`);
+    preview.style.setProperty("--intro-date-size", `${value("dateSize", 11)}px`);
+    preview.style.setProperty("--intro-eyebrow-name-gap", `${value("eyebrowNameGap", 10)}px`);
+    preview.style.setProperty("--intro-name-date-gap", `${value("nameDateGap", 10)}px`);
+    preview.style.setProperty("--intro-offset-y", `${value("offsetY", 0)}px`);
+    preview.querySelector("[data-intro-preview-eyebrow]").textContent = form.elements["hero.introEyebrow"].value || invitationData.hero.eyebrow || "our wedding day";
+    preview.querySelector("[data-intro-preview-name]").textContent = form.elements["hero.introName"].value || `${invitationData.couple?.groom?.name || "신랑"} · ${invitationData.couple?.bride?.name || "신부"}`;
+    preview.querySelector("[data-intro-preview-date]").textContent = form.elements["hero.introDate"].value || invitationData.wedding.displayDate;
+  };
+  form.addEventListener("input", (event) => {
+    if (event.target.name?.startsWith("adminDefaults.welcomeOverlay.")) updateWelcomePreview();
+    if (event.target.name?.startsWith("hero.intro")) {
+      if (event.target.type === "range") event.target.nextElementSibling.textContent = event.target.value;
+      updateDefaultIntroPreview();
+    }
+  });
+  form.addEventListener("change", (event) => {
+    if (event.target.name?.startsWith("adminDefaults.welcomeOverlay.")) updateWelcomePreview();
+  });
+  form.querySelector('[name="hero.introDesign.align"]')?.addEventListener("change", updateDefaultIntroPreview);
+  updateDefaultIntroPreview();
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const next = JSON.parse(JSON.stringify(invitationData));
     const fields = new FormData(form);
     for (const [name, value] of fields.entries()) {
       if (name === "adminDefaults.heroFields" || name === "adminDefaults.signupFields") continue;
-      const booleanFields = ["guestPhotos.previewVisible", "appearance.design.heroNamesEnabled", "appearance.design.heroEyebrowEnabled", "appearance.design.heroDateEnabled"];
+      const booleanFields = ["guestPhotos.previewVisible", "appearance.design.heroNamesEnabled", "appearance.design.heroEyebrowEnabled", "appearance.design.heroDateEnabled", "adminDefaults.welcomeOverlay.shadowEnabled"];
       setNested(next, name, booleanFields.includes(name) ? value === "true" : value.trim());
     }
     setNested(next, "adminDefaults.heroFields", fields.getAll("adminDefaults.heroFields"));
@@ -538,8 +731,24 @@ function textarea(name, label, value = "", rows = 3) {
   return `<label class="field"><span>${label}</span><textarea name="${name}" rows="${rows}">${escapeAdminHtml(value)}</textarea></label>`;
 }
 
+function rangeInput(name, label, value, min, max, step = 1) {
+  return `<label class="field range-field"><span>${label}</span><input name="${name}" type="range" min="${min}" max="${max}" step="${step}" value="${escapeAdminHtml(value)}"><output>${escapeAdminHtml(value)}</output></label>`;
+}
+
 function select(name, label, value, options) {
   return `<label class="field"><span>${label}</span><select name="${name}">${options.map(([optionValue, text]) => `<option value="${escapeAdminHtml(optionValue)}" ${String(value) === optionValue ? "selected" : ""}>${text}</option>`).join("")}</select></label>`;
+}
+
+function visibilitySelect(name, label, value = true) {
+  const isVisible = value !== false;
+  return `
+    <label class="visibility-switch">
+      <span>${label}</span>
+      <input type="hidden" name="${name}" value="${isVisible ? "true" : "false"}">
+      <input type="checkbox" data-visibility-toggle ${isVisible ? "checked" : ""} aria-label="${label} 공개 여부">
+      <i aria-hidden="true"></i>
+    </label>
+  `;
 }
 
 function introRange(name, label, value, min, max) {
@@ -626,9 +835,15 @@ function heroDecorationField(value = "none") {
 
 function imageField(name, label, value = "") {
   const isProfile = ["couple.groom.photo", "couple.bride.photo"].includes(name);
+  const originalName = isProfile ? `${name}Original` : "";
+  const originalValue = originalName ? getNested(invitationData, originalName, "") : "";
+  const cropName = isProfile ? `${name}Crop` : "";
+  const cropValue = cropName ? getNested(invitationData, cropName, "") : "";
   return `
     <div class="image-field ${isProfile ? "image-field-profile" : ""}">
       <input name="${name}" type="hidden" value="${escapeAdminHtml(value)}">
+      ${isProfile ? `<input name="${originalName}" type="hidden" value="${escapeAdminHtml(originalValue)}">` : ""}
+      ${isProfile ? `<input name="${cropName}" type="hidden" value="${escapeAdminHtml(cropValue)}">` : ""}
       <div class="image-preview" data-image-preview="${name}">
         ${value ? `<img src="${escapeAdminHtml(value)}" alt="${label} 미리보기">` : '<span>등록된 사진이 없습니다.</span>'}
       </div>
@@ -879,7 +1094,20 @@ async function decodeCropImage(file) {
   }
 }
 
-async function cropProfileImage(file) {
+function parseCropSettings(value = "") {
+  try {
+    const settings = JSON.parse(value);
+    return {
+      zoom: Number(settings.zoom) || 112,
+      x: Number.isFinite(Number(settings.x)) ? Number(settings.x) : 50,
+      y: Number.isFinite(Number(settings.y)) ? Number(settings.y) : 50,
+    };
+  } catch {
+    return { zoom: 112, x: 50, y: 50 };
+  }
+}
+
+async function cropProfileImage(file, { initialZoom = 112, initialX = 50, initialY = 50 } = {}) {
   let currentFile = file;
   let bitmap = await decodeCropImage(currentFile);
   let previewUrl = URL.createObjectURL(currentFile);
@@ -890,12 +1118,13 @@ async function cropProfileImage(file) {
     <p class="micro-help">사진을 확대하고 보여줄 영역을 맞춘 뒤 적용해 주세요.</p>
     <canvas class="image-crop-preview" width="480" height="600" aria-label="대표사진 자르기 미리보기"></canvas>
     <label class="btn image-upload">새 사진 업로드<input type="file" accept="image/*" data-crop-replace></label>
-    <label class="field"><span>확대</span><input type="range" min="100" max="220" value="100" data-crop-zoom></label>
-    <label class="field"><span>좌우 중심</span><input type="range" min="0" max="100" value="50" data-crop-x></label>
-    <label class="field"><span>상하 중심</span><input type="range" min="0" max="100" value="50" data-crop-y></label>
+    <label class="field"><span>확대</span><input type="range" min="100" max="220" value="${escapeAdminHtml(initialZoom)}" data-default-value="112" data-crop-zoom><output>${escapeAdminHtml(initialZoom)}</output></label>
+    <label class="field"><span>좌우 중심</span><input type="range" min="0" max="100" value="${escapeAdminHtml(initialX)}" data-default-value="50" data-crop-x><output>${escapeAdminHtml(initialX)}</output></label>
+    <label class="field"><span>상하 중심</span><input type="range" min="0" max="100" value="${escapeAdminHtml(initialY)}" data-default-value="50" data-crop-y><output>${escapeAdminHtml(initialY)}</output></label>
     <div class="modal-actions"><button class="btn" type="button" data-crop-cancel>취소</button><button class="btn btn-primary" type="button" data-crop-apply>적용</button></div>
   </section>`;
   document.body.append(root);
+  decorateRangeDefaults(root);
   const preview = root.querySelector(".image-crop-preview");
   const zoom = root.querySelector("[data-crop-zoom]");
   const x = root.querySelector("[data-crop-x]");
@@ -920,6 +1149,10 @@ async function cropProfileImage(file) {
     const context = preview.getContext("2d");
     context.clearRect(0, 0, preview.width, preview.height);
     context.drawImage(bitmap, source.x, source.y, source.width, source.height, 0, 0, preview.width, preview.height);
+    [zoom, x, y].forEach((input) => {
+      input.nextElementSibling.textContent = input.value;
+      setRangeFill(input);
+    });
   };
   zoom.addEventListener("input", update);
   x.addEventListener("input", update);
@@ -933,9 +1166,9 @@ async function cropProfileImage(file) {
     currentFile = replacement;
     bitmap = await decodeCropImage(currentFile);
     previewUrl = URL.createObjectURL(currentFile);
-    zoom.value = "100";
-    x.value = "50";
-    y.value = "50";
+    zoom.value = String(initialZoom);
+    x.value = String(initialX);
+    y.value = String(initialY);
     update();
   });
   return new Promise((resolve) => {
@@ -953,13 +1186,15 @@ async function cropProfileImage(file) {
       canvas.height = 1200;
       canvas.getContext("2d").drawImage(bitmap, source.x, source.y, source.width, source.height, 0, 0, canvas.width, canvas.height);
       const blob = await new Promise((done) => canvas.toBlob(done, "image/webp", 0.88));
-      finish(blob ? new File([blob], `${currentFile.name.replace(/\.[^.]+$/, "")}-crop.webp`, { type: "image/webp" }) : currentFile);
+      const settings = { zoom: Number(zoom.value), x: Number(x.value), y: Number(y.value) };
+      const croppedFile = blob ? new File([blob], `${currentFile.name.replace(/\.[^.]+$/, "")}-crop.webp`, { type: "image/webp" }) : currentFile;
+      finish({ file: croppedFile, settings });
     });
   });
 }
 
 function galleryManager(images) {
-  const slots = Array.from({ length: 20 }, (_, index) => images[index] || "");
+  const slots = Array.from({ length: GALLERY_MAX }, (_, index) => images[index] || "");
   return `
     <div class="gallery-manager">
       ${slots.map((image, index) => `<input name="gallery.${index}" type="hidden" value="${escapeAdminHtml(image)}">`).join("")}
@@ -967,7 +1202,7 @@ function galleryManager(images) {
         <label class="btn btn-primary image-upload">사진 추가<input type="file" accept="image/*" multiple data-gallery-upload></label>
         <button class="btn" type="button" data-gallery-clear>전체 비우기</button>
       </div>
-      <p class="admin-message" data-gallery-status>최대 20장까지 등록할 수 있습니다. 기존 사진은 유지되고, 사진별 변경/삭제도 가능합니다.</p>
+      <p class="admin-message" data-gallery-status>최대 ${GALLERY_MAX}장까지 등록할 수 있습니다. 기존 사진은 유지되고, 사진별 변경/삭제도 가능합니다.</p>
       <div class="gallery-manager-grid" data-gallery-editor-preview>
         ${galleryManagerPreview(slots)}
       </div>
@@ -1132,18 +1367,69 @@ function venueMapSearchUrl(value) {
   return `https://map.kakao.com/link/search/${encodeURIComponent(value)}`;
 }
 
-function findVenuePreset(value) {
+function findVenuePreset(value = "") {
   const normalized = value.replace(/\s+/g, "").toLowerCase();
   return venuePresets.find((preset) => preset.names.some((name) => normalized.includes(name.replace(/\s+/g, "").toLowerCase())));
 }
 
-function mapLinksFor(venue, address) {
-  const query = encodeURIComponent(address.trim() || venue.trim());
+function mapLinksFor(venue = "", address = "") {
+  const query = encodeURIComponent(String(address || "").trim() || String(venue || "").trim());
   return [
     { label: "네이버 지도", url: `https://map.naver.com/p/search/${query}` },
     { label: "카카오맵", url: `https://map.kakao.com/link/search/${query}` },
     { label: "티맵", url: `https://www.tmap.co.kr/tmap2/mobile/route.jsp?name=${query}` },
   ];
+}
+
+function openAddressSearchModal({ venue = "", address = "", onSelect }) {
+  const root = document.createElement("div");
+  root.className = "address-search-backdrop";
+  const resultMarkup = (query) => {
+    const value = query || venue || address;
+    const preset = findVenuePreset(value);
+    const links = mapLinksFor(value, preset?.address || value);
+    return `
+      <div class="address-search-results">
+        ${preset ? `<button class="address-result-card" type="button" data-address-result="${escapeAdminHtml(preset.address)}" data-venue-result="${escapeAdminHtml(preset.names[0])}">
+          <strong>${escapeAdminHtml(preset.names[0])}</strong>
+          <span>${escapeAdminHtml(preset.address)}</span>
+          <small>이 항목 선택</small>
+        </button>` : `<p class="admin-message">저장된 식장 프리셋에서는 찾지 못했습니다. 아래 지도에서 확인하거나 직접 입력해 주세요.</p>`}
+        <div class="map-links address-map-links">
+          ${links.map((link) => `<a class="btn" href="${escapeAdminHtml(link.url)}" target="_blank" rel="noopener">${escapeAdminHtml(link.label)}</a>`).join("")}
+        </div>
+      </div>`;
+  };
+  root.innerHTML = `<section class="address-search-modal">
+    <div class="signup-modal-head">
+      <div><p class="section-label">Address Search</p><h2>예식장 주소 검색</h2></div>
+      <button class="icon-btn" type="button" data-address-close aria-label="주소 검색 닫기">×</button>
+    </div>
+    <label class="field"><span>웨딩홀 이름</span><input data-address-query value="${escapeAdminHtml(venue)}" placeholder="웨딩홀 이름을 입력해 주세요."></label>
+    <div data-address-results>${resultMarkup(venue || address)}</div>
+    <div class="address-manual">
+      <label class="field"><span>직접 입력</span><input data-address-manual value="${escapeAdminHtml(address)}" placeholder="주소를 직접 입력할 수 있어요."></label>
+      <button class="btn btn-primary" type="button" data-address-manual-apply>직접입력 적용</button>
+    </div>
+  </section>`;
+  document.body.append(root);
+  const close = () => root.remove();
+  const queryInput = root.querySelector("[data-address-query]");
+  const results = root.querySelector("[data-address-results]");
+  queryInput?.addEventListener("input", () => { results.innerHTML = resultMarkup(queryInput.value.trim()); });
+  root.addEventListener("click", (event) => {
+    if (event.target === root || event.target.closest("[data-address-close]")) close();
+    const result = event.target.closest("[data-address-result]");
+    if (result) {
+      onSelect({ venue: result.dataset.venueResult, address: result.dataset.addressResult });
+      close();
+    }
+    if (event.target.closest("[data-address-manual-apply]")) {
+      onSelect({ venue: queryInput.value.trim(), address: root.querySelector("[data-address-manual]")?.value.trim() || "" });
+      close();
+    }
+  });
+  queryInput?.focus();
 }
 
 function parentNames(value = "") {
@@ -1226,38 +1512,54 @@ function transportEditor(item = {}, index = 0) {
 
 function transportManager(items = []) {
   return `
-    <section class="editor-subsection"><div class="editor-subsection-head"><strong>교통 안내</strong><span>대중교통과 주차 정보를 항목별로 수정하거나 숨길 수 있습니다.</span></div>
+    <section class="editor-subsection"><div class="editor-subsection-head"><strong>교통 안내</strong><span>가까운 역·정류장 기준으로 경로와 소요시간을 항목별로 관리합니다.</span></div>
+    <p class="admin-message micro-help">AI 연결 시에는 식장 주소 기준 가장 가까운 기차/지하철역과 버스정류장을 찾아 차량·버스·지하철·도보 소요시간을 생성합니다. 도보는 20분 이하일 때만 표시하는 기준으로 작성해 주세요.</p>
     <div class="notice-manager" data-transport-manager>
       <div class="notice-manager-list" data-transport-list>${items.map(transportEditor).join("")}</div>
       <button class="btn notice-add" type="button" data-transport-add>＋ 교통 안내 추가</button>
     </div></section>`;
 }
 
-function ensureAccountRows(accounts = []) {
-  const [groomFather = "", groomMother = ""] = parentNames(invitationData.couple?.groom?.parents || "");
-  const [brideFather = "", brideMother = ""] = parentNames(invitationData.couple?.bride?.parents || "");
+function ensureAccountRows(accounts = [], sourceData = invitationData) {
+  const [groomFather = "", groomMother = ""] = parentNames(sourceData.couple?.groom?.parents || "");
+  const [brideFather = "", brideMother = ""] = parentNames(sourceData.couple?.bride?.parents || "");
+  const expectedNames = {
+    "신랑측:신랑": sourceData.couple?.groom?.name || "신랑",
+    "신랑측:아버님": groomFather,
+    "신랑측:어머님": groomMother,
+    "신부측:신부": sourceData.couple?.bride?.name || "신부",
+    "신부측:아버님": brideFather,
+    "신부측:어머님": brideMother,
+  };
   const defaults = [
-    { side: "신랑측", relation: "신랑", name: invitationData.couple?.groom?.name || "신랑", bank: "", number: "" },
+    { side: "신랑측", relation: "신랑", name: expectedNames["신랑측:신랑"], bank: "", number: "" },
     { side: "신랑측", relation: "아버님", name: groomFather, bank: "", number: "" },
     { side: "신랑측", relation: "어머님", name: groomMother, bank: "", number: "" },
-    { side: "신부측", relation: "신부", name: invitationData.couple?.bride?.name || "신부", bank: "", number: "" },
+    { side: "신부측", relation: "신부", name: expectedNames["신부측:신부"], bank: "", number: "" },
     { side: "신부측", relation: "아버님", name: brideFather, bank: "", number: "" },
     { side: "신부측", relation: "어머님", name: brideMother, bank: "", number: "" },
-  ];
+  ].filter((account) => ["신랑", "신부"].includes(account.relation) || account.name);
   const normalizeRelation = (relation = "") => {
     if (relation.includes("아버")) return "아버님";
     if (relation.includes("어머")) return "어머님";
-    if (relation.includes("신랑")) return "신랑";
-    if (relation.includes("신부")) return "신부";
+    if (relation === "신랑") return "신랑";
+    if (relation === "신부") return "신부";
     return relation || "";
   };
-  const normalized = accounts.map((account) => ({
-    side: account.side || "신랑측",
-    relation: normalizeRelation(account.relation),
-    name: account.name || "",
-    bank: account.bank || "",
-    number: account.number || "",
-  }));
+  const normalized = accounts.map((account) => {
+    const side = account.side || "신랑측";
+    const relation = normalizeRelation(account.relation);
+    const expectedName = expectedNames[`${side}:${relation}`];
+    if (expectedName === "") return null;
+    return {
+      side,
+      relation,
+      personName: expectedName || account.personName || account.name || "",
+      name: expectedName || account.name || account.personName || "",
+      bank: account.bank || "",
+      number: account.number || "",
+    };
+  }).filter(Boolean);
   const missingDefaults = defaults.filter((fallback) =>
     !normalized.some((account) => account.side === fallback.side && account.relation === fallback.relation));
   return [...normalized, ...missingDefaults];
@@ -1266,16 +1568,26 @@ function ensureAccountRows(accounts = []) {
 function accountManager(accounts = []) {
   const groups = ["신랑측", "신부측"];
   const relationOptions = ["신랑", "신부", "아버님", "어머님", "형제", "자매", "직접입력"];
+  const normalizedAccounts = ensureAccountRows(accounts);
   const accountEditor = (account, index) => `
     <div class="account-editor" data-account-editor>
-      <div class="account-editor-head"><strong>${escapeAdminHtml(account.name || account.relation || "계좌")}</strong><button class="icon-btn" type="button" data-account-remove aria-label="계좌 삭제">×</button></div>
+      <button class="icon-btn account-remove" type="button" data-account-remove aria-label="계좌 삭제">×</button>
       <input type="hidden" name="account.${index}.side" value="${escapeAdminHtml(account.side)}">
-      ${select(`account.${index}.relation`, "관계", relationOptions.includes(account.relation) ? account.relation : account.relation ? "직접입력" : "", [["", "관계 선택"], ...relationOptions.map((item) => [item, item])])}
-      ${input(`account.${index}.relationCustom`, "관계 직접 입력", relationOptions.includes(account.relation) ? "" : account.relation || "")}
-      ${input(`account.${index}.name`, "예금주", account.name)}
-      ${select(`account.${index}.bankSelect`, "은행 선택", bankOptions.includes(account.bank) ? account.bank : account.bank ? "직접 입력" : "", bankOptions.map((bank) => [bank, bank || "은행을 선택해 주세요"]))}
-      ${input(`account.${index}.bank`, "은행명", account.bank)}
-      ${input(`account.${index}.number`, "계좌번호", account.number)}
+      <div class="account-row account-row-main">
+        ${input(`account.${index}.personName`, "이름", account.personName || account.name || "")}
+        ${select(`account.${index}.relation`, "관계", relationOptions.includes(account.relation) ? account.relation : account.relation ? "직접입력" : "", [["", "선택"], ...relationOptions.map((item) => [item, item])])}
+        ${input(`account.${index}.name`, "예금주", account.name || account.personName || "")}
+      </div>
+      <div class="account-row account-row-custom" data-account-relation-custom ${relationOptions.includes(account.relation) || !account.relation ? "hidden" : ""}>
+        ${input(`account.${index}.relationCustom`, "관계 직접 입력", relationOptions.includes(account.relation) ? "" : account.relation || "")}
+      </div>
+      <div class="account-row account-row-bank">
+        ${select(`account.${index}.bankSelect`, "은행", bankOptions.includes(account.bank) ? account.bank : account.bank ? "직접 입력" : "", bankOptions.map((bank) => [bank, bank || "선택"]))}
+        ${input(`account.${index}.number`, "계좌번호", account.number)}
+      </div>
+      <div class="account-row account-row-custom" data-account-bank-custom ${bankOptions.includes(account.bank) ? "hidden" : ""}>
+        ${input(`account.${index}.bank`, "은행 직접 입력", account.bank)}
+      </div>
     </div>`;
   return `
     <section class="editor-subsection account-manager-section" data-account-manager><div class="editor-subsection-head"><strong>계좌 안내</strong><span>필요한 계좌만 남기고 추가·삭제할 수 있습니다.</span></div>
@@ -1284,7 +1596,7 @@ function accountManager(accounts = []) {
         <section class="account-side-group" data-account-side="${side}">
           <div class="account-side-head"><strong>${side}</strong><span>${side === "신랑측" ? "신랑 가족 계좌" : "신부 가족 계좌"}</span></div>
           <div class="account-side-list">
-            ${accounts.map((account, index) => ({ account, index })).filter(({ account }) => account.side === side).map(({ account, index }) => accountEditor(account, index)).join("")}
+            ${normalizedAccounts.map((account, index) => ({ account, index })).filter(({ account }) => account.side === side).map(({ account, index }) => accountEditor(account, index)).join("")}
           </div>
           <button class="btn account-add" type="button" data-account-add="${side}">＋ ${side} 계좌 추가</button>
         </section>`).join("")}
@@ -1292,15 +1604,20 @@ function accountManager(accounts = []) {
 }
 
 function renderEditor(message = "", focus = "") {
+  if (adminArea === "general") {
+    const viewByFocus = { copy: "copy-editor", share: "share-settings", gallery: "gallery", sections: "sections" };
+    rememberAdminView(viewByFocus[focus] || "editor");
+  }
   window.WEDDING_DESIGN?.normalize(invitationData);
+  if (focus !== "copy") document.documentElement.style.removeProperty("--floating-save-bottom");
   invitationData.accounts = ensureAccountRows(invitationData.accounts);
   const { groom, bride } = invitationData.couple;
   const [groomFather = "", groomMother = ""] = parentNames(groom.parents);
   const [brideFather = "", brideMother = ""] = parentNames(bride.parents);
   const recommendations = recommendationSets(groom, bride);
-  const gallery = Array.from({ length: 20 }, (_, index) => invitationData.gallery[index] || "");
-  const editorTitle = focus === "share" ? "공유 설정" : focus === "gallery" ? "갤러리 설정" : focus === "copy" ? "편집 기능" : "청첩장 기본 설정";
-  const editorActiveMenu = focus === "copy" ? "copy" : focus === "share" ? "share" : focus === "gallery" ? "content" : "editor";
+  const gallery = Array.from({ length: GALLERY_MAX }, (_, index) => invitationData.gallery[index] || "");
+  const editorTitle = focus === "share" ? "공유 설정" : focus === "gallery" ? "갤러리 설정" : focus === "copy" ? "편집 기능" : focus === "sections" ? "섹션 설정" : "청첩장 기본 설정";
+  const editorActiveMenu = focus === "copy" ? "copy" : focus === "share" ? "share" : focus === "gallery" ? "content" : focus === "sections" ? "sections" : "editor";
   adminApp.innerHTML = `
     ${adminHeader(editorActiveMenu)}
     ${focus === "gallery" ? contentBackBar("갤러리") : ""}
@@ -1319,19 +1636,35 @@ function renderEditor(message = "", focus = "") {
       <form class="editor-form" id="invitation-editor">
         <fieldset class="basic-pane guided-step" id="couple-settings" data-guided-step="core"><legend>1. 가장 먼저 입력해 주세요</legend>
           <p class="admin-message">여기에서 입력한 이름, 부모님 성함, 식장과 예식 일시는 아래 세부 설정에 자동으로 반영됩니다.</p>
+          <div class="quick-couple-cards">
+            <section class="quick-side-card">
+              <h3>신랑측 정보</h3>
+              ${quickInput("couple.groom.name", "신랑 이름", groom.name)}
+              ${quickInput("couple.groom.birthday", "신랑 생일", birthdayInputValue(groom.birthday), "date")}
+              ${quickInput("groomFather", "신랑 아버지", groomFather)}
+              ${quickInput("groomMother", "신랑 어머니", groomMother)}
+            </section>
+            <section class="quick-side-card">
+              <h3>신부측 정보</h3>
+              ${quickInput("couple.bride.name", "신부 이름", bride.name)}
+              ${quickInput("couple.bride.birthday", "신부 생일", birthdayInputValue(bride.birthday), "date")}
+              ${quickInput("brideFather", "신부 아버지", brideFather)}
+              ${quickInput("brideMother", "신부 어머니", brideMother)}
+            </section>
+          </div>
           <div class="quick-input-grid">
-            ${quickInput("couple.groom.name", "신랑 이름", groom.name)}
-            ${quickInput("couple.bride.name", "신부 이름", bride.name)}
-            ${quickInput("groomFather", "신랑 아버지", groomFather)}
-            ${quickInput("brideFather", "신부 아버지", brideFather)}
-            ${quickInput("groomMother", "신랑 어머니", groomMother)}
-            ${quickInput("brideMother", "신부 어머니", brideMother)}
-            ${quickInput("couple.groom.birthday", "신랑 생일", birthdayInputValue(groom.birthday), "date")}
-            ${quickInput("couple.bride.birthday", "신부 생일", birthdayInputValue(bride.birthday), "date")}
             ${quickInput("wedding.venue", "식장 이름", invitationData.wedding.venue)}
             ${quickInput("wedding.hall", "홀 정보", invitationData.wedding.hall || "")}
             ${quickInput("wedding.date", "예식 일시", weddingDateInputValue(invitationData.wedding.date), "datetime-local")}
           </div>
+          <div class="visibility-switch-grid">
+            ${visibilitySelect("displaySettings.showInvitationParents", "초대글 부모님 성함", invitationData.displaySettings?.showInvitationParents)}
+            ${visibilitySelect("displaySettings.showProfileParents", "두 사람 소개 부모님 성함", invitationData.displaySettings?.showProfileParents)}
+            ${visibilitySelect("displaySettings.showProfileBirthdays", "두 사람 소개 생일", invitationData.displaySettings?.showProfileBirthdays)}
+          </div>
+          <p class="admin-message micro-help">비공개로 바꿔도 계좌 항목 자동 생성에는 부모님 성함을 그대로 사용합니다.</p>
+          <button class="btn btn-secondary quick-apply" type="button" data-quick-apply>1번 입력값을 아래 항목에 반영</button>
+          <p class="admin-message micro-help">이 버튼은 화면 안의 관련 항목만 맞춰줍니다. 최종 저장은 우측 하단의 변경사항 저장 버튼에서 완료됩니다.</p>
         </fieldset>
         <fieldset class="basic-pane guided-step" id="main-media-settings" data-guided-step="media" data-step-requires="core"><legend>2. 첫 화면</legend>
           ${heroActiveMediaField(invitationData.hero)}
@@ -1378,10 +1711,9 @@ function renderEditor(message = "", focus = "") {
           ${input("wedding.displayDateCustom", "화면 표시 일시 · 선택 후 수정 가능", invitationData.wedding.displayDateCustom || invitationData.wedding.displayDate)}
           ${input("wedding.address", "주소", invitationData.wedding.address)}
           <div class="venue-actions">
-            <a class="btn" href="${escapeAdminHtml(venueMapSearchUrl(invitationData.wedding.venue))}" target="_blank" rel="noopener" data-venue-map>지도에서 확인</a>
-            <button class="btn" type="button" data-address-focus>주소 직접 입력</button>
+            <button class="btn btn-primary" type="button" data-address-search>주소 검색</button>
           </div>
-          <p class="admin-message" data-venue-status>등록된 식장은 이름을 입력하면 주소가 자동으로 채워집니다. 다른 식장은 지도에서 확인 후 주소를 직접 입력해 주세요.</p>
+          <p class="admin-message" data-venue-status>등록된 식장은 이름을 입력하면 주소가 자동으로 채워집니다. 다른 식장은 주소 검색에서 지도 확인 또는 직접입력을 사용할 수 있습니다.</p>
         </fieldset>
         <details class="editor-details basic-pane guided-step" open data-guided-step="accounts" data-step-requires="wedding"><summary>4. 계좌 안내</summary><div class="editor-details-body">
           ${textarea("sectionDescriptions.account", "계좌 안내 문구", invitationData.sectionDescriptions?.account || "참석이 어려우신 분들을 위해\n계좌번호를 안내해 드립니다.")}
@@ -1401,7 +1733,7 @@ function renderEditor(message = "", focus = "") {
             <div class="copy-editor-toolbar"><div><strong>편집 기능</strong><small>점선 영역을 누르면 아래 도구가 해당 영역에 맞게 바뀝니다.</small></div></div>
             ${editorDesignPanel()}
             <p class="admin-message copy-editor-guide">공개 청첩장에서 수정 가능한 영역만 점선으로 표시됩니다.</p>
-            <iframe class="copy-editor-public-frame" src="./index.html?copyEditorPreview=1&v=20260604-ux27" title="공개 청첩장 문구 수정 미리보기" data-copy-editor-frame></iframe>
+            <iframe class="copy-editor-public-frame" src="./index.html?copyEditorPreview=1&v=20260605-ux30" title="공개 청첩장 문구 수정 미리보기" data-copy-editor-frame></iframe>
             <aside class="copy-editor-drawer" data-copy-editor-drawer>
             <section class="copy-editor-section copy-editor-intro-settings">
               <p class="section-label">Intro Overlay</p><h2>진입 화면</h2>
@@ -1426,11 +1758,11 @@ function renderEditor(message = "", focus = "") {
           </div>
         </section>
         <section class="editor-details content-pane content-settings-card" id="gallery-settings"><div class="editor-details-title">갤러리<button class="btn btn-secondary gallery-modal-close" type="button" data-gallery-modal-close hidden>닫기</button></div><div class="editor-details-body">
-          <p class="admin-message">최대 20장까지 등록할 수 있습니다. 공개 화면에는 접속할 때마다 등록 사진 중 무작위 6장이 미리보기로 표시됩니다.</p>
+          <p class="admin-message">최대 ${GALLERY_MAX}장까지 등록할 수 있습니다. 공개 화면에는 접속할 때마다 등록 사진 중 무작위 6장이 미리보기로 표시됩니다.</p>
           ${select("galleryDisplayMode", "사진 확대 화면 표시 방식", invitationData.galleryDisplayMode || "portrait", [["portrait", "세로형 화면에 맞추기"], ["original", "원본 사진 비율 유지"]])}
           ${galleryManager(gallery)}
         </div></section>
-        <details class="editor-details basic-pane guided-step" data-guided-step="sections" data-step-requires="wedding"><summary>섹션 순서와 노출 설정</summary><div class="editor-details-body">
+        <details class="editor-details section-pane" open data-guided-step="sections" data-step-requires="wedding"><summary>섹션 순서와 노출 설정</summary><div class="editor-details-body">
           <p class="admin-message">표시할 섹션을 체크하고 화살표 버튼으로 순서를 정해 주세요.</p>
           <div class="section-order-columns">
             ${sectionOrderEditor("sectionSettings.preWedding", "결혼식 전날까지", invitationData.sectionSettings?.preWedding)}
@@ -1460,6 +1792,10 @@ function setNested(target, path, value) {
   parent[last] = value;
 }
 
+function getNested(target, path, fallback = "") {
+  return path.split(".").reduce((current, key) => current?.[key], target) ?? fallback;
+}
+
 function editorData(form) {
   const next = JSON.parse(JSON.stringify(invitationData));
   const fields = new FormData(form);
@@ -1467,7 +1803,7 @@ function editorData(form) {
     if (name === "appearance.preset" || name === "editorPresetId" || name.startsWith("notice.") || name.startsWith("noticePreset.") || name.startsWith("account.") || name.startsWith("transport.")) {
       continue;
     }
-    if (name === "guestPhotos.previewVisible") {
+    if (name === "guestPhotos.previewVisible" || name.startsWith("displaySettings.")) {
       setNested(next, name, value === "true");
     } else if (name === "wedding.date") {
       setNested(next, name, weddingDateIso(value));
@@ -1497,17 +1833,20 @@ function editorData(form) {
   })).filter((item) => item.title || item.text);
   next.couple.groom.tags = fields.getAll("couple.groom.tags").map((item) => item.trim().replace(/^#+/, "")).filter(Boolean).slice(0, 3);
   next.couple.bride.tags = fields.getAll("couple.bride.tags").map((item) => item.trim().replace(/^#+/, "")).filter(Boolean).slice(0, 3);
-  next.accounts = [...form.querySelectorAll("[data-account-editor]")].map((editor) => {
+  next.accounts = ensureAccountRows([...form.querySelectorAll("[data-account-editor]")].map((editor) => {
     const relationSelect = editor.querySelector('select[name*=".relation"]')?.value || "";
     const relationCustom = editor.querySelector('input[name*=".relationCustom"]')?.value.trim() || "";
+    const bankSelect = editor.querySelector('select[name*=".bankSelect"]')?.value || "";
+    const bankCustom = editor.querySelector('input[name*=".bank"]')?.value.trim() || "";
     return {
       side: editor.querySelector('input[name*=".side"]')?.value.trim() || "신랑측",
+      personName: editor.querySelector('input[name*=".personName"]')?.value.trim() || "",
       name: editor.querySelector('input[name*=".name"]')?.value.trim() || "",
-      bank: editor.querySelector('input[name*=".bank"]')?.value.trim() || "",
+      bank: bankSelect === "직접 입력" ? bankCustom : bankSelect,
       number: editor.querySelector('input[name*=".number"]')?.value.trim() || "",
       relation: relationSelect === "직접입력" ? relationCustom : relationSelect,
     };
-  }).filter((account) => account.name || account.bank || account.number || account.relation);
+  }).filter((account) => account.name || account.bank || account.number || account.relation), next);
   const selectedPreset = next.designSystem?.themes?.find((theme) => theme.id === fields.get("editorPresetId"));
   if (selectedPreset) {
     next.appearance.theme = selectedPreset.type === "color" ? selectedPreset.id : (next.appearance.theme || "sky");
@@ -1655,7 +1994,7 @@ function bindEditor() {
   };
   const refreshFrameGallery = () => {
     if (!frameDocumentRef) return;
-    const images = Array.from({ length: 20 }, (_, index) => form.elements[`gallery.${index}`]?.value || "").filter(Boolean);
+    const images = Array.from({ length: GALLERY_MAX }, (_, index) => form.elements[`gallery.${index}`]?.value || "").filter(Boolean);
     const galleryGrid = frameDocumentRef.querySelector(".gallery-grid");
     if (!galleryGrid) return;
     galleryGrid.innerHTML = images.slice(0, 6).map((image, index) => `
@@ -1763,6 +2102,17 @@ function bindEditor() {
       refreshEditHandles();
     }
   };
+  const updateFloatingSaveForToolDock = () => {
+    const save = document.querySelector('.admin-floating-save[form="invitation-editor"]');
+    if (!save || !toolPanel || toolPanel.hidden) {
+      document.documentElement.style.removeProperty("--floating-save-bottom");
+      return;
+    }
+    const panelHeight = Math.ceil(toolPanel.getBoundingClientRect().height || 0);
+    document.documentElement.style.setProperty("--floating-save-bottom", toolPanel.classList.contains("is-collapsed")
+      ? "calc(58px + env(safe-area-inset-bottom))"
+      : `calc(${panelHeight}px + 8px + env(safe-area-inset-bottom))`);
+  };
   const setToolDock = (title, help, activeTab = "media", context = "text") => {
     if (!toolPanel) return;
     toolPanel.hidden = false;
@@ -1804,6 +2154,7 @@ function bindEditor() {
     toolPanel.querySelectorAll("[data-tooldock-items]").forEach((item) => {
       item.hidden = item.dataset.tooldockItems !== context;
     });
+    updateFloatingSaveForToolDock();
   };
   const triggerFileInput = (selector) => {
     const inputElement = form.querySelector(selector);
@@ -1819,12 +2170,14 @@ function bindEditor() {
   const closeGalleryModal = () => {
     gallerySettingsPanel?.classList.remove("is-gallery-modal");
     gallerySettingsPanel?.querySelector("[data-gallery-modal-close]")?.setAttribute("hidden", "");
+    updateFloatingSaveForToolDock();
   };
   const openGalleryModal = () => {
     if (!gallerySettingsPanel) return;
     gallerySettingsPanel.classList.add("is-gallery-modal");
     gallerySettingsPanel.querySelector("[data-gallery-modal-close]")?.removeAttribute("hidden");
     toolPanel?.classList.add("is-collapsed");
+    updateFloatingSaveForToolDock();
   };
   gallerySettingsPanel?.querySelector("[data-gallery-modal-close]")?.addEventListener("click", closeGalleryModal);
   const bindDesignControls = () => {
@@ -1843,8 +2196,18 @@ function bindEditor() {
     }));
     copyEditor.querySelectorAll('input[name="appearance.design.heroDecoration"]').forEach((field) => {
       field.addEventListener("change", () => {
+        copyEditor.querySelectorAll(".hero-decoration-option").forEach((option) => option.classList.toggle("is-selected", option.contains(field) && field.checked));
         refreshFrameAppearance();
         refreshEditHandles();
+      });
+    });
+    copyEditor.querySelectorAll(".editor-tooldock .hero-decoration-option").forEach((option) => {
+      option.addEventListener("click", () => {
+        const field = option.querySelector('input[name="appearance.design.heroDecoration"]');
+        if (!field) return;
+        field.checked = true;
+        field.dispatchEvent(new Event("change", { bubbles: true }));
+        setToolDock("메인 이미지 꾸밈", "선택한 꾸밈이 미리보기에 바로 적용됩니다.", "frame", "hero");
       });
     });
     copyEditor.querySelectorAll('.editor-tooldock input[type="range"]').forEach((field) => {
@@ -1890,10 +2253,12 @@ function bindEditor() {
     copyEditor.querySelector("[data-tooldock-collapse]")?.addEventListener("click", (event) => {
       event.stopPropagation();
       toolPanel.classList.toggle("is-collapsed");
+      updateFloatingSaveForToolDock();
     });
     toolPanel?.addEventListener("click", (event) => {
       if (toolPanel.classList.contains("is-collapsed") && event.target.closest(".editor-tooldock-head") && !event.target.closest("button")) {
         toolPanel.classList.remove("is-collapsed");
+        updateFloatingSaveForToolDock();
       }
     });
     copyEditor.querySelectorAll("[data-tool-action]").forEach((button) => {
@@ -2116,7 +2481,10 @@ function bindEditor() {
       const handle = clickEvent.target.closest("[data-copy-edit-handle]");
       const target = handle ? handle.closest(editableSelector) : clickEvent.target.closest(editableSelector);
       if (!target || target.matches("[data-copy-inline-editor]")) {
-        if (!target && toolPanel && !toolPanel.hidden) toolPanel.classList.add("is-collapsed");
+        if (!target && toolPanel && !toolPanel.hidden) {
+          toolPanel.classList.add("is-collapsed");
+          updateFloatingSaveForToolDock();
+        }
         if (clickEvent.target.closest("a, button, input, select, textarea, label")) {
           clickEvent.preventDefault();
           clickEvent.stopImmediatePropagation();
@@ -2185,25 +2553,35 @@ function bindEditor() {
   const syncParentNames = () => {
     form.elements["couple.groom.parents"].value = joinParentNames(form.querySelector('[data-quick="groomFather"]').value, form.querySelector('[data-quick="groomMother"]').value);
     form.elements["couple.bride.parents"].value = joinParentNames(form.querySelector('[data-quick="brideFather"]').value, form.querySelector('[data-quick="brideMother"]').value);
+    invitationData.couple.groom.parents = form.elements["couple.groom.parents"].value;
+    invitationData.couple.bride.parents = form.elements["couple.bride.parents"].value;
   };
   const accountItems = () => [...form.querySelectorAll("[data-account-editor]")].map((editor) => {
     const relationSelect = editor.querySelector('select[name*=".relation"]')?.value || "";
     const relationCustom = editor.querySelector('input[name*=".relationCustom"]')?.value.trim() || "";
+    const bankSelect = editor.querySelector('select[name*=".bankSelect"]')?.value || "";
+    const bankCustom = editor.querySelector('input[name*=".bank"]')?.value.trim() || "";
     return {
       side: editor.querySelector('input[name*=".side"]')?.value.trim() || "신랑측",
+      personName: editor.querySelector('input[name*=".personName"]')?.value.trim() || "",
       name: editor.querySelector('input[name*=".name"]')?.value.trim() || "",
-      bank: editor.querySelector('input[name*=".bank"]')?.value.trim() || "",
+      bank: bankSelect === "직접 입력" ? bankCustom : bankSelect,
       number: editor.querySelector('input[name*=".number"]')?.value.trim() || "",
       relation: relationSelect === "직접입력" ? relationCustom : relationSelect,
     };
   });
   const renderAccountItems = (items) => {
-    invitationData.accounts = items;
+    const normalizedItems = ensureAccountRows(items);
+    invitationData.accounts = normalizedItems;
     const current = form.querySelector("[data-account-manager]");
-    current.outerHTML = accountManager(items);
+    current.outerHTML = accountManager(normalizedItems);
     bindAccountManager();
   };
   const syncAccountParentNames = () => {
+    invitationData.couple.groom.name = form.elements["couple.groom.name"]?.value || invitationData.couple.groom.name;
+    invitationData.couple.bride.name = form.elements["couple.bride.name"]?.value || invitationData.couple.bride.name;
+    invitationData.couple.groom.parents = form.elements["couple.groom.parents"]?.value || "";
+    invitationData.couple.bride.parents = form.elements["couple.bride.parents"]?.value || "";
     const map = {
       "신랑측:신랑": form.elements["couple.groom.name"]?.value || "",
       "신부측:신부": form.elements["couple.bride.name"]?.value || "",
@@ -2216,8 +2594,18 @@ function bindEditor() {
     const synced = accountItems().map((item) => {
       const key = `${item.side}:${item.relation}`;
       if (!Object.prototype.hasOwnProperty.call(map, key)) return item;
-      changed = changed || item.name !== map[key];
-      return { ...item, name: map[key] };
+      if (map[key] === "" && !["신랑", "신부"].includes(item.relation)) {
+        changed = true;
+        return null;
+      }
+      changed = changed || item.personName !== map[key] || item.name !== map[key];
+      return { ...item, personName: map[key], name: map[key] };
+    }).filter(Boolean);
+    Object.entries(map).forEach(([key, value]) => {
+      const [, relation] = key.split(":");
+      if (value && ["아버님", "어머님"].includes(relation) && !synced.some((item) => `${item.side}:${item.relation}` === key)) {
+        changed = true;
+      }
     });
     if (changed) renderAccountItems(synced);
   };
@@ -2235,6 +2623,27 @@ function bindEditor() {
       if (["couple.groom.name", "couple.bride.name"].includes(quickField.dataset.quick)) syncAccountParentNames();
     });
   });
+  form.querySelectorAll("[data-visibility-toggle]").forEach((toggle) => {
+    toggle.addEventListener("change", () => {
+      const hiddenValue = toggle.closest(".visibility-switch")?.querySelector('input[type="hidden"]');
+      if (!hiddenValue) return;
+      hiddenValue.value = toggle.checked ? "true" : "false";
+      hiddenValue.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+  });
+  form.querySelector("[data-quick-apply]")?.addEventListener("click", () => {
+    syncParentNames();
+    form.querySelectorAll("[data-quick]").forEach((quickField) => {
+      const target = form.elements[quickField.dataset.quick];
+      if (target) {
+        target.value = quickField.value;
+        target.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+    syncAccountParentNames();
+    form.dispatchEvent(new Event("change", { bubbles: true }));
+    alert("1번 기본정보를 아래 항목에 반영했습니다. 최종 저장은 변경사항 저장 버튼을 눌러 주세요.");
+  });
   form.querySelectorAll("[data-recommendation-editor]").forEach((editor) => {
     const target = editor.querySelector("input, textarea");
     editor.addEventListener("click", (event) => {
@@ -2250,10 +2659,20 @@ function bindEditor() {
   });
   const bindAccountManager = () => {
     const manager = form.querySelector("[data-account-manager]");
+    const syncConditionalFields = () => {
+      manager?.querySelectorAll("[data-account-editor]").forEach((editor) => {
+        const relationSelect = editor.querySelector('select[name*=".relation"]');
+        const relationCustom = editor.querySelector("[data-account-relation-custom]");
+        if (relationCustom) relationCustom.hidden = relationSelect?.value !== "직접입력";
+        const bankSelect = editor.querySelector('select[name*=".bankSelect"]');
+        const bankCustom = editor.querySelector("[data-account-bank-custom]");
+        if (bankCustom) bankCustom.hidden = bankSelect?.value !== "직접 입력";
+      });
+    };
     manager?.addEventListener("click", (event) => {
       const add = event.target.closest("[data-account-add]");
       if (add) {
-        renderAccountItems([...accountItems(), { side: add.dataset.accountAdd, relation: "직접입력", name: "", bank: "", number: "" }]);
+        renderAccountItems([...accountItems(), { side: add.dataset.accountAdd, relation: "직접입력", personName: "", name: "", bank: "", number: "" }]);
         return;
       }
       const remove = event.target.closest("[data-account-remove]");
@@ -2264,13 +2683,27 @@ function bindEditor() {
       renderAccountItems(items);
     });
     manager?.addEventListener("change", (event) => {
+      if (event.target.matches('select[name*=".relation"]')) {
+        syncConditionalFields();
+        return;
+      }
       const bankSelect = event.target.closest('select[name*=".bankSelect"]');
       if (!bankSelect) return;
       const bankInput = bankSelect.closest("[data-account-editor]")?.querySelector('input[name*=".bank"]');
-      if (!bankInput) return;
-      if (bankSelect.value !== "직접 입력") bankInput.value = bankSelect.value;
-      bankInput.focus();
+      if (bankInput && bankSelect.value !== "직접 입력") bankInput.value = "";
+      syncConditionalFields();
+      if (bankSelect.value === "직접 입력") bankInput?.focus();
     });
+    manager?.addEventListener("input", (event) => {
+      const personName = event.target.closest('input[name*=".personName"]');
+      if (!personName) return;
+      const holder = personName.closest("[data-account-editor]")?.querySelector('input[name*=".name"]');
+      if (holder && !holder.dataset.touched) holder.value = personName.value;
+    });
+    manager?.querySelectorAll('input[name*=".name"]').forEach((field) => {
+      field.addEventListener("input", () => { field.dataset.touched = "1"; });
+    });
+    syncConditionalFields();
   };
   bindAccountManager();
   const noticeManagerElement = form.querySelector("[data-notice-manager]");
@@ -2344,11 +2777,7 @@ function bindEditor() {
 
   const venueInput = form.elements["wedding.venue"];
   const addressInput = form.elements["wedding.address"];
-  const venueMap = form.querySelector("[data-venue-map]");
   const venueStatus = form.querySelector("[data-venue-status]");
-  const updateVenueMap = () => {
-    venueMap.href = venueMapSearchUrl(addressInput.value.trim() || venueInput.value.trim());
-  };
   venueInput.addEventListener("change", () => {
     const preset = findVenuePreset(venueInput.value);
     if (preset) {
@@ -2356,13 +2785,23 @@ function bindEditor() {
       renderTransportItems(preset.transport);
       venueStatus.textContent = "등록된 식장을 찾았습니다. 주소가 자동으로 입력되었습니다.";
     } else {
-      venueStatus.textContent = "자동으로 찾지 못했습니다. 지도에서 확인하거나 주소를 직접 입력해 주세요.";
+      venueStatus.textContent = "자동으로 찾지 못했습니다. 주소 검색에서 지도 확인 또는 직접입력을 사용해 주세요.";
     }
-    updateVenueMap();
   });
-  addressInput.addEventListener("input", updateVenueMap);
-  form.querySelector("[data-address-focus]").addEventListener("click", () => addressInput.focus());
-  updateVenueMap();
+  form.querySelector("[data-address-search]")?.addEventListener("click", () => {
+    openAddressSearchModal({
+      venue: venueInput.value,
+      address: addressInput.value,
+      onSelect: ({ venue, address }) => {
+        if (venue) venueInput.value = venue;
+        if (address) addressInput.value = address;
+        const preset = findVenuePreset(venue || venueInput.value);
+        if (preset) renderTransportItems(preset.transport);
+        venueStatus.textContent = "선택한 주소를 반영했습니다.";
+        addressInput.dispatchEvent(new Event("input", { bubbles: true }));
+      },
+    });
+  });
 
   form.querySelectorAll("[data-section-order]").forEach((editor) => {
     const updateSectionOrder = () => {
@@ -2388,20 +2827,29 @@ function bindEditor() {
     fileInput.addEventListener("change", async () => {
       let file = fileInput.files[0];
       if (!file) return;
+      let originalUrl = "";
       if (["couple.groom.photo", "couple.bride.photo"].includes(fileInput.dataset.imageTarget)) {
         try {
-          file = await cropProfileImage(file);
+          originalUrl = await window.RSVP_STORAGE.uploadInvitationImage(file, `${fileInput.dataset.imageTarget.replace(/\./g, "-")}-original`);
+          const cropResult = await cropProfileImage(file);
+          if (!cropResult) return;
+          file = cropResult.file;
+          if (form.elements[`${fileInput.dataset.imageTarget}Crop`]) {
+            form.elements[`${fileInput.dataset.imageTarget}Crop`].value = JSON.stringify(cropResult.settings);
+          }
         } catch (error) {
           alert(`대표사진 자르기 화면을 열지 못했습니다.\n${error.message || "다른 이미지 파일로 다시 시도해 주세요."}`);
           return;
         }
-        if (!file) return;
       }
       const label = fileInput.closest(".image-upload");
       label.firstChild.textContent = "업로드 중...";
       try {
         const url = await window.RSVP_STORAGE.uploadInvitationImage(file, fileInput.dataset.imageTarget.replace(/\./g, "-"));
         form.elements[fileInput.dataset.imageTarget].value = url;
+        if (originalUrl && form.elements[`${fileInput.dataset.imageTarget}Original`]) {
+          form.elements[`${fileInput.dataset.imageTarget}Original`].value = originalUrl;
+        }
         if (fileInput.dataset.imageTarget === "hero.image") {
           const imageActive = form.querySelector('[name="hero.activeMedia"][value="image"]');
           if (imageActive) imageActive.checked = true;
@@ -2419,7 +2867,8 @@ function bindEditor() {
   form.querySelectorAll("[data-image-crop-edit]").forEach((button) => {
     button.addEventListener("click", async () => {
       const target = button.dataset.imageCropEdit;
-      const currentUrl = form.elements[target].value;
+      const originalUrl = form.elements[`${target}Original`]?.value || "";
+      const currentUrl = originalUrl || form.elements[target].value;
       if (!currentUrl) return;
       button.disabled = true;
       button.textContent = "불러오는 중...";
@@ -2427,11 +2876,19 @@ function bindEditor() {
         const response = await fetch(currentUrl);
         if (!response.ok) throw new Error("등록된 사진을 불러오지 못했습니다.");
         const original = await response.blob();
-        const file = await cropProfileImage(new File([original], "profile-image", { type: original.type || "image/jpeg" }));
-        if (!file) return;
+        const savedSettings = parseCropSettings(form.elements[`${target}Crop`]?.value || "");
+        const cropResult = await cropProfileImage(new File([original], "profile-image", { type: original.type || "image/jpeg" }), {
+          initialZoom: savedSettings.zoom,
+          initialX: savedSettings.x,
+          initialY: savedSettings.y,
+        });
+        if (!cropResult) return;
+        const file = cropResult.file;
         button.textContent = "업로드 중...";
         const url = await window.RSVP_STORAGE.uploadInvitationImage(file, target.replace(/\./g, "-"));
         form.elements[target].value = url;
+        if (!originalUrl && form.elements[`${target}Original`]) form.elements[`${target}Original`].value = currentUrl;
+        if (form.elements[`${target}Crop`]) form.elements[`${target}Crop`].value = JSON.stringify(cropResult.settings);
         form.querySelector(`[data-image-preview="${target}"]`).innerHTML = `<img src="${escapeAdminHtml(url)}" alt="업로드한 사진 미리보기">`;
         refreshFrameMedia(target, url);
       } catch (error) {
@@ -2477,14 +2934,16 @@ function bindEditor() {
     button.addEventListener("click", () => {
       const target = button.dataset.imageRemove;
       form.elements[target].value = "";
+      if (form.elements[`${target}Original`]) form.elements[`${target}Original`].value = "";
+      if (form.elements[`${target}Crop`]) form.elements[`${target}Crop`].value = "";
       if (target === "hero.image" && form.elements["hero.video"]?.value) form.querySelector('[name="hero.activeMedia"][value="video"]')?.click();
       form.querySelector(`[data-image-preview="${target}"]`).innerHTML = "<span>등록된 사진이 없습니다.</span>";
       refreshFrameMedia(target, "");
     });
   });
-  const galleryValues = () => Array.from({ length: 20 }, (_, index) => form.elements[`gallery.${index}`].value).filter(Boolean);
+  const galleryValues = () => Array.from({ length: GALLERY_MAX }, (_, index) => form.elements[`gallery.${index}`].value).filter(Boolean);
   const updateGallery = (images) => {
-    const slots = Array.from({ length: 20 }, (_, index) => images[index] || "");
+    const slots = Array.from({ length: GALLERY_MAX }, (_, index) => images[index] || "");
     invitationData.gallery = slots;
     slots.forEach((image, index) => { form.elements[`gallery.${index}`].value = image; });
     form.querySelector("[data-gallery-editor-preview]").innerHTML = galleryManagerPreview(slots);
@@ -2494,15 +2953,15 @@ function bindEditor() {
   form.querySelector("[data-gallery-upload]").addEventListener("change", async (event) => {
     const files = [...event.currentTarget.files];
     if (!files.length) return;
-    if (files.length > 20) {
-      alert("갤러리 사진은 최대 20장까지 선택할 수 있습니다.");
+    if (files.length > GALLERY_MAX) {
+      alert(`갤러리 사진은 최대 ${GALLERY_MAX}장까지 선택할 수 있습니다.`);
       event.currentTarget.value = "";
       return;
     }
     const currentImages = galleryValues();
-    const freeSlots = Math.max(0, 20 - currentImages.length);
+    const freeSlots = Math.max(0, GALLERY_MAX - currentImages.length);
     if (currentImages.length && !freeSlots) {
-      alert("갤러리 사진이 이미 20장입니다. 사진별 변경 버튼을 이용하거나 일부 사진을 삭제해 주세요.");
+      alert(`갤러리 사진이 이미 ${GALLERY_MAX}장입니다. 사진별 변경 버튼을 이용하거나 일부 사진을 삭제해 주세요.`);
       event.currentTarget.value = "";
       return;
     }
@@ -2567,6 +3026,7 @@ function bindEditor() {
       const keepFocus = document.querySelector(".admin-editor-view")?.classList.contains("view-copy") ? "copy"
         : document.querySelector(".admin-editor-view")?.classList.contains("view-share") ? "share"
           : document.querySelector(".admin-editor-view")?.classList.contains("view-gallery") ? "gallery"
+            : document.querySelector(".admin-editor-view")?.classList.contains("view-sections") ? "sections"
             : "";
       invitationData = editorData(form);
       applyAppearance(invitationData.appearance);
@@ -2589,11 +3049,75 @@ function bindEditor() {
   }
 }
 
+function showAdminWelcomeOverlay(force = false) {
+  if (adminArea !== "general") return;
+  const slug = window.RSVP_STORAGE?.getActiveInvitationSlug?.() || "local";
+  const key = `admin-welcome-shown:${slug}`;
+  if (!force && sessionStorage.getItem(key)) return;
+  sessionStorage.setItem(key, "1");
+  const settings = { ...defaultWelcomeOverlay, ...(invitationData.adminDefaults?.welcomeOverlay || {}) };
+  const overlay = document.createElement("div");
+  overlay.className = "admin-welcome-intro";
+  overlay.innerHTML = `
+    <div class="admin-welcome-card">
+      <span class="section-label">${escapeAdminHtml(settings.eyebrow || defaultWelcomeOverlay.eyebrow)}</span>
+      <p data-admin-welcome-text></p>
+    </div>`;
+  const opacity = Math.max(0, Math.min(1, Number(settings.overlayOpacity ?? defaultWelcomeOverlay.overlayOpacity) / 100));
+  const shadowOpacity = Math.max(0, Math.min(0.7, Number(settings.shadowOpacity ?? defaultWelcomeOverlay.shadowOpacity) / 100));
+  const shadowEnabled = settings.shadowEnabled !== false;
+  const shadowColor = settings.shadowColor || settings.textColor || defaultWelcomeOverlay.shadowColor;
+  const shadowLayer = shadowEnabled
+    ? `radial-gradient(circle at 50% 25%, ${hexToRgba(shadowColor, shadowOpacity)}, transparent 42%)`
+    : "linear-gradient(transparent, transparent)";
+  overlay.style.background = `${shadowLayer}, ${hexToRgba(settings.backgroundColor || defaultWelcomeOverlay.backgroundColor, opacity)}`;
+  overlay.style.setProperty("--admin-welcome-card-bg", hexToRgba(settings.cardColor || defaultWelcomeOverlay.cardColor, Math.max(0, Math.min(1, Number(settings.cardOpacity ?? defaultWelcomeOverlay.cardOpacity) / 100))));
+  overlay.style.setProperty("--admin-welcome-text", settings.textColor || defaultWelcomeOverlay.textColor);
+  overlay.style.setProperty("--admin-welcome-size", `${Number(settings.textSize) || 30}px`);
+  overlay.style.setProperty("--admin-welcome-border", `${Number(settings.borderWidth ?? defaultWelcomeOverlay.borderWidth) || 0}px solid ${settings.borderColor || defaultWelcomeOverlay.borderColor}`);
+  overlay.style.setProperty("--admin-welcome-radius", `${Number(settings.borderRadius ?? defaultWelcomeOverlay.borderRadius) || 0}px`);
+  overlay.style.setProperty("--admin-welcome-shadow", shadowEnabled
+    ? `0 28px 80px ${hexToRgba(shadowColor, shadowOpacity)}`
+    : "none");
+  document.body.classList.add("admin-welcome-locked");
+  document.body.append(overlay);
+  const target = overlay.querySelector("[data-admin-welcome-text]");
+  const text = settings.text || defaultWelcomeOverlay.text;
+  let index = 0;
+  const typeNext = () => {
+    target.textContent = text.slice(0, index);
+    index += 1;
+    if (index <= text.length) {
+      window.setTimeout(typeNext, text[index - 2] === "\n" ? 170 : 52);
+      return;
+    }
+    window.setTimeout(() => {
+      overlay.classList.add("is-leaving");
+      window.setTimeout(() => {
+        overlay.remove();
+        document.body.classList.remove("admin-welcome-locked");
+      }, 420);
+    }, 900);
+  };
+  window.setTimeout(typeNext, 240);
+}
+
+function hexToRgba(color = "#eff7fa", alpha = 0.94) {
+  const value = String(color || "").trim();
+  const match = /^#?([0-9a-f]{6})$/i.exec(value);
+  if (!match) return value;
+  const number = Number.parseInt(match[1], 16);
+  return `rgba(${(number >> 16) & 255}, ${(number >> 8) & 255}, ${number & 255}, ${alpha})`;
+}
+
 async function login(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
+  const email = String(form.get("email") || "").trim();
+  if (form.get("rememberEmail") === "on") localStorage.setItem(SAVED_LOGIN_EMAIL_KEY, email);
+  else localStorage.removeItem(SAVED_LOGIN_EMAIL_KEY);
   const { error } = await supabaseClient.auth.signInWithPassword({
-    email: form.get("email"),
+    email,
     password: form.get("password"),
   });
   if (error) return renderLogin("로그인하지 못했습니다. 이메일과 비밀번호를 확인해 주세요.");
@@ -2605,16 +3129,32 @@ async function login(event) {
     }
   }
   await loadInvitationData();
-  if (adminArea === "super") renderThemeManager();
-  else renderEditor();
+  if (adminArea === "super") renderAdminView(localStorage.getItem(SUPER_ADMIN_VIEW_KEY) || "themes");
+  else {
+    renderAdminView(localStorage.getItem(GENERAL_ADMIN_VIEW_KEY) || "editor");
+    showAdminWelcomeOverlay();
+  }
 }
 
 async function signup(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
+  const status = event.currentTarget.querySelector("[data-signup-status]") || document.createElement("p");
+  if (!status.dataset.signupStatus) {
+    status.dataset.signupStatus = "1";
+    status.className = "admin-message signup-status";
+    event.currentTarget.append(status);
+  }
+  const submitButton = event.currentTarget.querySelector('button[type="submit"]');
+  const defaultLabel = submitButton?.textContent || "";
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "만드는 중...";
+  }
+  status.textContent = "계정을 만들고 전용 청첩장을 준비하고 있습니다.";
   try {
     const result = await window.RSVP_STORAGE.signUpInvitationAdmin({
-      email: form.get("email"),
+      email: String(form.get("email") || "").trim(),
       password: form.get("password"),
       groomName: form.get("groomName"),
       brideName: form.get("brideName"),
@@ -2630,13 +3170,23 @@ async function signup(event) {
       agreeMarketing: form.get("agreeMarketing") === "on",
     });
     if (result.needsConfirmation) {
-      renderLogin("가입 확인 메일을 보냈습니다. 이메일 인증 후 로그인하면 전용 청첩장과 관리자 페이지가 자동으로 연결됩니다.");
+      const message = "가입 확인 메일을 보냈습니다. Supabase 이메일 인증이 켜져 있어서 메일 인증 전에는 자동 로그인할 수 없습니다.";
+      alert(message);
+      renderLogin(message);
       return;
     }
+    localStorage.setItem(SAVED_LOGIN_EMAIL_KEY, String(form.get("email") || "").trim());
     await loadInvitationData();
     renderEditor("전용 청첩장 페이지와 관리자 페이지를 만들었습니다. 사진·영상은 비어 있고 기본 색상 배경으로 시작합니다.");
+    showAdminWelcomeOverlay(true);
   } catch (error) {
-    renderLogin(`가입을 완료하지 못했습니다. ${error.message || "입력값과 Supabase Auth 설정을 확인해 주세요."}`);
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = defaultLabel;
+    }
+    const message = `가입을 완료하지 못했습니다. ${error.message || "입력값과 Supabase Auth 설정을 확인해 주세요."}`;
+    status.textContent = message;
+    alert(message);
   }
 }
 
@@ -2649,6 +3199,7 @@ async function loadInvitationData() {
 }
 
 async function renderResponses() {
+  if (adminArea === "general") rememberAdminView("responses");
   if (!supabaseClient) {
     adminApp.innerHTML = `${adminHeader("responses")}${contentBackBar("참석 현황")}${responsesView(window.RSVP_STORAGE.readLocalResponses(), true)}`;
     bindAdminNavigation();
@@ -2667,16 +3218,17 @@ async function renderResponses() {
 
 const ADMIN_SAVED_GUEST_PHOTOS_KEY = "wedding-admin-saved-guest-photos";
 const isGuestVideo = (photo = {}) => /\.(mp4|webm|mov)(?:$|[?#])/i.test(photo.name || photo.path || "");
+const savedGuestPhotosKey = () => `${ADMIN_SAVED_GUEST_PHOTOS_KEY}:${window.RSVP_STORAGE.getActiveInvitationSlug()}`;
 
 function savedGuestPhotoPaths() {
-  try { return new Set(JSON.parse(localStorage.getItem(ADMIN_SAVED_GUEST_PHOTOS_KEY) || "[]")); }
+  try { return new Set(JSON.parse(localStorage.getItem(savedGuestPhotosKey()) || "[]")); }
   catch { return new Set(); }
 }
 
 function rememberSavedGuestPhotos(photos) {
   const saved = savedGuestPhotoPaths();
   photos.forEach((photo) => saved.add(photo.path));
-  localStorage.setItem(ADMIN_SAVED_GUEST_PHOTOS_KEY, JSON.stringify([...saved]));
+  localStorage.setItem(savedGuestPhotosKey(), JSON.stringify([...saved]));
 }
 
 function guestPhotoCards(photos, saved = false) {
@@ -2805,6 +3357,7 @@ async function downloadGuestPhotos(photos, button) {
 }
 
 async function renderGuestPhotos() {
+  if (adminArea === "general") rememberAdminView("photos");
   adminApp.innerHTML = `
     ${adminHeader("photos")}
     ${contentBackBar("하객 사진·영상")}
@@ -2849,16 +3402,17 @@ async function renderGuestPhotos() {
         }
       });
     });
-  } catch {
+  } catch (error) {
     adminApp.innerHTML = `
       ${adminHeader("photos")}
       ${contentBackBar("하객 사진·영상")}
-      <section class="admin-card"><p class="admin-message">파일을 불러오지 못했습니다. Storage 정책을 확인해 주세요.</p></section>`;
+      <section class="admin-card"><p class="admin-message">파일을 불러오지 못했습니다. Storage 정책을 확인해 주세요.</p><p class="admin-message micro-help">${escapeAdminHtml(error.message || "")}</p></section>`;
     bindAdminNavigation();
   }
 }
 
 async function renderGuestbookEntries() {
+  if (adminArea === "general") rememberAdminView("guestbook");
   adminApp.innerHTML = `${adminHeader("guestbook")}${contentBackBar("방명록")}<section class="admin-card"><h2>방명록</h2><p class="admin-message">방명록을 불러오고 있습니다.</p></section>`;
   bindAdminNavigation();
   try {
@@ -2897,8 +3451,8 @@ async function start() {
   const { data } = await supabaseClient.auth.getSession();
   if (!data.session) return renderLogin();
   await loadInvitationData();
-  if (adminArea === "super") renderThemeManager();
-  else renderEditor();
+  if (adminArea === "super") renderAdminView(localStorage.getItem(SUPER_ADMIN_VIEW_KEY) || "themes");
+  else renderAdminView(localStorage.getItem(GENERAL_ADMIN_VIEW_KEY) || "editor");
 }
 
 start();

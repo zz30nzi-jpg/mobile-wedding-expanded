@@ -38,6 +38,11 @@ window.INVITATION_DATA = {
       photo: "",
     },
   },
+  displaySettings: {
+    showInvitationParents: true,
+    showProfileParents: true,
+    showProfileBirthdays: true,
+  },
   wedding: {
     date: "2026-10-04T12:20:00+09:00",
     displayDate: "2026. 10. 04. 일요일 오후 12시 20분",
@@ -100,7 +105,7 @@ window.INVITATION_DATA = {
     { title: "버스", text: "창원고속버스터미널에서 호텔까지 차량으로 약 10분입니다. 버스 노선은 변동될 수 있으니 지도 앱에서 최신 경로를 확인해 주세요." },
     { title: "자가용", text: "내비게이션에 '그랜드 머큐어 앰배서더 창원' 또는 주소를 입력해 주세요." },
   ],
-  gallery: ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
+  gallery: Array.from({ length: 30 }, () => ""),
   notices: [
     { title: "식사 안내", text: "예식 전후로 연회장을 편하게 이용해 주세요." },
     { title: "주차 안내", text: "주차 등록은 예식장 로비 키오스크에서 가능합니다." },
@@ -124,6 +129,22 @@ window.INVITATION_DATA = {
   adminDefaults: {
     heroFields: ["eyebrow", "names", "date"],
     signupFields: ["groomName", "brideName", "groomBirthday", "brideBirthday", "weddingDate", "weddingVenue", "weddingHall"],
+    welcomeOverlay: {
+      eyebrow: "Vivid Vows",
+      text: "결혼을 축하드립니다!\n커스텀하여 청첩장을 꾸며보세요.",
+      textSize: 30,
+      backgroundColor: "#eff7fa",
+      cardColor: "#ffffff",
+      textColor: "#3b6674",
+      overlayOpacity: 94,
+      cardOpacity: 88,
+      borderColor: "#d8e8ee",
+      borderWidth: 1,
+      borderRadius: 30,
+      shadowEnabled: true,
+      shadowColor: "#3b6674",
+      shadowOpacity: 24,
+    },
     fieldLabels: {
       groomName: "신랑 이름",
       brideName: "신부 이름",

@@ -353,7 +353,7 @@ const assetCategories = {
   frame: { key: "frames", label: "메인 이미지 꾸밈", guide: "overlay 420x670, outer 480x720 기준 SVG 300KB 이하 권장" },
   textTheme: { key: "textThemes", label: "메인 문구 테마", guide: "문구 위치, 정렬, 크기를 조합하는 레이아웃 소스" },
   sectionIcon: { key: "sectionIcons", label: "섹션 아이콘", guide: "512x512, 단색 또는 2색 권장" },
-  background: { key: "backgrounds", label: "배경 장식", guide: "1920x1080, 저채도 장식 권장" },
+  background: { key: "backgrounds", label: "전체 배경 장식", guide: "청첩장 전체 배경에 깔리는 장식입니다. 1920x1080, 저채도 장식 권장" },
 };
 
 function assetPreview(type, item = {}) {

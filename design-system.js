@@ -70,7 +70,7 @@
     };
     data.appearance.design.heroTextTheme = migrateTextThemeId(data.appearance.design.heroTextTheme);
     delete data.appearance.design.customEnabled;
-    data.accounts = Array.isArray(data.accounts) ? data.accounts.map((account) => ({ ...account, relation: account.relation || "" })) : [];
+    data.accounts = Array.isArray(data.accounts) ? data.accounts.map((account) => ({ ...account, personName: account.personName || account.name || "", name: account.name || account.personName || "", relation: account.relation || "" })) : [];
     data.galleryDisplayMode = data.galleryDisplayMode === "original" ? "original" : "portrait";
     data.hero ||= {};
     data.hero.activeMedia = data.hero.activeMedia === "video" && data.hero.video ? "video" : "image";
