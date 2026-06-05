@@ -125,6 +125,11 @@ window.INVITATION_DATA = {
   },
   rsvp: {
     modalGuide: "기차표와 숙소 준비를 위해 필요한 정보입니다.",
+    originPlaceholder: "예: 서울역, 창원시 성산구",
+    transportOptions: ["자가용", "기차", "버스", "택시", "도보", "직접입력"],
+    transportPlaceholder: "예: 자가용, KTX, 버스",
+    notesPlaceholder: "교통편이나 숙소 관련 요청을 자유롭게 적어 주세요.",
+    accommodationGuide: "숙소 준비를 위해 함께 오는 인원 이름 또는 명수를 적어 주세요.",
   },
   adminDefaults: {
     heroFields: ["eyebrow", "names", "date"],

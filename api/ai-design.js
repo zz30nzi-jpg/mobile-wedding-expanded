@@ -1,6 +1,7 @@
 const API_URL = "https://api.openai.com/v1/responses";
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://cimyjsqjpenljpywhgso.supabase.co";
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "sb_publishable_jxY5QiiuKHV-5VSBO1F8Ow_wWeYjcDV";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_API_KEY;
 
 const schema = {
   type: "object",
@@ -73,7 +74,7 @@ async function callGemini(prompt) {
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   const gemini = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": process.env.GEMINI_API_KEY },
+    headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { responseMimeType: "application/json", responseJsonSchema: schema },
@@ -90,11 +91,11 @@ module.exports = async function aiDesign(request, response) {
   if (!await registeredAdmin(request)) return response.status(401).json({ error: "등록된 관리자 로그인 후 이용해 주세요." });
   const provider = request.method === "POST" ? request.body?.provider || "OpenAI" : request.query?.provider || "OpenAI";
   if (request.method === "GET") {
-    const configured = provider === "Gemini" ? Boolean(process.env.GEMINI_API_KEY) : Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL);
+    const configured = provider === "Gemini" ? Boolean(GEMINI_API_KEY) : Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL);
     return response.status(configured ? 200 : 503).json({ configured, provider, error: configured ? "" : provider === "Gemini" ? "GEMINI_API_KEY 환경변수를 등록해 주세요." : "OPENAI_API_KEY와 OPENAI_MODEL 환경변수를 등록해 주세요." });
   }
   if (request.method !== "POST") return response.status(405).json({ error: "지원하지 않는 요청입니다." });
-  if (provider === "Gemini" && !process.env.GEMINI_API_KEY) return response.status(503).json({ error: "Gemini 서버 환경변수가 설정되지 않았습니다." });
+  if (provider === "Gemini" && !GEMINI_API_KEY) return response.status(503).json({ error: "Gemini 서버 환경변수가 설정되지 않았습니다." });
   if (provider !== "Gemini" && (!process.env.OPENAI_API_KEY || !process.env.OPENAI_MODEL)) return response.status(503).json({ error: "OpenAI 서버 환경변수가 설정되지 않았습니다." });
 
   const { type = "palette", context = {} } = request.body || {};

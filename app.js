@@ -610,23 +610,40 @@ function bindShareModal() {
 }
 
 function attendanceForm() {
+  const rsvp = data.rsvp || {};
+  const transportOptions = rsvp.transportOptions || ["자가용", "기차", "버스", "택시", "도보", "직접입력"];
   return `
     <h2>참석 정보 입력</h2>
-    <p class="form-guide">${escapeLineHtml(data.rsvp?.modalGuide || "기차표와 숙소 준비를 위해 필요한 정보입니다.")}</p>
+    <p class="form-guide">${escapeLineHtml(rsvp.modalGuide || "기차표와 숙소 준비를 위해 필요한 정보입니다.")}</p>
     <form class="form-grid" id="attendance-form">
       <label class="field"><span>성함</span><input name="guest_name" required maxlength="30" autocomplete="name"></label>
       <label class="field"><span>연락처</span><input name="phone" required maxlength="20" inputmode="tel" autocomplete="tel" placeholder="010-0000-0000"></label>
-      <label class="field"><span>참석 여부</span><select name="attendance" id="attendance-status"><option value="참석">참석합니다</option><option value="불참">참석이 어렵습니다</option></select></label>
+      <label class="rsvp-switch"><span>참석 여부</span><input type="hidden" name="attendance" value="참석"><input type="checkbox" id="attendance-status" checked><i aria-hidden="true"></i></label>
+      <label class="field"><span>추가 전달 사항</span><textarea name="notes" rows="3" maxlength="500" placeholder="${escapeHtml(rsvp.notesPlaceholder || "교통편이나 숙소 관련 요청을 자유롭게 적어 주세요.")}"></textarea></label>
       <div class="attendance-details" id="attendance-details">
-        <label class="field"><span>출발지</span><select name="origin"><option>서울</option><option>창원</option><option>부산</option><option>기타</option></select></label>
-        <label class="field"><span>오는 방법</span><select name="transport"><option>자가용</option><option>기차</option><option>버스</option><option>택시</option><option>도보</option><option>기타</option></select></label>
-        <label class="field"><span>기타 출발지 또는 이동 방법</span><input name="travel_details" maxlength="100" placeholder="목록에 없는 경우 적어 주세요."></label>
-        <label class="field"><span>출발 일자</span><select name="departure_date"><option value="2026-10-04">당일 (10월 4일)</option><option value="2026-10-03">1일 전 (10월 3일)</option><option value="2026-10-02 이전">2일 이상 전</option></select></label>
-        <label class="field"><span>함께 오시는 분</span><textarea name="companions" id="companions" rows="4" maxlength="500" placeholder="한 줄에 한 분씩 이름 또는 관계를 적어 주세요.&#10;예: 어머니&#10;예: 홍길동"></textarea></label>
+        <label class="field"><span>출발일자</span><input name="departure_date" type="date"></label>
+        <label class="field"><span>출발지</span><input name="origin" maxlength="50" placeholder="${escapeHtml(rsvp.originPlaceholder || "예: 서울역, 창원시 성산구")}"></label>
+        <section class="rsvp-choice-group">
+          <span>오는 방법</span>
+          <input type="hidden" name="transport" value="${escapeHtml(transportOptions[0] || "자가용")}">
+          <div class="rsvp-choice-list">
+            ${transportOptions.map((option, index) => `<button class="${index === 0 ? "is-active" : ""}" type="button" data-transport-choice="${escapeHtml(option)}">${escapeHtml(option)}</button>`).join("")}
+          </div>
+        </section>
+        <label class="field" id="travel-details-field" hidden><span>기타 이동 정보</span><input name="travel_details" maxlength="100" placeholder="${escapeHtml(rsvp.transportPlaceholder || "예: KTX 창원중앙역 도착 후 택시")}"></label>
+        <section class="companion-manager">
+          <span>함께 오시는 분</span>
+          <div id="companions-list">
+            <label class="companion-row"><input name="companions" maxlength="40" placeholder="이름 또는 관계"><button class="icon-btn" type="button" data-companion-add aria-label="동행인 추가">＋</button><button class="icon-btn" type="button" data-companion-remove aria-label="동행인 삭제">－</button></label>
+          </div>
+        </section>
         <p class="attendance-count">예상 참석 인원 <strong id="attendance-count">1명</strong></p>
-        <label class="field"><span>숙소 필요 여부</span><select name="needs_accommodation"><option value="아니오">필요하지 않습니다</option><option value="예">필요합니다</option><option value="미정">아직 모르겠습니다</option></select></label>
+        <label class="rsvp-switch"><span>숙소 필요 여부</span><input type="hidden" name="needs_accommodation" value="아니오"><input type="checkbox" id="accommodation-status"><i aria-hidden="true"></i></label>
+        <div class="accommodation-extra" id="accommodation-extra" hidden>
+          <p class="form-guide">${escapeLineHtml(rsvp.accommodationGuide || "숙소 준비를 위해 함께 오는 인원 이름 또는 명수를 적어 주세요.")}</p>
+          <label class="field"><span>숙소 인원 정보</span><input name="accommodation_details" maxlength="120" placeholder="예: 홍길동, 김영희 / 총 2명"></label>
+        </div>
       </div>
-      <label class="field"><span>추가 전달 사항</span><textarea name="notes" rows="3" maxlength="500" placeholder="교통편이나 숙소 관련 요청을 자유롭게 적어 주세요."></textarea></label>
       <label class="consent"><input type="checkbox" required> <span>교통편 및 숙소 준비를 위한 개인정보 수집에 동의합니다.</span></label>
       <div class="modal-actions"><button class="btn" type="button" data-close>취소</button><button class="btn btn-primary" id="attendance-submit">전달하기</button></div>
     </form>`;
@@ -675,6 +692,10 @@ function bindInformationSlider() {
 
 function companionLines(value) {
   return value.split("\n").map((line) => line.trim()).filter(Boolean);
+}
+
+function companionInputValues(form) {
+  return [...form.querySelectorAll('input[name="companions"]')].map((input) => input.value.trim()).filter(Boolean);
 }
 
 function gallerySlider(index = 0) {
@@ -826,24 +847,70 @@ function bindEvents() {
     openModal(attendanceForm());
     const form = document.querySelector("#attendance-form");
     const status = document.querySelector("#attendance-status");
+    const attendanceValue = form.elements.attendance;
+    const accommodationStatus = document.querySelector("#accommodation-status");
+    const accommodationValue = form.elements.needs_accommodation;
+    const accommodationExtra = document.querySelector("#accommodation-extra");
     const details = document.querySelector("#attendance-details");
-    const companions = document.querySelector("#companions");
+    const companionsList = document.querySelector("#companions-list");
+    const travelDetailsField = document.querySelector("#travel-details-field");
     const count = document.querySelector("#attendance-count");
     const updateAttendanceForm = () => {
-      const isAttending = status.value === "참석";
+      const isAttending = status.checked;
+      attendanceValue.value = isAttending ? "참석" : "불참";
       details.hidden = !isAttending;
-      count.textContent = `${isAttending ? companionLines(companions.value).length + 1 : 0}명`;
+      count.textContent = `${isAttending ? companionInputValues(form).length + 1 : 0}명`;
+    };
+    const updateAccommodationForm = () => {
+      const needsRoom = accommodationStatus.checked;
+      accommodationValue.value = needsRoom ? "예" : "아니오";
+      accommodationExtra.hidden = !needsRoom;
+    };
+    const updateTransportForm = (choice) => {
+      form.elements.transport.value = choice;
+      form.querySelectorAll("[data-transport-choice]").forEach((button) => button.classList.toggle("is-active", button.dataset.transportChoice === choice));
+      travelDetailsField.hidden = choice !== "직접입력";
+      if (travelDetailsField.hidden) form.elements.travel_details.value = "";
+    };
+    const addCompanionInput = (value = "") => {
+      const row = document.createElement("label");
+      row.className = "companion-row";
+      row.innerHTML = `<input name="companions" maxlength="40" placeholder="이름 또는 관계" value="${escapeHtml(value)}"><button class="icon-btn" type="button" data-companion-add aria-label="동행인 추가">＋</button><button class="icon-btn" type="button" data-companion-remove aria-label="동행인 삭제">－</button>`;
+      companionsList.append(row);
+      updateCompanionButtons();
+      row.querySelector("input").focus();
+    };
+    const updateCompanionButtons = () => {
+      const rows = [...companionsList.querySelectorAll(".companion-row")];
+      rows.forEach((row) => {
+        row.querySelector("[data-companion-remove]").disabled = rows.length <= 1;
+      });
     };
     status.addEventListener("change", updateAttendanceForm);
-    companions.addEventListener("input", updateAttendanceForm);
+    accommodationStatus.addEventListener("change", updateAccommodationForm);
+    form.querySelectorAll("[data-transport-choice]").forEach((button) => {
+      button.addEventListener("click", () => updateTransportForm(button.dataset.transportChoice));
+    });
+    companionsList.addEventListener("click", (event) => {
+      if (event.target.closest("[data-companion-add]")) addCompanionInput();
+      const removeButton = event.target.closest("[data-companion-remove]");
+      if (removeButton && companionsList.querySelectorAll(".companion-row").length > 1) {
+        removeButton.closest(".companion-row").remove();
+        updateCompanionButtons();
+        updateAttendanceForm();
+      }
+    });
+    companionsList.addEventListener("input", updateAttendanceForm);
+    updateCompanionButtons();
     updateAttendanceForm();
+    updateAccommodationForm();
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const submitButton = document.querySelector("#attendance-submit");
       const fields = new FormData(form);
       const isAttending = fields.get("attendance") === "참석";
-      const companionList = isAttending ? companionLines(fields.get("companions")) : [];
+      const companionList = isAttending ? companionInputValues(form) : [];
       submitButton.disabled = true;
       submitButton.textContent = "전달 중...";
       try {
@@ -859,6 +926,7 @@ function bindEvents() {
           companion_count: companionList.length,
           total_count: isAttending ? companionList.length + 1 : 0,
           needs_accommodation: isAttending ? fields.get("needs_accommodation") : null,
+          accommodation_details: isAttending && fields.get("needs_accommodation") === "예" ? fields.get("accommodation_details").trim() : "",
           notes: fields.get("notes").trim(),
         });
         closeModal();

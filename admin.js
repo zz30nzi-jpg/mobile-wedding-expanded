@@ -142,6 +142,8 @@ function superOverview() {
 
 function adminHeader(active) {
   const coupleBadge = [invitationData.couple?.groom?.name, invitationData.couple?.bride?.name].filter(Boolean).join(" · ");
+  const cardSlug = adminArea === "general" ? window.RSVP_STORAGE?.getActiveInvitationSlug?.() : "";
+  const cardUrl = cardSlug && cardSlug !== "main" ? `./index.html?card=${encodeURIComponent(cardSlug)}` : "./index.html";
   const generalMenu = `<div class="admin-menu-group"><strong>일반 관리자</strong><nav class="admin-tabs">
       <button class="btn ${active === "editor" ? "btn-primary" : ""}" data-admin-view="editor">기본 설정</button>
       <button class="btn ${active === "copy" ? "btn-primary" : ""}" data-admin-view="copy-editor">편집 기능</button>
@@ -179,6 +181,7 @@ function adminHeader(active) {
       <div><p class="section-label">Wedding Admin</p><h1>청첩장 일반관리자</h1></div>
       <div class="admin-header-actions">
         ${coupleBadge ? `<span class="admin-current-couple">${escapeAdminHtml(coupleBadge)}</span>` : ""}
+        <a class="btn btn-secondary" href="${cardUrl}" target="_blank" rel="noopener">내 청첩장</a>
         <button class="btn" id="admin-logout">로그아웃</button>
       </div>
     </div>
@@ -287,9 +290,6 @@ function applySuperSearch() {
 }
 
 function renderLogin(message = "") {
-  const signupFields = invitationData.adminDefaults?.signupFields || ["groomName", "brideName", "groomBirthday", "brideBirthday", "weddingDate", "weddingVenue", "weddingHall"];
-  const signupField = (key, markup) => signupFields.includes(key) ? markup : "";
-  const today = dateInputToday();
   const rememberedEmail = localStorage.getItem(SAVED_LOGIN_EMAIL_KEY) || "";
   const generalSignup = adminArea === "general" ? `
       <div class="admin-signup-panel">
@@ -306,7 +306,7 @@ function renderLogin(message = "") {
             <div><p class="section-label">Create Account</p><h2>내 청첩장 만들기</h2></div>
             <button class="icon-btn" type="button" data-signup-close aria-label="회원가입 닫기">×</button>
           </div>
-          <div class="signup-progress" aria-label="회원가입 단계"><span class="is-active">동의</span><span>계정</span><span>기본정보</span></div>
+          <div class="signup-progress" aria-label="회원가입 단계"><span class="is-active">동의</span><span>계정</span></div>
           <section class="signup-step is-active" data-signup-step="0">
             <h2>서비스 이용 동의</h2>
             <p class="admin-message micro-help">가입하면 계정별 청첩장 페이지와 일반관리자 페이지가 각각 생성됩니다.</p>
@@ -321,22 +321,8 @@ function renderLogin(message = "") {
             <h2>로그인 계정 만들기</h2>
             <label class="field"><span>가입 이메일</span><input name="email" type="email" required autocomplete="email"></label>
             <label class="field"><span>비밀번호</span><input name="password" type="password" required minlength="8" autocomplete="new-password"></label>
-            <div class="signup-actions"><button class="btn" type="button" data-signup-prev>이전</button><button class="btn btn-primary" type="button" data-signup-next>다음</button></div>
-          </section>
-          <section class="signup-step" data-signup-step="2">
-            <h2>기본정보 입력</h2>
-            <div class="quick-input-grid">
-              ${signupField("groomName", '<label class="field"><span>신랑 이름</span><input name="groomName" required autocomplete="given-name"></label>')}
-              ${signupField("brideName", '<label class="field"><span>신부 이름</span><input name="brideName" required autocomplete="additional-name"></label>')}
-              ${signupField("groomBirthday", '<label class="field"><span>신랑 생년월일</span><input name="groomBirthday" type="date"></label>')}
-              ${signupField("brideBirthday", '<label class="field"><span>신부 생년월일</span><input name="brideBirthday" type="date"></label>')}
-              ${signupField("weddingDate", '<label class="field"><span>예식일자</span><input name="weddingDate" type="datetime-local" required></label>')}
-              ${signupField("weddingVenue", '<label class="field"><span>예식 장소</span><input name="weddingVenue" required></label>')}
-              ${signupField("weddingHall", '<label class="field"><span>홀 이름</span><input name="weddingHall"></label>')}
-              <label class="field"><span>청첩장 공개 시작일</span><input name="publicOpenDate" type="date" value="${today}" min="${today}" data-public-open></label>
-              <label class="field"><span>청첩장 공개 종료일</span><input name="publicCloseDate" type="date" data-public-close></label>
-            </div>
-            <div class="signup-actions"><button class="btn" type="button" data-signup-prev>이전</button><button class="btn btn-primary" type="submit">내 청첩장 만들기</button></div>
+            <p class="admin-message micro-help">가입 후 기본정보를 입력하면 전용 청첩장과 일반관리자 페이지가 생성됩니다.</p>
+            <div class="signup-actions"><button class="btn" type="button" data-signup-prev>이전</button><button class="btn btn-primary" type="submit">회원가입 완료</button></div>
           </section>
         </form>
       </div>` : "";
@@ -380,7 +366,7 @@ function renderLogin(message = "") {
       const step = Number(signupForm.dataset.step || 0);
       const fields = [...signupForm.querySelectorAll(`[data-signup-step="${step}"] input[required]`)];
       if (fields.some((field) => !field.reportValidity())) return;
-      setSignupStep(Math.min(2, step + 1));
+      setSignupStep(Math.min(1, step + 1));
     }
     if (event.target.closest("[data-signup-prev]")) setSignupStep(Math.max(0, Number(signupForm.dataset.step || 0) - 1));
   });
@@ -432,6 +418,75 @@ function renderLogin(message = "") {
   });
 }
 
+function renderBasicInfoOnboarding(message = "") {
+  const today = dateInputToday();
+  adminApp.innerHTML = `
+    <section class="admin-card admin-login onboarding-card">
+      <p class="section-label">Create Wedding Card</p>
+      <h1>기본정보 입력</h1>
+      <p class="admin-message">${escapeAdminHtml(message || "소셜 로그인 또는 회원가입이 완료되었습니다. 청첩장 생성을 위해 기본정보를 입력해 주세요.")}</p>
+      <form class="form-grid" id="basic-info-form">
+        <div class="quick-input-grid">
+          <label class="field"><span>신랑 이름</span><input name="groomName" required autocomplete="given-name"></label>
+          <label class="field"><span>신부 이름</span><input name="brideName" required autocomplete="additional-name"></label>
+          <label class="field"><span>신랑 생년월일</span><input name="groomBirthday" type="date"></label>
+          <label class="field"><span>신부 생년월일</span><input name="brideBirthday" type="date"></label>
+          <label class="field"><span>예식일자</span><input name="weddingDate" type="datetime-local" required></label>
+          <label class="field"><span>예식 장소</span><input name="weddingVenue" required></label>
+          <label class="field"><span>홀 이름</span><input name="weddingHall"></label>
+          <label class="field"><span>청첩장 공개 시작일</span><input name="publicOpenDate" type="date" value="${today}" min="${today}" data-public-open></label>
+          <label class="field"><span>청첩장 공개 종료일</span><input name="publicCloseDate" type="date" data-public-close></label>
+        </div>
+        <button class="btn btn-primary">내 일반관리자 페이지 만들기</button>
+      </form>
+    </section>`;
+  const form = document.querySelector("#basic-info-form");
+  const syncPublicPeriod = (forceCloseToWedding = false) => {
+    const weddingDay = dateOnly(form.elements.weddingDate.value);
+    const openField = form.elements.publicOpenDate;
+    const closeField = form.elements.publicCloseDate;
+    openField.min = today;
+    openField.max = weddingDay ? addDays(weddingDay, -1) : "";
+    if (!openField.value) openField.value = today;
+    if (weddingDay) {
+      closeField.min = openField.value || today;
+      closeField.max = addDays(weddingDay, 3);
+      if (forceCloseToWedding || !closeField.value || closeField.value < closeField.min || closeField.value > closeField.max) closeField.value = weddingDay;
+    }
+  };
+  form.elements.weddingDate.addEventListener("change", () => syncPublicPeriod(true));
+  form.elements.publicOpenDate.addEventListener("change", () => syncPublicPeriod(false));
+  syncPublicPeriod();
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const button = form.querySelector('button[type="submit"], .btn-primary');
+    button.disabled = true;
+    button.textContent = "생성 중...";
+    const fields = new FormData(form);
+    try {
+      currentInvitationSite = await window.RSVP_STORAGE.ensureInvitationForCurrentUser(window.INVITATION_DATA, {
+        groomName: fields.get("groomName")?.trim(),
+        brideName: fields.get("brideName")?.trim(),
+        groomBirthday: fields.get("groomBirthday"),
+        brideBirthday: fields.get("brideBirthday"),
+        weddingDate: fields.get("weddingDate"),
+        weddingVenue: fields.get("weddingVenue")?.trim(),
+        weddingHall: fields.get("weddingHall")?.trim(),
+        publicOpenDate: fields.get("publicOpenDate"),
+        publicCloseDate: fields.get("publicCloseDate"),
+      });
+      if (!currentInvitationSite?.slug) throw new Error("기본정보가 부족합니다.");
+      await loadInvitationData();
+      renderAdminView("editor");
+      showAdminWelcomeOverlay(true);
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = "내 일반관리자 페이지 만들기";
+      alert(`일반관리자 페이지를 만들지 못했습니다.\n${error.message || "입력값과 Supabase 설정을 확인해 주세요."}`);
+    }
+  });
+}
+
 async function renderSetupNotice() {
   await loadInvitationData();
   if (adminArea === "super") return renderAdminView(localStorage.getItem(SUPER_ADMIN_VIEW_KEY) || "themes");
@@ -466,6 +521,7 @@ function responseCard(response) {
       <p>${escapeAdminHtml(response.phone)}</p>
       ${response.attendance === "참석" ? `<p>출발지: ${escapeAdminHtml(response.origin)} · 이동: ${escapeAdminHtml(response.transport)} · 출발: ${escapeAdminHtml(response.departure_date)}
 ${response.travel_details ? `기타 이동 정보: ${escapeAdminHtml(response.travel_details)}
+` : ""}${response.needs_accommodation === "예" ? `숙소 인원: ${escapeAdminHtml(response.accommodation_details || "미입력")}
 ` : ""}총 ${escapeAdminHtml(response.total_count)}명 · 동행인: ${companions}
 숙소 필요: ${escapeAdminHtml(response.needs_accommodation)}</p>` : ""}
       ${response.notes ? `<p>전달 사항: ${escapeAdminHtml(response.notes)}</p>` : ""}
@@ -700,9 +756,9 @@ async function renderGeneralAdmins(message = "") {
       const publicPeriod = `${formatDateOnly(site.publicPeriod?.openDate) || "미설정"} ~ ${formatDateOnly(site.publicPeriod?.closeDate) || "미설정"}`;
       const guestOpen = formatDateOnly(site.guestPhotos?.eventDate) || "미설정";
       const previewVisible = site.guestPhotos?.previewVisible === false ? "숨김" : "표시";
-      return `<article class="member-card">
+      return `<article class="member-card ${site.disabled ? "is-disabled" : ""}">
         <div>
-          <strong>${escapeAdminHtml(title)}</strong>
+          <strong>${escapeAdminHtml(title)} ${site.disabled ? '<span class="badge">비활성</span>' : ""}</strong>
           <span>${escapeAdminHtml(site.signup_email || "이메일 정보 없음")}</span>
           <small>예식일: ${escapeAdminHtml(formatDateOnly(site.weddingDate) || "미설정")} · 생성 ${escapeAdminHtml(formatDate(site.created_at))}</small>
           <dl class="member-meta">
@@ -715,9 +771,32 @@ async function renderGeneralAdmins(message = "") {
         <div class="member-card-actions">
           <a class="btn" href="${cardUrl}" target="_blank" rel="noopener">청첩장</a>
           <a class="btn btn-primary" href="${adminUrl}" target="_blank" rel="noopener">관리자</a>
+          <button class="btn" type="button" data-member-toggle="${escapeAdminHtml(site.slug)}" data-disabled="${site.disabled ? "true" : "false"}">${site.disabled ? "활성화" : "비활성화"}</button>
+          <button class="btn danger-btn" type="button" data-member-delete="${escapeAdminHtml(site.slug)}">삭제</button>
         </div>
       </article>`;
     }).join("") : '<p class="admin-message">아직 가입한 일반관리자가 없습니다.</p>';
+    list.querySelectorAll("[data-member-toggle]").forEach((button) => button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        await window.RSVP_STORAGE.setInvitationSiteDisabled(button.dataset.memberToggle, button.dataset.disabled !== "true");
+        await renderGeneralAdmins(button.dataset.disabled === "true" ? "일반관리자를 활성화했습니다." : "일반관리자를 비활성화했습니다.");
+      } catch (error) {
+        button.disabled = false;
+        alert(`상태를 변경하지 못했습니다.\n${error.message || "Supabase 권한을 확인해 주세요."}`);
+      }
+    }));
+    list.querySelectorAll("[data-member-delete]").forEach((button) => button.addEventListener("click", async () => {
+      if (!confirm("이 일반관리자의 청첩장 데이터와 업로드 파일을 삭제할까요? 이 작업은 되돌릴 수 없습니다.")) return;
+      button.disabled = true;
+      try {
+        await window.RSVP_STORAGE.removeInvitationSite(button.dataset.memberDelete);
+        await renderGeneralAdmins("일반관리자 청첩장 데이터를 삭제했습니다.");
+      } catch (error) {
+        button.disabled = false;
+        alert(`삭제하지 못했습니다.\n${error.message || "Supabase 권한과 Storage 정책을 확인해 주세요."}`);
+      }
+    }));
   } catch (error) {
     list.innerHTML = `<p class="admin-message">일반관리자 목록을 불러오지 못했습니다.</p><p class="admin-message micro-help">${escapeAdminHtml(error.message || "supabase-setup.sql을 다시 실행해 주세요.")}</p>`;
   }
@@ -1074,6 +1153,11 @@ function editorDesignPanel() {
         </div>
         <div class="editor-detail-fields" data-tooldock-items="rsvp-detail">
           ${textarea("rsvp.modalGuide", "RSVP 모달 안내 문구", invitationData.rsvp?.modalGuide || "기차표와 숙소 준비를 위해 필요한 정보입니다.")}
+          ${textarea("rsvp.transportOptions", "오는 방법 선택지", (invitationData.rsvp?.transportOptions || ["자가용", "기차", "버스", "택시", "도보", "직접입력"]).join("\n"))}
+          ${input("rsvp.originPlaceholder", "출발지 입력 예시", invitationData.rsvp?.originPlaceholder || "예: 서울역, 창원시 성산구")}
+          ${input("rsvp.transportPlaceholder", "오는 방법 입력 예시", invitationData.rsvp?.transportPlaceholder || "예: 자가용, KTX, 버스")}
+          ${textarea("rsvp.notesPlaceholder", "추가 전달사항 입력 예시", invitationData.rsvp?.notesPlaceholder || "교통편이나 숙소 관련 요청을 자유롭게 적어 주세요.")}
+          ${textarea("rsvp.accommodationGuide", "숙소 필요 ON 안내 문구", invitationData.rsvp?.accommodationGuide || "숙소 준비를 위해 함께 오는 인원 이름 또는 명수를 적어 주세요.")}
         </div>
       </div>
     </section>`;
@@ -1815,6 +1899,9 @@ function editorData(form) {
       continue;
     } else if (name === "invitation.paragraphs") {
       setNested(next, name, value.split(/\n\s*\n/).map((item) => item.trim()).filter(Boolean));
+    } else if (name === "rsvp.transportOptions") {
+      const options = value.split(/[\n,]/).map((item) => item.trim()).filter(Boolean);
+      setNested(next, name, options.includes("직접입력") ? options : [...options, "직접입력"]);
     } else if (name === "notices") {
       next.notices = parseList(value, ["title", "text"]);
     } else {
@@ -3123,7 +3210,9 @@ async function login(event) {
   if (error) return renderLogin("로그인하지 못했습니다. 이메일과 비밀번호를 확인해 주세요.");
   if (adminArea === "general") {
     try {
-      currentInvitationSite = await window.RSVP_STORAGE.ensureInvitationForCurrentUser(window.INVITATION_DATA);
+      currentInvitationSite = await window.RSVP_STORAGE.getCurrentInvitationSite();
+      if (!currentInvitationSite?.slug) return renderBasicInfoOnboarding();
+      if (currentInvitationSite.disabled) return renderLogin("비활성화된 일반관리자입니다. 슈퍼관리자에게 문의해 주세요.");
     } catch (siteError) {
       return renderLogin(`계정 전용 청첩장을 준비하지 못했습니다. ${siteError.message || "Supabase 설정을 확인해 주세요."}`);
     }
@@ -3156,15 +3245,6 @@ async function signup(event) {
     const result = await window.RSVP_STORAGE.signUpInvitationAdmin({
       email: String(form.get("email") || "").trim(),
       password: form.get("password"),
-      groomName: form.get("groomName"),
-      brideName: form.get("brideName"),
-      groomBirthday: form.get("groomBirthday"),
-      brideBirthday: form.get("brideBirthday"),
-      weddingDate: form.get("weddingDate"),
-      weddingVenue: form.get("weddingVenue"),
-      weddingHall: form.get("weddingHall"),
-      publicOpenDate: form.get("publicOpenDate"),
-      publicCloseDate: form.get("publicCloseDate"),
       agreeTerms: form.get("agreeTerms") === "on",
       agreePrivacy: form.get("agreePrivacy") === "on",
       agreeMarketing: form.get("agreeMarketing") === "on",
@@ -3176,9 +3256,7 @@ async function signup(event) {
       return;
     }
     localStorage.setItem(SAVED_LOGIN_EMAIL_KEY, String(form.get("email") || "").trim());
-    await loadInvitationData();
-    renderEditor("전용 청첩장 페이지와 관리자 페이지를 만들었습니다. 사진·영상은 비어 있고 기본 색상 배경으로 시작합니다.");
-    showAdminWelcomeOverlay(true);
+    renderBasicInfoOnboarding("회원가입이 완료되었습니다. 기본정보를 입력하면 전용 청첩장과 일반관리자 페이지가 생성됩니다.");
   } catch (error) {
     if (submitButton) {
       submitButton.disabled = false;
@@ -3192,7 +3270,7 @@ async function signup(event) {
 
 async function loadInvitationData() {
   if (adminArea === "general" && supabaseClient) {
-    currentInvitationSite = await window.RSVP_STORAGE.ensureInvitationForCurrentUser(window.INVITATION_DATA);
+    currentInvitationSite = await window.RSVP_STORAGE.getCurrentInvitationSite();
   }
   invitationData = await window.RSVP_STORAGE.loadInvitationData(window.INVITATION_DATA);
   applyAppearance(invitationData.appearance);
@@ -3450,9 +3528,16 @@ async function start() {
   if (!supabaseClient) return renderSetupNotice();
   const { data } = await supabaseClient.auth.getSession();
   if (!data.session) return renderLogin();
-  await loadInvitationData();
-  if (adminArea === "super") renderAdminView(localStorage.getItem(SUPER_ADMIN_VIEW_KEY) || "themes");
-  else renderAdminView(localStorage.getItem(GENERAL_ADMIN_VIEW_KEY) || "editor");
+  if (adminArea === "super") {
+    await loadInvitationData();
+    renderAdminView(localStorage.getItem(SUPER_ADMIN_VIEW_KEY) || "themes");
+  } else {
+    currentInvitationSite = await window.RSVP_STORAGE.getCurrentInvitationSite();
+    if (!currentInvitationSite?.slug) return renderBasicInfoOnboarding();
+    if (currentInvitationSite.disabled) return renderLogin("비활성화된 일반관리자입니다. 슈퍼관리자에게 문의해 주세요.");
+    await loadInvitationData();
+    renderAdminView(localStorage.getItem(GENERAL_ADMIN_VIEW_KEY) || "editor");
+  }
 }
 
 start();

@@ -10,10 +10,13 @@ create table if not exists public.invitation_sites (
   groom_name text not null default '',
   bride_name text not null default '',
   signup_email text,
+  disabled boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 create index if not exists invitation_sites_owner_idx on public.invitation_sites(owner_id);
+alter table public.invitation_sites
+  add column if not exists disabled boolean not null default false;
 
 create table if not exists public.attendance_responses (
   id uuid primary key default gen_random_uuid(),
@@ -29,6 +32,7 @@ create table if not exists public.attendance_responses (
   companion_count integer not null default 0 check (companion_count >= 0),
   total_count integer not null default 0 check (total_count >= 0),
   needs_accommodation text check (needs_accommodation in ('예', '아니오', '미정')),
+  accommodation_details text not null default '' check (char_length(accommodation_details) <= 120),
   notes text not null default '' check (char_length(notes) <= 500),
   created_at timestamptz not null default now()
 );
@@ -36,6 +40,8 @@ alter table public.attendance_responses
   add column if not exists travel_details text not null default '';
 alter table public.attendance_responses
   add column if not exists invitation_id text not null default 'main';
+alter table public.attendance_responses
+  add column if not exists accommodation_details text not null default '';
 
 create table if not exists public.invitation_settings (
   id text primary key,
@@ -67,12 +73,12 @@ revoke all on table public.attendance_responses from anon, authenticated;
 revoke all on table public.invitation_settings from anon, authenticated;
 revoke all on table public.guestbook_entries from anon, authenticated;
 grant select on table public.rsvp_admins to authenticated;
-grant select, insert, update on table public.invitation_sites to authenticated;
+grant select, insert, update, delete on table public.invitation_sites to authenticated;
 grant select on table public.invitation_sites to anon;
 grant insert on table public.attendance_responses to anon, authenticated;
 grant select on table public.attendance_responses to authenticated;
 grant select on table public.invitation_settings to anon, authenticated;
-grant insert, update on table public.invitation_settings to authenticated;
+grant insert, update, delete on table public.invitation_settings to authenticated;
 grant select, insert on table public.guestbook_entries to anon, authenticated;
 grant update on table public.guestbook_entries to authenticated;
 
@@ -100,6 +106,12 @@ on public.invitation_sites for update
 to authenticated
 using ((select auth.uid()) = owner_id or exists (select 1 from public.rsvp_admins where user_id = (select auth.uid())))
 with check ((select auth.uid()) = owner_id or exists (select 1 from public.rsvp_admins where user_id = (select auth.uid())));
+
+drop policy if exists "admins can delete invitation sites" on public.invitation_sites;
+create policy "admins can delete invitation sites"
+on public.invitation_sites for delete
+to authenticated
+using (exists (select 1 from public.rsvp_admins where user_id = (select auth.uid())));
 
 drop policy if exists "guests can submit attendance" on public.attendance_responses;
 create policy "guests can submit attendance"
@@ -158,6 +170,16 @@ with check (
     select 1 from public.rsvp_admins where user_id = (select auth.uid())
   ) or exists (
     select 1 from public.invitation_sites where slug = id and owner_id = (select auth.uid())
+  )
+);
+
+drop policy if exists "registered admins can delete invitation settings" on public.invitation_settings;
+create policy "registered admins can delete invitation settings"
+on public.invitation_settings for delete
+to authenticated
+using (
+  exists (
+    select 1 from public.rsvp_admins where user_id = (select auth.uid())
   )
 );
 

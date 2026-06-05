@@ -126,7 +126,13 @@ async function currentUserInvitationSite(client) {
   return data;
 }
 
-async function ensureInvitationForCurrentUser(fallback = window.INVITATION_DATA) {
+async function getCurrentInvitationSite() {
+  const client = getSupabaseClient();
+  if (!client) return null;
+  return currentUserInvitationSite(client);
+}
+
+async function ensureInvitationForCurrentUser(fallback = window.INVITATION_DATA, profile = {}) {
   const client = getSupabaseClient();
   if (!client) return null;
   const { data: sessionData } = await client.auth.getSession();
@@ -138,9 +144,12 @@ async function ensureInvitationForCurrentUser(fallback = window.INVITATION_DATA)
     return existing;
   }
   const meta = user.user_metadata || {};
-  const groomName = meta.groom_name || "";
-  const brideName = meta.bride_name || "";
-  const slug = fallbackSlug(meta.card_slug || `${groomName}-${brideName}` || user.email?.split("@")[0]);
+  const groomName = profile.groomName || meta.groom_name || "";
+  const brideName = profile.brideName || meta.bride_name || "";
+  const weddingDate = profile.weddingDate || meta.wedding_date || "";
+  const weddingVenue = profile.weddingVenue || meta.wedding_venue || "";
+  if (!groomName || !brideName || !weddingDate || !weddingVenue) return null;
+  const slug = fallbackSlug(profile.cardSlug || meta.card_slug || `${groomName}-${brideName}` || user.email?.split("@")[0]);
   const title = [groomName, brideName].filter(Boolean).join(" · ") || user.email || "새 청첩장";
   const { data: defaultSettings } = await client
     .from("invitation_settings")
@@ -152,13 +161,13 @@ async function ensureInvitationForCurrentUser(fallback = window.INVITATION_DATA)
     slug,
     groomName,
     brideName,
-    groomBirthday: meta.groom_birthday || "",
-    brideBirthday: meta.bride_birthday || "",
-    weddingDate: meta.wedding_date || "",
-    weddingVenue: meta.wedding_venue || "",
-    weddingHall: meta.wedding_hall || "",
-    publicOpenDate: meta.public_open_date || "",
-    publicCloseDate: meta.public_close_date || "",
+    groomBirthday: profile.groomBirthday || meta.groom_birthday || "",
+    brideBirthday: profile.brideBirthday || meta.bride_birthday || "",
+    weddingDate,
+    weddingVenue,
+    weddingHall: profile.weddingHall || meta.wedding_hall || "",
+    publicOpenDate: profile.publicOpenDate || meta.public_open_date || "",
+    publicCloseDate: profile.publicCloseDate || meta.public_close_date || "",
   });
   const { data: site, error: siteError } = await client
     .from("invitation_sites")
@@ -281,11 +290,11 @@ async function saveInvitationData(content) {
   }).eq("slug", slug);
 }
 
-async function signUpInvitationAdmin({ email, password, groomName, brideName, groomBirthday = "", brideBirthday = "", weddingDate = "", weddingVenue = "", weddingHall = "", publicOpenDate = "", publicCloseDate = "", agreeTerms, agreePrivacy, agreeMarketing = false }) {
+async function signUpInvitationAdmin({ email, password, groomName = "", brideName = "", groomBirthday = "", brideBirthday = "", weddingDate = "", weddingVenue = "", weddingHall = "", publicOpenDate = "", publicCloseDate = "", agreeTerms, agreePrivacy, agreeMarketing = false }) {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
   if (!agreeTerms || !agreePrivacy) throw new Error("필수 약관에 동의해 주세요.");
-  const slug = fallbackSlug(`${groomName}-${brideName}`);
+  const slug = groomName && brideName ? fallbackSlug(`${groomName}-${brideName}`) : "";
   const { data, error } = await client.auth.signUp({
     email,
     password,
@@ -301,7 +310,7 @@ async function signUpInvitationAdmin({ email, password, groomName, brideName, gr
         wedding_hall: weddingHall,
         public_open_date: publicOpenDate,
         public_close_date: publicCloseDate,
-        card_slug: slug,
+        ...(slug ? { card_slug: slug } : {}),
         agree_terms: Boolean(agreeTerms),
         agree_privacy: Boolean(agreePrivacy),
         agree_marketing: Boolean(agreeMarketing),
@@ -329,7 +338,7 @@ async function listInvitationSites() {
   if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
   const { data, error } = await client
     .from("invitation_sites")
-    .select("slug,title,groom_name,bride_name,signup_email,created_at,updated_at")
+    .select("slug,title,groom_name,bride_name,signup_email,disabled,created_at,updated_at")
     .order("created_at", { ascending: false });
   if (error) throw error;
   const sites = data || [];
@@ -362,7 +371,7 @@ async function listInvitationSites() {
 }
 
 function storageBytes(files = []) {
-  return files.reduce((total, file) => total + Number(file.metadata?.size || file.metadata?.contentLength || file.size || 0), 0);
+  return files.reduce((total, file) => total + Number(file.metadata?.size || file.metadata?.contentLength || file.metadata?.content_length || file.size || 0), 0);
 }
 
 async function listStorageFolder(client, bucket, folder = "") {
@@ -374,6 +383,39 @@ async function listStorageFolder(client, bucket, folder = "") {
   const folders = (entries || []).filter((entry) => !entry.id);
   const nested = await Promise.all(folders.map((entry) => listStorageFolder(client, bucket, folder ? `${folder}/${entry.name}` : entry.name)));
   return files.concat(...nested);
+}
+
+async function setInvitationSiteDisabled(slug, disabled) {
+  const client = getSupabaseClient();
+  if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
+  const { error } = await client
+    .from("invitation_sites")
+    .update({ disabled: Boolean(disabled), updated_at: new Date().toISOString() })
+    .eq("slug", slug);
+  if (error) throw error;
+}
+
+async function removeInvitationSite(slug) {
+  const client = getSupabaseClient();
+  if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
+  const { data: setting } = await client
+    .from("invitation_settings")
+    .select("content")
+    .eq("id", slug)
+    .maybeSingle();
+  const guestSlug = setting?.content?.guestPhotos?.uploadSlug || slug;
+  const [invitationFiles, guestFiles] = await Promise.all([
+    listStorageFolder(client, "invitation-media", slug).catch(() => []),
+    listStorageFolder(client, "guest-photos", guestSlug).catch(() => []),
+  ]);
+  const invitationPaths = invitationFiles.map((file) => file.path);
+  const guestPaths = guestFiles.map((file) => file.path);
+  if (invitationPaths.length) await client.storage.from("invitation-media").remove(invitationPaths);
+  if (guestPaths.length) await client.storage.from("guest-photos").remove(guestPaths);
+  const { error: settingsError } = await client.from("invitation_settings").delete().eq("id", slug);
+  if (settingsError) throw settingsError;
+  const { error: siteError } = await client.from("invitation_sites").delete().eq("slug", slug);
+  if (siteError) throw siteError;
 }
 
 async function optimizeInvitationImage(file) {
@@ -560,10 +602,13 @@ window.RSVP_STORAGE = {
   getSupabaseClient,
   getActiveInvitationSlug,
   setActiveInvitationSlug,
+  getCurrentInvitationSite,
   ensureInvitationForCurrentUser,
   signUpInvitationAdmin,
   signInWithProvider,
   listInvitationSites,
+  setInvitationSiteDisabled,
+  removeInvitationSite,
   loadInvitationData,
   loadGuestbookEntries,
   loadAdminGuestbookEntries,

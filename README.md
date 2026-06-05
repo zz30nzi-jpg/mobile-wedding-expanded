@@ -149,17 +149,221 @@ API Key는 `supabase-config.js`, `invitation-data.js`, 관리자 입력값에 �
 
 Gemini도 같은 `api/ai-design.js` 서버 함수에서 사용할 수 있습니다.
 
-1. Google AI Studio에서 Gemini API Key를 발급합니다.
-2. Vercel 프로젝트의 Settings > Environment Variables에 `GEMINI_API_KEY`를 등록합니다.
-3. 선택 사항으로 `GEMINI_MODEL`을 등록합니다. 비워두면 `gemini-2.5-flash`를 사용합니다.
-4. 재배포합니다.
-5. 관리자 > AI 설정에서 Provider를 `Google Gemini`로 선택합니다.
-6. `Mock Mode`를 끄고 저장합니다.
-7. `연결 테스트`를 누릅니다.
+1. [Google AI Studio](https://aistudio.google.com)에 로그인합니다.
+2. 왼쪽 메뉴 또는 상단의 `Get API key`를 누릅니다.
+3. `Create API key`를 누릅니다.
+4. 새 Google Cloud 프로젝트를 만들거나 기존 프로젝트를 선택합니다.
+5. 발급된 API Key를 복사합니다.
+6. [Vercel Dashboard](https://vercel.com/dashboard)에 로그인합니다.
+7. 청첩장 프로젝트를 선택합니다.
+8. `Settings` > `Environment Variables`로 이동합니다.
+9. `Key`에 `GEMINI_API_KEY`, `Value`에 발급받은 API Key를 입력하고 저장합니다.
+10. 같은 화면에서 선택 사항으로 `GEMINI_MODEL`을 추가합니다. 비워두면 `gemini-2.5-flash`를 사용합니다.
+11. Vercel 프로젝트의 `Deployments` 메뉴로 이동합니다.
+12. 최신 배포의 `...` 메뉴에서 `Redeploy`를 누르거나 새 커밋을 push해서 다시 배포합니다.
+13. 배포가 끝나면 `super-admin.html`에 로그인합니다.
+14. 슈퍼관리자 메뉴에서 `AI 설정`을 누릅니다.
+15. Provider를 `Google Gemini`로 선택합니다.
+16. 서버 AI 엔드포인트가 `/api/ai-design`인지 확인합니다.
+17. `Mock Mode`를 끄고 저장합니다.
+18. `연결 테스트`를 눌러 정상 연결 메시지를 확인합니다.
 
 Gemini API Key도 브라우저 코드에 넣지 마세요. `api/ai-design.js` 서버 함수만 `GEMINI_API_KEY` 환경변수를 읽습니다.
 
 `gemini-2.5-flash`와 `gemini-2.5-flash-lite`는 Gemini Developer API 무료 티어가 있지만 요청 제한이 있습니다. 무료 티어 사용 데이터는 Google 제품 개선에 사용될 수 있습니다. `gemini-2.5-flash-image` 이미지 생성은 공식 가격표 기준 무료 티어가 제공되지 않습니다.
+
+### Kakao 소셜가입 연결 방법
+
+일반관리자 로그인 화면의 `카카오로 시작` 버튼은 Supabase Auth의 Kakao Provider를 사용합니다. 현재 버튼은 `admin.js`에서 `provider="kakao"`로 연결되어 있습니다.
+
+먼저 Supabase 콜백 URL에 들어가는 `<project-ref>`를 확인합니다.
+
+1. [Supabase Dashboard](https://supabase.com/dashboard)에 로그인합니다.
+2. 청첩장에 연결할 프로젝트를 클릭합니다.
+3. 왼쪽 아래 `Project Settings`를 누릅니다.
+4. `General` 또는 `API` 화면에서 Project Ref를 확인합니다.
+5. Project Ref가 `abcdefghijklmnop`라면 Supabase 콜백 URL은 아래처럼 됩니다.
+
+```text
+https://<project-ref>.supabase.co/auth/v1/callback
+```
+
+```text
+https://abcdefghijklmnop.supabase.co/auth/v1/callback
+```
+
+그다음 Kakao Developers에서 앱을 설정합니다.
+
+1. [Kakao Developers](https://developers.kakao.com)에 로그인합니다.
+2. 상단 메뉴에서 `내 애플리케이션`을 누릅니다.
+3. `애플리케이션 추가하기`를 누릅니다.
+4. 앱 이름과 사업자명을 입력하고 저장합니다.
+5. 생성된 앱을 클릭합니다.
+6. 왼쪽 메뉴에서 `앱 설정` > `플랫폼`을 누릅니다.
+7. `Web 플랫폼 등록`을 누릅니다.
+8. 사이트 도메인에 실제 배포 도메인을 입력합니다.
+
+```text
+https://도메인
+http://localhost:5500
+```
+
+9. 왼쪽 메뉴에서 `제품 설정` > `카카오 로그인`을 누릅니다.
+10. `활성화 설정`을 `ON`으로 바꿉니다.
+11. 같은 화면의 `Redirect URI` 영역에서 `Redirect URI 등록`을 누릅니다.
+12. 위에서 만든 Supabase 콜백 URL을 입력하고 저장합니다.
+13. 왼쪽 메뉴에서 `앱 설정` > `앱 키`를 누릅니다.
+14. `REST API 키`를 복사해 둡니다.
+15. 왼쪽 메뉴에서 `제품 설정` > `카카오 로그인` > `보안`을 누릅니다.
+16. `Client Secret`을 활성화하고 코드를 복사해 둡니다.
+
+마지막으로 Supabase에 Kakao Provider를 등록합니다.
+
+1. [Supabase Dashboard](https://supabase.com/dashboard)에서 프로젝트를 엽니다.
+2. 왼쪽 메뉴에서 `Authentication`을 누릅니다.
+3. `Providers`를 누릅니다.
+4. 목록에서 `Kakao`를 찾아 클릭합니다.
+5. `Enable Kakao provider`를 켭니다.
+6. Client ID에는 Kakao의 `REST API 키`를 입력합니다.
+7. Client Secret에는 Kakao Login의 `Client Secret`을 입력합니다.
+8. 저장합니다.
+9. 왼쪽 메뉴에서 `Authentication` > `URL Configuration`으로 이동합니다.
+10. `Site URL`에 실제 사이트 주소를 입력합니다.
+11. `Redirect URLs` 또는 `Additional Redirect URLs`에 관리자 주소를 추가합니다.
+
+```text
+https://도메인/admin.html
+http://localhost:5500/admin.html
+```
+
+12. 저장 후 일반관리자 로그인 화면에서 `카카오로 시작`을 눌러 테스트합니다.
+
+### Naver 소셜가입 연결 방법
+
+Naver는 Supabase 기본 Provider가 아니라 Custom OAuth Provider로 연결합니다. 현재 버튼은 `admin.js`에서 `provider="custom:naver"`로 연결되어 있으므로 Supabase의 Provider ID를 `naver`로 맞춥니다.
+
+먼저 Supabase 콜백 URL을 준비합니다. Kakao와 같은 URL을 사용합니다.
+
+```text
+https://<project-ref>.supabase.co/auth/v1/callback
+```
+
+Naver Developers에서 앱을 설정합니다.
+
+1. [Naver Developers](https://developers.naver.com)에 로그인합니다.
+2. 상단 또는 오른쪽의 `Application` 메뉴를 누릅니다.
+3. `애플리케이션 등록`을 누릅니다.
+4. 애플리케이션 이름을 입력합니다.
+5. 사용 API에서 `네이버 아이디로 로그인`을 선택합니다.
+6. 제공 정보를 선택합니다. 기본으로 `이메일`, `이름`을 선택합니다.
+7. 로그인 오픈 API 서비스 환경에서 `PC 웹`을 선택합니다.
+8. 서비스 URL에 실제 사이트의 기본 도메인을 입력합니다. 가입자마다 만들어지는 청첩장 주소나 관리자 데이터 주소를 넣는 칸이 아닙니다. 네이버 로그인 버튼이 있는 서비스의 대표 도메인만 넣습니다.
+
+```text
+https://도메인
+http://localhost:5500
+```
+
+운영 도메인이 `https://vividvows.co.kr`라면 서비스 URL은 아래처럼 입력합니다.
+
+```text
+https://vividvows.co.kr
+```
+
+Vercel 기본 도메인을 그대로 쓰는 경우에는 아래처럼 입력합니다.
+
+```text
+https://mobile-wedding-expanded.vercel.app
+```
+
+로컬에서만 테스트할 때는 임시로 아래 주소를 사용할 수 있습니다. 운영 배포 후에는 실제 도메인으로 바꿉니다.
+
+```text
+http://localhost:5500
+```
+
+일반관리자 가입 후 생성되는 개인 청첩장 페이지와 관리자 데이터는 Supabase 로그인 완료 후 사이트 내부에서 만들어집니다. Naver Developers의 서비스 URL에 가입자별 주소를 미리 등록하지 않습니다.
+
+로그인 후 일반관리자 페이지로 돌아오게 하려면 Supabase의 Redirect URL에는 `admin.html`까지 포함한 주소를 추가합니다.
+
+```text
+https://mobile-wedding-expanded.vercel.app/admin.html
+```
+
+Naver Developers의 서비스 URL은 대표 도메인이고, Supabase Redirect URL은 로그인 후 실제로 돌아올 관리자 페이지 주소입니다.
+
+9. Callback URL에 Supabase 콜백 URL을 입력합니다.
+
+```text
+https://<project-ref>.supabase.co/auth/v1/callback
+```
+
+10. 등록을 완료합니다.
+11. 생성된 애플리케이션 상세 화면에서 Client ID와 Client Secret을 복사해 둡니다.
+
+Supabase에서 Custom OAuth Provider를 만듭니다.
+
+1. [Supabase Dashboard](https://supabase.com/dashboard)에서 프로젝트를 엽니다.
+2. 왼쪽 메뉴에서 `Authentication`을 누릅니다.
+3. `Providers`를 누릅니다.
+4. `Add provider` 또는 `New provider`를 누릅니다.
+5. `Custom OAuth` 또는 `Custom OAuth2` provider를 선택합니다. `OIDC`, `Auto-discovery`, `OpenID Connect`가 아니라 OAuth2 수동 설정을 선택해야 합니다.
+6. Provider ID를 `naver`로 입력합니다. 이 값이 `custom:naver`의 `naver` 부분입니다.
+7. Client ID에는 Naver Client ID를 입력합니다.
+8. Client Secret에는 Naver Client Secret을 입력합니다.
+9. 화면에 `Issuer URL` 또는 `발급자 URL`이 필수로 보이면 아래 값을 입력합니다.
+
+```text
+Issuer URL: https://nid.naver.com
+```
+
+10. OAuth endpoint를 아래처럼 입력합니다.
+
+```text
+Authorization URL: https://nid.naver.com/oauth2.0/authorize
+Token URL: https://nid.naver.com/oauth2.0/token
+UserInfo URL: https://openapi.naver.com/v1/nid/me
+Scope: name email
+```
+
+11. `JWKS URI`가 선택 입력이면 비워둡니다. 필수로 요구되면 현재 화면이 OIDC 검증 방식일 수 있으니 Supabase의 `Manual configuration` 선택 여부를 다시 확인합니다.
+12. 저장합니다.
+13. 왼쪽 메뉴에서 `Authentication` > `URL Configuration`으로 이동합니다.
+14. `Site URL`에 실제 사이트 주소를 입력합니다.
+15. `Redirect URLs` 또는 `Additional Redirect URLs`에 관리자 주소를 추가합니다.
+
+```text
+https://도메인/admin.html
+http://localhost:5500/admin.html
+```
+
+16. 저장 후 일반관리자 로그인 화면에서 `네이버로 시작`을 눌러 테스트합니다.
+
+### AI 기능 확장 계획
+
+현재 연결 준비가 된 AI 기능은 슈퍼관리자 영역입니다.
+
+- `슈퍼관리자 > AI 설정`: Provider, 서버 엔드포인트, Mock Mode 설정
+- `슈퍼관리자 > 테마 생성 및 수정`: `/api/ai-design` 서버 함수로 연결 가능
+- `슈퍼관리자 > 디자인 요소 생성`: `/api/ai-design` 서버 함수로 연결 가능
+
+추가 구현이 필요한 AI 기능은 일반관리자 영역입니다.
+
+- `일반관리자 > 교통안내 AI`: 예식장 기준 가장 가까운 기차역, 지하철역, 버스정류장, 차량, 대중교통, 도보 안내 초안 생성
+- `일반관리자 > 식장안내 AI`: 주차, 식사, 층, 홀, 포토부스, 엘리베이터, 유아동반, 화환 여부 등 안내사항 초안 생성
+
+다음 구현 전에 확인해야 할 정보는 아래와 같습니다.
+
+- 배포 플랫폼: Vercel, Netlify, 자체 서버 중 무엇인지
+- 실제 서비스 도메인
+- Supabase Project Ref 또는 Supabase URL
+- AI Provider: Gemini만 사용할지, OpenAI도 함께 남길지
+- 교통안내에 사용할 지도 API: Kakao Maps, Naver Maps, Google Maps 중 선택
+- AI 결과 적용 방식: 바로 덮어쓰기 또는 미리보기 후 적용
+- 교통안내 대상: 한국 예식장만 지원할지, 해외 예식장도 지원할지
+- 식장안내 필수 항목: 주차, 식사, 층/홀, 포토부스, 엘리베이터, 유아동반, 화환 여부 등
+
+교통안내와 식장안내는 하객 이동에 직접 영향을 주므로 `AI 초안 생성 -> 관리자 확인 -> 적용` 흐름으로 구현하는 것을 권장합니다.
 
 ## 하객 사진·영상 업로드 정책 변경
 
