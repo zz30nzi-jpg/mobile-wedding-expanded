@@ -26,6 +26,13 @@
       { id: "editorial_left", name: "포스터 좌측형", layout: "poster-left", align: "left", shadow: true, boxEnabled: false, nameSize: 46, dateSize: 13 },
       { id: "minimal_center", name: "중앙 오버레이형", layout: "center", align: "center", shadow: false, boxEnabled: false, opacity: 0.82, blendMode: "screen", nameSize: 35, dateSize: 12 },
     ],
+    fonts: [
+      { id: "noto-serif-kr", name: "Noto Serif KR", family: "Noto Serif KR", source: "Google Fonts", license: "SIL Open Font License", commercialFree: true },
+      { id: "noto-sans-kr", name: "Noto Sans KR", family: "Noto Sans KR", source: "Google Fonts", license: "SIL Open Font License", commercialFree: true },
+      { id: "gowun-batang", name: "Gowun Batang", family: "Gowun Batang", source: "Google Fonts", license: "SIL Open Font License", commercialFree: true },
+      { id: "gowun-dodum", name: "Gowun Dodum", family: "Gowun Dodum", source: "Google Fonts", license: "SIL Open Font License", commercialFree: true },
+      { id: "cormorant-garamond", name: "Cormorant Garamond", family: "Cormorant Garamond", source: "Google Fonts", license: "SIL Open Font License", commercialFree: true },
+    ],
     sectionIcons: [],
     backgrounds: [],
   };
@@ -35,6 +42,19 @@
   const migrateTextThemeId = (id) => id === "auto" ? "default_center" : (["classic", "caption_card"].includes(id) ? "editorial_left" : id);
   const mergeUnique = (defaults, saved = []) => [...defaults.map((item) => ({ ...item, ...(saved.find((savedItem) => savedItem.id === item.id) || {}) })), ...saved.filter((item) => !defaults.some((fallback) => fallback.id === item.id))];
   const themePresetId = (appearance = {}) => appearance.movieConcept && appearance.movieConcept !== "none" ? appearance.movieConcept : (appearance.theme || "sky");
+  const cssString = (value) => String(value || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+
+  function ensureFontFace(font = {}) {
+    if (!font.url || !font.family || !document?.head) return;
+    const id = `design-font-${String(font.id || font.family).replace(/[^a-z0-9_-]/gi, "-")}`;
+    if (document.getElementById(id)) return;
+    const extension = String(font.url).split("?")[0].split(".").pop()?.toLowerCase();
+    const format = extension === "woff2" ? "woff2" : extension === "woff" ? "woff" : extension === "otf" ? "opentype" : "truetype";
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = `@font-face{font-family:"${cssString(font.family)}";src:url("${cssString(font.url)}") format("${format}");font-display:swap;}`;
+    document.head.appendChild(style);
+  }
 
   function normalize(data = {}) {
     data.appearance ||= {};
@@ -54,7 +74,18 @@
     // Color presets always use the neutral invitation defaults. Movie presets
     // may still provide their own frame and text layout.
     system.colorDefaults = { heroDecoration: "none", heroTextTheme: "default_center", ...(system.colorDefaults || {}) };
-    system.aiSettings = { enabled: true, mockMode: true, provider: "OpenAI", model: "server-managed", endpoint: "/api/ai-design", removeWhiteBackground: true, whiteTolerance: 24, convertSvg: false, savePng: true, ...(system.aiSettings || {}) };
+    const defaultPrompts = {
+      base: "고급 모바일 청첩장 디자인 시스템을 만든다. 결과는 과하게 장식적이지 않고, 모바일 세로 화면에서 읽기 쉬워야 한다. 메인 사진을 가리지 않는 프레임, 한국어 이름과 날짜가 잘 보이는 문구 구조, 섹션 사이를 부드럽게 이어주는 작은 아이콘을 우선한다. 색상은 한 가지 색만 반복하지 말고 배경, 카드, 본문, 보조 글자, 포인트, 라인이 서로 구분되게 제안한다.",
+      colorTheme: "컬러테마는 색상값 추천에 집중한다. 배경, 카드, 본문 글자, 보조 글자, 포인트, 라인 색상을 모바일 청첩장에 맞게 제안한다.",
+      movieTheme: "영화테마는 사용자의 문장 속 장면, 계절, 감정, 시대감, 질감에서 색감 조합, 폰트, 메인 이미지 꾸밈, 메인 문구 테마, 섹션 아이콘, 갤러리 프레임, 버튼 모양을 함께 제안한다.",
+      frameAsset: "메인이미지꾸밈은 사진 가장자리 또는 바깥을 보조하며 인물 얼굴을 가리지 않는다. 사진 위 오버레이 또는 바깥 프레임으로 쓸 수 있게 단순하고 고급스럽게 제안한다.",
+      textThemeAsset: "메인문구테마는 이름과 날짜의 위계, 정렬, 폰트, 그림자, 박스 여부를 제안한다. 상업적 무료 폰트만 사용한다.",
+      iconAsset: "섹션아이콘은 작고 단순하며 단색 또는 2색으로 쓴다. 참고 레퍼런스 이미지는 분위기와 구조만 참고하고 그대로 복제하지 않는다.",
+      transport: "예식장 기준 가장 가까운 기차역/지하철역과 버스정류장을 중심으로 안내한다. 차량 몇 분, 버스 번호와 소요시간, 지하철/기차 이용, 도보 몇 분을 가능한 범위에서 적는다. 도보는 20분 이하일 때만 적고, 불확실한 정보는 확인 필요라고 표시한다.",
+      venue: "식장 공식홈페이지나 공식 안내 정보를 우선한다고 가정하고, 모르는 사실은 지어내지 않는다. 기본 안내사항은 주차와 식사다. 식사 안내에는 식권 받는 곳과 연회장 위치를 포함하고, 주차 안내에는 주차권 받는 곳, 주차권 필요 여부, 여러 주차장이 있으면 가능한 주차장을 정리한다.",
+    };
+    system.aiSettings = { enabled: true, mockMode: true, provider: "OpenAI", model: "server-managed", endpoint: "/api/ai-design", removeWhiteBackground: true, whiteTolerance: 24, convertSvg: false, savePng: true, prompts: defaultPrompts, referenceImages: "", ...(system.aiSettings || {}) };
+    system.aiSettings.prompts = { ...defaultPrompts, ...(system.aiSettings.prompts || {}) };
     system.aiLibrary = Array.isArray(system.aiLibrary) ? system.aiLibrary : [];
     const legacyCustom = !data.appearance.design && ((data.appearance.heroDecoration && data.appearance.heroDecoration !== "none") || (data.appearance.heroTextTheme && data.appearance.heroTextTheme !== "auto"));
     const previousDesign = data.appearance.design;
@@ -150,7 +181,8 @@
       })(),
       heroTextThemeAsset: (() => {
         const asset = data.designSystem.assets.textThemes.find((item) => item.id === heroTextTheme);
-        return asset ? { ...asset, xPercent: design.heroTextXPercent ?? asset.xPercent, yPercent: design.heroTextYPercent ?? asset.yPercent } : asset;
+        const font = data.designSystem.assets.fonts.find((item) => item.id === asset?.fontId);
+        return asset ? { ...asset, font, xPercent: design.heroTextXPercent ?? asset.xPercent, yPercent: design.heroTextYPercent ?? asset.yPercent } : asset;
       })(),
       sectionIcon: theme.type === "movie" ? theme.sectionIcon || "" : "",
       backgroundDecoration: theme.type === "movie" ? theme.backgroundDecoration || "" : "",
@@ -209,6 +241,9 @@
     root.style.setProperty("--custom-hero-card-border-width", `${resolved.heroTextThemeAsset?.cardBorderEnabled === false ? 0 : resolved.heroTextThemeAsset?.cardBorderWidth ?? 0}px`);
     root.style.setProperty("--custom-hero-card-border-style", resolved.heroTextThemeAsset?.cardBorderStyle || "solid");
     root.style.setProperty("--custom-hero-card-radius", `${resolved.heroTextThemeAsset?.cardRadius ?? 8}px`);
+    if (resolved.heroTextThemeAsset?.font) ensureFontFace(resolved.heroTextThemeAsset.font);
+    const heroFontFamily = resolved.heroTextThemeAsset?.font?.family || "Cormorant Garamond";
+    root.style.setProperty("--custom-hero-font-family", `"${cssString(heroFontFamily)}", "Noto Serif KR", serif`);
     document.querySelector('meta[name="theme-color"]')?.setAttribute("content", getComputedStyle(root).getPropertyValue("--body-bg").trim());
     return resolved;
   }

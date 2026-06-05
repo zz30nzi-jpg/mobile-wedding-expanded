@@ -167,6 +167,16 @@ function paletteFields(theme = {}) {
   </div>`;
 }
 
+function colorToHex(value = "") {
+  const color = String(value || "").trim();
+  if (/^#[0-9a-f]{6}$/i.test(color)) return color;
+  const shortHex = color.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i);
+  if (shortHex) return `#${shortHex.slice(1).map((item) => item + item).join("")}`;
+  const rgba = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (rgba) return `#${rgba.slice(1, 4).map((item) => Math.max(0, Math.min(255, Number(item))).toString(16).padStart(2, "0")).join("")}`;
+  return "";
+}
+
 function themeCards(type) {
   const themes = designData().designSystem.themes.filter((theme) => theme.type === type);
   return themes.map((theme) => `
@@ -245,28 +255,27 @@ function themeModalMarkup(theme = {}) {
     <div class="admin-toolbar"><h2>${theme.id ? "테마 수정" : "새 테마 만들기"}</h2><button class="btn" type="button" data-theme-close>닫기</button></div>
     <form class="editor-form" id="theme-form">
       <input type="hidden" name="id" value="${escapeAdminHtml(theme.id || "")}">
+      <input type="hidden" name="fontDirection" value="${escapeAdminHtml(theme.fontDirection || "")}">
+      <input type="hidden" name="galleryFrameDirection" value="${escapeAdminHtml(theme.galleryFrameDirection || "")}">
+      <input type="hidden" name="buttonShapeDirection" value="${escapeAdminHtml(theme.buttonShapeDirection || "")}">
       ${select("type", "테마 유형", type, [["color", "컬러테마"], ["movie", "영화테마"]])}
+      <section class="ai-assistant"><h3>AI 디자인 어시스턴트</h3><p class="admin-message">컬러테마는 색상값 중심, 영화테마는 색감·폰트·꾸밈요소·갤러리 프레임·버튼 모양까지 결과를 만듭니다.</p>
+        <div class="ai-chat" data-ai-chat><p>AI: 원하는 무드, 참고 영화, 계절감, 색상값을 한 문장으로 알려주세요.</p></div>
+        <div class="ai-input-row"><input data-ai-instruction placeholder="예: 맑은 하늘색과 흰색 중심, 단정하고 고급스럽게"><button class="btn" type="button" data-ai-send>결과보기</button></div>
+        <div class="ai-progress" data-ai-progress hidden><span></span><i style="width:0%"></i><b>0%</b></div>
+        <div data-ai-results></div>
+      </section>
       ${input("name", "테마명", theme.name || "")}
-      <div data-movie-fields>
-        ${input("concept", "영화명 또는 컨셉명", theme.concept || "")}
-        ${textarea("mood", "무드 설명", theme.mood || "", 2)}
-      </div>
       ${paletteFields(theme)}
       <div data-movie-fields>
         ${designSelect("heroDecoration", "영화테마 전용 메인 이미지 꾸밈", assets.frames, theme.heroDecoration || "none")}
         ${designSelect("heroTextTheme", "영화테마 전용 메인 문구 테마", assets.textThemes, theme.heroTextTheme || "auto")}
         ${input("sectionIcon", "섹션 아이콘 SVG/이미지 URL", theme.sectionIcon || "")}
         ${input("backgroundDecoration", "배경 장식 SVG/이미지 URL", theme.backgroundDecoration || "")}
-        <button class="btn" type="button" data-ai-movie>AI 영화 컨셉 생성</button>
       </div>
       <label class="consent"><input type="checkbox" name="enabled" ${theme.enabled !== false ? "checked" : ""}> <span>사용 가능한 테마로 표시</span></label>
       <button class="btn btn-primary">최종 저장</button>
     </form>
-    <section class="ai-assistant"><h3>AI 디자인 어시스턴트</h3><p class="admin-message">결과는 미리보기와 적용 이후 최종 저장 전까지 테마에 저장되지 않습니다.</p>
-      <div class="ai-chat" data-ai-chat><p>AI: 원하는 무드를 알려주세요.</p></div>
-      <div class="ai-input-row"><input data-ai-instruction placeholder="조금 더 따뜻하고 빈티지하게"><button class="btn" type="button" data-ai-send>추천 받기</button></div>
-      <div data-ai-results></div>
-    </section>
   </section></div>`;
 }
 
@@ -287,20 +296,48 @@ function openThemeModal(themeId = "") {
       id, type: fields.get("type"), name: fields.get("name") || "이름 없는 테마", enabled: fields.get("enabled") === "on",
       concept: fields.get("concept"), mood: fields.get("mood"), heroDecoration: fields.get("heroDecoration"), heroTextTheme: fields.get("heroTextTheme"),
       sectionIcon: fields.get("sectionIcon"), backgroundDecoration: fields.get("backgroundDecoration"),
+      fontDirection: fields.get("fontDirection"), galleryFrameDirection: fields.get("galleryFrameDirection"), buttonShapeDirection: fields.get("buttonShapeDirection"),
       palette: Object.fromEntries(["background", "card", "ink", "muted", "accent", "line"].map((key) => [key, fields.get(key)])),
     };
     const index = system.themes.findIndex((item) => item.id === id);
     if (index >= 0) system.themes[index] = next; else system.themes.push(next);
     await saveDesignData("테마를 저장했습니다.", renderThemeManager);
   });
-  const requestAI = async (movie = false) => {
-    const instruction = document.querySelector("[data-ai-instruction]").value || form.elements.mood.value;
-    const context = { concept: form.elements.concept?.value, mood: form.elements.mood?.value, instruction, name: form.elements.name.value };
-    const aiResult = movie || form.elements.type.value === "movie" ? await AI_DESIGN_SERVICE.recommendMovieTheme(context) : await AI_DESIGN_SERVICE.recommendColorPalette(context);
+  const runAIWithProgress = async (runner, progressSelector = "[data-ai-progress]") => {
+    const progress = document.querySelector(progressSelector);
+    const bar = progress?.querySelector("i");
+    const label = progress?.querySelector("b");
+    let percent = 8;
+    if (progress) progress.hidden = false;
+    const timer = setInterval(() => {
+      percent = Math.min(92, percent + Math.ceil((100 - percent) / 9));
+      if (bar) bar.style.width = `${percent}%`;
+      if (label) label.textContent = `${percent}%`;
+    }, 220);
+    try {
+      const value = await runner();
+      if (bar) bar.style.width = "100%";
+      if (label) label.textContent = "100%";
+      await new Promise((resolve) => setTimeout(resolve, 180));
+      return value;
+    } finally {
+      clearInterval(timer);
+      if (progress) {
+        setTimeout(() => {
+          progress.hidden = true;
+          if (bar) bar.style.width = "0%";
+          if (label) label.textContent = "0%";
+        }, 260);
+      }
+    }
+  };
+  const requestAI = async () => {
+    const instruction = document.querySelector("[data-ai-instruction]").value || form.elements.name.value || "고급스럽고 따뜻한 모바일 청첩장 테마";
+    const context = { concept: instruction, mood: instruction, instruction, name: form.elements.name.value, settings: invitationData.designSystem.aiSettings, fonts: designData().designSystem.assets.fonts || [] };
+    const aiResult = await runAIWithProgress(() => form.elements.type.value === "movie" ? AI_DESIGN_SERVICE.recommendMovieTheme(context) : AI_DESIGN_SERVICE.recommendColorPalette(context));
     rememberAIResult(aiResult); showAIResult(aiResult, form);
   };
   document.querySelector("[data-ai-send]").addEventListener("click", () => requestAI());
-  document.querySelector("[data-ai-movie]")?.addEventListener("click", () => requestAI(true));
 }
 
 function rememberAIResult(result) {
@@ -310,10 +347,50 @@ function rememberAIResult(result) {
 }
 
 function applyAIResult(result, form, scope = "all") {
-  const applyPalette = () => result.palette && Object.entries(result.palette).forEach(([key, value]) => { if (form.elements[key]) form.elements[key].value = /^#/.test(value) ? value : form.elements[key].value; });
+  const applyPalette = () => result.palette && Object.entries(result.palette).forEach(([key, value]) => {
+    if (!form.elements[key]) return;
+    const hex = colorToHex(value);
+    if (hex) form.elements[key].value = hex;
+  });
+  const ensureSelectOption = (selectElement, value, label) => {
+    if (!selectElement || !value) return;
+    if (![...selectElement.options].some((option) => option.value === value)) selectElement.append(new Option(label || value, value));
+    selectElement.value = value;
+  };
+  const addAsset = (key, item) => {
+    const list = designData().designSystem.assets[key] ||= [];
+    const existing = list.find((asset) => asset.id === item.id);
+    if (existing) Object.assign(existing, item);
+    else list.push(item);
+  };
+  const registerMovieAssets = () => {
+    if (form.elements.type.value !== "movie") return;
+    const seed = (result.name || result.instruction || `ai-${Date.now()}`).toLowerCase().replace(/[^a-z0-9가-힣]+/g, "-").replace(/^-|-$/g, "").slice(0, 28) || `ai-${Date.now()}`;
+    const frameId = `ai-frame-${seed}`;
+    const textId = `ai-text-${seed}`;
+    const iconId = `ai-icon-${seed}`;
+    const bgId = `ai-bg-${seed}`;
+    const fonts = designData().designSystem.assets.fonts || [];
+    const matchedFont = fonts.find((font) => font.id === result.fontId) || fonts.find((font) => font.family === result.fontFamily) || fonts[0];
+    addAsset("frames", { id: frameId, name: `${result.name || "AI"} 메인 꾸밈`, mode: "overlay", heroDecoration: result.heroDecoration || "doodle_hearts", direction: result.galleryFrameDirection || result.backgroundDirection || "" });
+    addAsset("textThemes", { id: textId, name: `${result.name || "AI"} 문구 테마`, layout: result.heroTextTheme === "minimal_center" ? "center" : "poster-left", heroTextTheme: result.heroTextTheme || "editorial_left", fontId: matchedFont?.id || "noto-serif-kr", align: result.heroTextTheme === "minimal_center" ? "center" : "left", shadow: true, boxEnabled: false, nameSize: 38, dateSize: 12, direction: result.fontDirection || "" });
+    addAsset("sectionIcons", { id: iconId, name: `${result.name || "AI"} 섹션 아이콘`, direction: result.sectionIconDirection || "" });
+    addAsset("backgrounds", { id: bgId, name: `${result.name || "AI"} 배경 장식`, direction: result.backgroundDirection || "" });
+    ensureSelectOption(form.elements.heroDecoration, frameId, `${result.name || "AI"} 메인 꾸밈`);
+    ensureSelectOption(form.elements.heroTextTheme, textId, `${result.name || "AI"} 문구 테마`);
+    if (form.elements.sectionIcon) form.elements.sectionIcon.value = iconId;
+    if (form.elements.backgroundDecoration) form.elements.backgroundDecoration.value = bgId;
+    if (form.elements.fontDirection) form.elements.fontDirection.value = result.fontDirection || "";
+    if (form.elements.galleryFrameDirection) form.elements.galleryFrameDirection.value = result.galleryFrameDirection || "";
+    if (form.elements.buttonShapeDirection) form.elements.buttonShapeDirection.value = result.buttonShapeDirection || "";
+  };
+  if (result.name && form.elements.name && !form.elements.name.value.trim()) form.elements.name.value = result.name;
   if (scope === "all" || scope === "palette") applyPalette();
-  if ((scope === "all" || scope === "frame") && result.heroDecoration && form.elements.heroDecoration) form.elements.heroDecoration.value = result.heroDecoration;
-  if ((scope === "all" || scope === "text") && result.heroTextTheme && form.elements.heroTextTheme) form.elements.heroTextTheme.value = result.heroTextTheme;
+  if (scope === "all" && form.elements.type.value === "movie") registerMovieAssets();
+  else {
+    if ((scope === "all" || scope === "frame") && result.heroDecoration && form.elements.heroDecoration) form.elements.heroDecoration.value = result.heroDecoration;
+    if ((scope === "all" || scope === "text") && result.heroTextTheme && form.elements.heroTextTheme) form.elements.heroTextTheme.value = result.heroTextTheme;
+  }
 }
 
 function aiPalettePreview(palette = {}) {
@@ -329,18 +406,23 @@ function aiVisualPreview(result) {
     ${result.heroTextTheme ? `<div><strong>추천 문구 테마</strong><div class="ai-text-preview" data-ai-text-theme="${escapeAdminHtml(result.heroTextTheme)}">조성호 · 전지연<small>2026. 10. 04</small></div></div>` : ""}
     ${result.sectionIconDirection ? `<div class="ai-direction"><strong>섹션 아이콘 방향</strong><p>${escapeAdminHtml(result.sectionIconDirection)}</p></div>` : ""}
     ${result.backgroundDirection ? `<div class="ai-direction"><strong>배경 장식 방향</strong><p>${escapeAdminHtml(result.backgroundDirection)}</p></div>` : ""}
+    ${result.fontDirection ? `<div class="ai-direction"><strong>폰트 방향</strong><p>${escapeAdminHtml(result.fontDirection)}</p></div>` : ""}
+    ${result.galleryFrameDirection ? `<div class="ai-direction"><strong>갤러리 프레임</strong><p>${escapeAdminHtml(result.galleryFrameDirection)}</p></div>` : ""}
+    ${result.buttonShapeDirection ? `<div class="ai-direction"><strong>버튼 모양</strong><p>${escapeAdminHtml(result.buttonShapeDirection)}</p></div>` : ""}
   </div>`;
 }
 
 function showAIResult(result, form) {
   const isMovieTheme = form.elements.type.value === "movie";
+  const visibleResult = isMovieTheme ? result : { name: result.name, type: result.type, palette: result.palette, instruction: result.instruction };
   document.querySelector("[data-ai-chat]").insertAdjacentHTML("beforeend", `<p>사용자: ${escapeAdminHtml(result.instruction || "추천 요청")}</p><p>AI: 구조화된 디자인 결과를 만들었습니다. 미리보기 후 적용 범위를 선택해 주세요.</p>`);
   document.querySelector("[data-ai-results]").innerHTML = `<article class="ai-result-card">
     <strong>${escapeAdminHtml(result.name || result.type)}</strong>
-    ${aiVisualPreview(result)}
+    ${aiVisualPreview(visibleResult)}
     <div class="compact-actions"><button class="btn" type="button" data-ai-preview>미리보기</button><button class="btn" type="button" data-ai-apply="palette">팔레트 적용</button>${isMovieTheme && result.heroDecoration ? '<button class="btn" type="button" data-ai-apply="frame">프레임 적용</button>' : ""}${isMovieTheme && result.heroTextTheme ? '<button class="btn" type="button" data-ai-apply="text">문구 테마 적용</button>' : ""}${isMovieTheme ? '<button class="btn btn-primary" type="button" data-ai-apply="all">전체 적용</button>' : ""}<button class="btn" type="button" data-ai-regenerate>재생성</button><button class="btn" type="button" data-ai-ignore>무시</button></div>
   </article>`;
   document.querySelectorAll("[data-ai-apply]").forEach((button) => button.addEventListener("click", () => applyAIResult(result, form, button.dataset.aiApply)));
+  applyAIResult(result, form, isMovieTheme ? "all" : "palette");
   document.querySelector("[data-ai-preview]").addEventListener("click", () => document.querySelector(".ai-visual-preview").classList.toggle("is-emphasized"));
   document.querySelector("[data-ai-ignore]").addEventListener("click", () => { document.querySelector("[data-ai-results]").innerHTML = ""; });
   document.querySelector("[data-ai-regenerate]").addEventListener("click", async () => {
@@ -352,6 +434,7 @@ function showAIResult(result, form) {
 const assetCategories = {
   frame: { key: "frames", label: "메인 이미지 꾸밈", guide: "overlay 420x670, outer 480x720 기준 SVG 300KB 이하 권장" },
   textTheme: { key: "textThemes", label: "메인 문구 테마", guide: "문구 위치, 정렬, 크기를 조합하는 레이아웃 소스" },
+  font: { key: "fonts", label: "폰트", guide: "상업적 무료 폰트만 등록합니다. WOFF2 권장, TTF/OTF/WOFF도 가능" },
   sectionIcon: { key: "sectionIcons", label: "섹션 아이콘", guide: "512x512, 단색 또는 2색 권장" },
   background: { key: "backgrounds", label: "전체 배경 장식", guide: "청첩장 전체 배경에 깔리는 장식입니다. 1920x1080, 저채도 장식 권장" },
 };
@@ -360,7 +443,11 @@ function assetPreview(type, item = {}) {
   const previewUrl = item.url || item.previewUrl;
   if (previewUrl) return `<div class="asset-source-preview asset-source-image ${type === "background" ? "is-background" : ""}"><img src="${escapeAdminHtml(previewUrl)}" alt="${escapeAdminHtml(item.name || "디자인 소스")} 미리보기"></div>`;
   if (type === "frame") return `<div class="asset-source-preview"><span class="hero-decoration-preview" data-decoration-preview="${escapeAdminHtml(item.heroDecoration || item.id || "none")}"><i></i></span></div>`;
-  if (type === "textTheme") return `<div class="asset-source-preview"><div class="ai-text-preview">조성호 · 전지연<small>2026. 10. 04</small></div></div>`;
+  if (type === "textTheme") {
+    const font = (designData().designSystem.assets.fonts || []).find((fontItem) => fontItem.id === item.fontId);
+    return `<div class="asset-source-preview"><div class="ai-text-preview" style="font-family:${escapeAdminHtml(font?.family || "Cormorant Garamond")}, 'Noto Serif KR', serif">조성호 · 전지연<small>2026. 10. 04</small></div></div>`;
+  }
+  if (type === "font") return `<div class="asset-source-preview asset-placeholder-background"><span style="font-family:${escapeAdminHtml(item.family || "serif")}">가나다 Aa</span><small>${escapeAdminHtml(item.license || "상업적 무료 확인 필요")}</small></div>`;
   if (type === "sectionIcon") return `<div class="asset-source-preview asset-placeholder-icon"><span>✦</span><small>${escapeAdminHtml(item.direction || "ICON")}</small></div>`;
   return `<div class="asset-source-preview asset-placeholder-background"><span>${escapeAdminHtml(item.direction || "BACKGROUND")}</span></div>`;
 }
@@ -400,16 +487,19 @@ function renderDesignAssets(message = "", filter = "all") {
 }
 
 function assetModalFields(type) {
+  const fonts = designData().designSystem.assets.fonts || [];
   return `<div class="asset-modal-fields">
     ${type === "frame" ? '<label class="field"><span>적용 방식</span><select name="assetMode"><option value="overlay">사진 위 오버레이</option><option value="outer">사진 바깥 프레임</option></select></label>' : ""}
-    ${type === "textTheme" ? '<label class="field"><span>레이아웃</span><select name="layout"><option value="poster-left">포스터 좌측형</option><option value="center">중앙 오버레이형</option></select></label>' : ""}
-    ${type !== "textTheme" ? '<label class="btn image-upload">SVG/이미지 업로드<input type="file" accept="image/svg+xml,image/png,image/webp,image/jpeg" data-asset-modal-upload></label>' : ""}
+    ${type === "textTheme" ? `<label class="field"><span>레이아웃</span><select name="layout"><option value="poster-left">포스터 좌측형</option><option value="center">중앙 오버레이형</option></select></label>${designSelect("fontId", "사용 폰트", fonts, "noto-serif-kr")}<label class="btn image-upload">폰트 파일 업로드<input type="file" accept=".woff,.woff2,.ttf,.otf,font/woff,font/woff2,font/ttf,font/otf" data-font-upload></label>` : ""}
+    ${type === "font" ? '<label class="field"><span>폰트 패밀리명</span><input name="fontFamily" placeholder="예: My Wedding Font"></label><label class="field"><span>라이선스</span><input name="fontLicense" value="상업적 무료 확인 완료"></label><label class="btn image-upload">폰트 파일 업로드<input type="file" accept=".woff,.woff2,.ttf,.otf,font/woff,font/woff2,font/ttf,font/otf" data-font-upload></label>' : ""}
+    ${!["textTheme", "font"].includes(type) ? '<label class="btn image-upload">SVG/이미지 업로드<input type="file" accept="image/svg+xml,image/png,image/webp,image/jpeg" data-asset-modal-upload></label>' : ""}
   </div>`;
 }
 
 function assetDraftFromAI(type, result) {
   if (type === "frame") return { heroDecoration: result.heroDecoration, direction: result.heroDecoration };
-  if (type === "textTheme") return { heroTextTheme: result.heroTextTheme, layout: result.layout?.position || "poster-left" };
+  if (type === "textTheme") return { heroTextTheme: result.heroTextTheme, layout: result.layout?.position || "poster-left", fontId: result.fontId || "noto-serif-kr", direction: result.fontDirection || "" };
+  if (type === "font") return { family: result.fontFamily || "Noto Serif KR", license: result.fontLicense || result.license || "상업적 무료 확인 필요" };
   return { direction: result.direction || result.sectionIconDirection || result.backgroundDirection || "AI 디자인 방향" };
 }
 
@@ -424,10 +514,12 @@ function renderAssetModalAIResult(type, result) {
   const root = document.querySelector("[data-asset-ai-results]");
   root.innerHTML = `<article class="ai-result-card"><strong>${escapeAdminHtml(result.name || assetCategories[type].label)}</strong>${assetPreview(type, { ...result, ...assetDraftFromAI(type, result) })}
     <div class="compact-actions"><button class="btn btn-primary" type="button" data-asset-ai-accept>미리보기에 적용</button><button class="btn" type="button" data-asset-ai-regenerate>재생성</button><button class="btn" type="button" data-asset-ai-ignore>무시</button></div></article>`;
-  document.querySelector("[data-asset-ai-accept]").addEventListener("click", () => {
+  const applyDraft = () => {
     window.assetSourceDraft = { ...(window.assetSourceDraft || {}), ...assetDraftFromAI(type, result), aiResult: result };
     rememberAIResult(result); updateAssetModalPreview();
-  });
+  };
+  applyDraft();
+  document.querySelector("[data-asset-ai-accept]").addEventListener("click", applyDraft);
   document.querySelector("[data-asset-ai-ignore]").addEventListener("click", () => { root.innerHTML = ""; });
   document.querySelector("[data-asset-ai-regenerate]").addEventListener("click", async () => {
     const next = await AI_DESIGN_SERVICE.regenerateAIResult(result, document.querySelector("[data-asset-ai-instruction]").value);
@@ -449,11 +541,54 @@ function bindAssetModal(type) {
       updateAssetModalPreview();
     } catch (error) { alert(error.message); }
   });
+  document.querySelector("[data-font-upload]")?.addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+      const url = await RSVP_STORAGE.uploadDesignAsset(file, "fonts");
+      const id = `font-${Date.now()}`;
+      const family = form.elements.fontFamily?.value?.trim() || file.name.replace(/\.(woff2?|ttf|otf)$/i, "");
+      const fontItem = { id, name: family, family, url, source: "업로드", license: form.elements.fontLicense?.value?.trim() || "상업적 무료 확인 필요", commercialFree: true };
+      invitationData.designSystem.assets.fonts ||= [];
+      invitationData.designSystem.assets.fonts.push(fontItem);
+      window.assetSourceDraft = { ...(window.assetSourceDraft || {}), ...fontItem, fontId: id };
+      if (form.elements.fontId) {
+        form.elements.fontId.append(new Option(fontItem.name, id));
+        form.elements.fontId.value = id;
+      }
+      updateAssetModalPreview();
+      alert("폰트 파일을 업로드하고 폰트 목록에 추가했습니다.");
+    } catch (error) {
+      alert(`폰트를 업로드하지 못했습니다.\n${error.message || "Storage 정책을 확인해 주세요."}`);
+    }
+  });
   document.querySelector("[data-asset-ai-send]").addEventListener("click", async () => {
-    const methods = { frame: "generateFrameDecoration", textTheme: "generateHeroTextTheme", sectionIcon: "generateSectionIcon", background: "generateBackgroundDecoration" };
+    const methods = { frame: "generateFrameDecoration", textTheme: "generateHeroTextTheme", sectionIcon: "generateSectionIcon", background: "generateBackgroundDecoration", font: "generateHeroTextTheme" };
     const instruction = document.querySelector("[data-asset-ai-instruction]").value;
     document.querySelector("[data-asset-ai-chat]").insertAdjacentHTML("beforeend", `<p>사용자: ${escapeAdminHtml(instruction)}</p><p>AI: 요청에 맞는 미리보기를 만들었습니다.</p>`);
-    renderAssetModalAIResult(type, await AI_DESIGN_SERVICE[methods[type]]({ instruction, settings: invitationData.designSystem.aiSettings }));
+    const progress = document.querySelector("[data-asset-ai-progress]");
+    const bar = progress?.querySelector("i");
+    const label = progress?.querySelector("b");
+    let percent = 10;
+    if (progress) progress.hidden = false;
+    const timer = setInterval(() => {
+      percent = Math.min(92, percent + Math.ceil((100 - percent) / 8));
+      if (bar) bar.style.width = `${percent}%`;
+      if (label) label.textContent = `${percent}%`;
+    }, 220);
+    try {
+      const result = await AI_DESIGN_SERVICE[methods[type]]({ instruction, settings: invitationData.designSystem.aiSettings, fonts: designData().designSystem.assets.fonts || [] });
+      if (bar) bar.style.width = "100%";
+      if (label) label.textContent = "100%";
+      renderAssetModalAIResult(type, result);
+    } finally {
+      clearInterval(timer);
+      setTimeout(() => {
+        if (progress) progress.hidden = true;
+        if (bar) bar.style.width = "0%";
+        if (label) label.textContent = "0%";
+      }, 260);
+    }
   });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -461,7 +596,8 @@ function bindAssetModal(type) {
     const draft = window.assetSourceDraft || {};
     const item = { id: `${type}-${Date.now()}`, name: fields.get("assetName") || `새 ${assetCategories[type].label}`, url: draft.url || "", direction: draft.direction || "" };
     if (type === "frame") Object.assign(item, { mode: fields.get("assetMode") || "overlay", heroDecoration: draft.heroDecoration || "none" });
-    if (type === "textTheme") Object.assign(item, { layout: fields.get("layout") || draft.layout || "poster-left", heroTextTheme: draft.heroTextTheme || "editorial_left", align: "center", shadow: true, boxEnabled: false, nameSize: 34, dateSize: 12 });
+    if (type === "textTheme") Object.assign(item, { layout: fields.get("layout") || draft.layout || "poster-left", heroTextTheme: draft.heroTextTheme || "editorial_left", fontId: fields.get("fontId") || draft.fontId || "noto-serif-kr", align: "center", shadow: true, boxEnabled: false, nameSize: 34, dateSize: 12 });
+    if (type === "font") Object.assign(item, { family: fields.get("fontFamily") || draft.family || fields.get("assetName"), url: draft.url || "", license: fields.get("fontLicense") || draft.license || "상업적 무료 확인 필요", source: draft.source || "업로드", commercialFree: true });
     invitationData.designSystem.assets[assetCategories[type].key].push(item);
     await saveDesignData("디자인 소스를 저장했습니다.", renderDesignAssets);
   });
@@ -478,7 +614,7 @@ function openAssetCreateModal(type = "frame") {
       <p class="admin-message">${category.guide}</p>${assetModalFields(type)}
       <div class="asset-create-preview"><strong>현재 미리보기</strong><div data-asset-modal-preview="${type}">${assetPreview(type)}</div></div>
       <section class="ai-assistant"><h3>AI 디자인 어시스턴트</h3><div class="ai-chat" data-asset-ai-chat><p>AI: 원하는 ${category.label}의 분위기와 형태를 알려주세요.</p></div>
-        <div class="ai-input-row"><input data-asset-ai-instruction placeholder="따뜻한 빈티지 필름 느낌으로 만들어줘"><button class="btn" type="button" data-asset-ai-send>AI로 생성</button></div><div data-asset-ai-results></div>
+        <div class="ai-input-row"><input data-asset-ai-instruction placeholder="따뜻한 빈티지 필름 느낌으로 만들어줘"><button class="btn" type="button" data-asset-ai-send>결과보기</button></div><div class="ai-progress" data-asset-ai-progress hidden><span></span><i style="width:0%"></i><b>0%</b></div><div data-asset-ai-results></div>
       </section>
       <button class="btn btn-primary" type="submit">디자인 소스 저장</button>
     </form>
@@ -488,6 +624,7 @@ function openAssetCreateModal(type = "frame") {
 
 function renderAISettings(message = "") {
   const settings = designData().designSystem.aiSettings;
+  const prompts = settings.prompts || {};
   adminApp.innerHTML = `${adminHeader("ai-settings")}<section class="admin-card"><p class="section-label">Super Admin</p><h2>AI 설정</h2>
     <p class="admin-message">${escapeAdminHtml(message || "API Key는 프론트엔드에 저장하지 않습니다. 현재는 Mock Mode로 동작합니다.")}</p>
     <form class="form-grid" id="ai-settings-form">
@@ -496,6 +633,19 @@ function renderAISettings(message = "") {
       ${select("provider", "Provider", settings.provider, [["OpenAI", "OpenAI"], ["Gemini", "Google Gemini"], ["future", "기타 확장용"]])}
       ${input("model", "모델명", settings.model)}
       ${input("endpoint", "서버 AI 엔드포인트", settings.endpoint || "/api/ai-design")}
+      <fieldset><legend>AI 기본 프롬프트</legend>
+        ${textarea("prompts.base", "공통 디자인 프롬프트", prompts.base || "", 5)}
+        ${textarea("prompts.colorTheme", "테마생성 - 컬러테마 프롬프트", prompts.colorTheme || "", 4)}
+        ${textarea("prompts.movieTheme", "테마생성 - 영화테마 프롬프트", prompts.movieTheme || "", 4)}
+        ${textarea("prompts.frameAsset", "디자인요소 - 메인이미지꾸밈 프롬프트", prompts.frameAsset || "", 4)}
+        ${textarea("prompts.textThemeAsset", "디자인요소 - 메인문구테마 프롬프트", prompts.textThemeAsset || "", 4)}
+        ${textarea("prompts.iconAsset", "디자인요소 - 섹션아이콘 프롬프트", prompts.iconAsset || "", 4)}
+        ${textarea("prompts.transport", "교통안내 프롬프트", prompts.transport || "", 4)}
+        ${textarea("prompts.venue", "식장안내 프롬프트", prompts.venue || "", 4)}
+        <label class="btn image-upload">참고 이미지 첨부<input type="file" accept="image/*" multiple data-ai-reference-upload></label>
+        ${textarea("referenceImages", "참고 레퍼런스 이미지 URL", settings.referenceImages || "", 4)}
+        <p class="admin-message micro-help">첨부 이미지는 업로드 후 URL로 저장됩니다. 현재 서버는 이미지 파일 자체를 분석하지 않고 URL과 참고 설명을 프롬프트에 함께 전달합니다.</p>
+      </fieldset>
       <fieldset><legend>이미지 후처리</legend>
         <label class="consent"><input type="checkbox" name="removeWhiteBackground" ${settings.removeWhiteBackground ? "checked" : ""}> <span>흰색/near-white 배경 제거</span></label>
         ${input("whiteTolerance", "배경 제거 민감도", settings.whiteTolerance, "range")}
@@ -507,9 +657,45 @@ function renderAISettings(message = "") {
   bindAdminNavigation();
   const form = document.querySelector("#ai-settings-form");
   document.querySelector("[data-ai-test]").addEventListener("click", async () => alert((await AI_DESIGN_SERVICE.testAIConnection(settings)).message));
+  document.querySelector("[data-ai-reference-upload]")?.addEventListener("change", async (event) => {
+    const files = [...(event.target.files || [])];
+    if (!files.length) return;
+    try {
+      const urls = [];
+      for (const file of files) urls.push(await RSVP_STORAGE.uploadDesignAsset(file, "ai-references"));
+      const field = form.elements.referenceImages;
+      field.value = [field.value.trim(), ...urls].filter(Boolean).join("\n");
+      alert(`참고 이미지 ${urls.length}개를 업로드했습니다. 저장을 눌러 AI 설정에 반영하세요.`);
+    } catch (error) {
+      alert(error.message || "참고 이미지 업로드에 실패했습니다.");
+    } finally {
+      event.target.value = "";
+    }
+  });
   form.addEventListener("submit", async (event) => {
     event.preventDefault(); const fields = new FormData(form);
-    invitationData.designSystem.aiSettings = { enabled: fields.get("enabled") === "on", mockMode: fields.get("mockMode") === "on", provider: fields.get("provider"), model: fields.get("model"), endpoint: fields.get("endpoint"), removeWhiteBackground: fields.get("removeWhiteBackground") === "on", whiteTolerance: Number(fields.get("whiteTolerance")), convertSvg: fields.get("convertSvg") === "on", savePng: fields.get("savePng") === "on" };
+    invitationData.designSystem.aiSettings = {
+      enabled: fields.get("enabled") === "on",
+      mockMode: fields.get("mockMode") === "on",
+      provider: fields.get("provider"),
+      model: fields.get("model"),
+      endpoint: fields.get("endpoint"),
+      removeWhiteBackground: fields.get("removeWhiteBackground") === "on",
+      whiteTolerance: Number(fields.get("whiteTolerance")),
+      convertSvg: fields.get("convertSvg") === "on",
+      savePng: fields.get("savePng") === "on",
+      referenceImages: fields.get("referenceImages"),
+      prompts: {
+        base: fields.get("prompts.base"),
+        colorTheme: fields.get("prompts.colorTheme"),
+        movieTheme: fields.get("prompts.movieTheme"),
+        frameAsset: fields.get("prompts.frameAsset"),
+        textThemeAsset: fields.get("prompts.textThemeAsset"),
+        iconAsset: fields.get("prompts.iconAsset"),
+        transport: fields.get("prompts.transport"),
+        venue: fields.get("prompts.venue"),
+      },
+    };
     await saveDesignData("AI 설정을 저장했습니다.", renderAISettings);
   });
 }

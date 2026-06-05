@@ -96,6 +96,19 @@ function addDays(dateValue = "", days = 0) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(date);
 }
 
+function syncPublicPeriodFields({ weddingField, openField, closeField, forceCloseToWedding = false } = {}) {
+  if (!weddingField || !openField || !closeField) return;
+  const today = dateInputToday();
+  const weddingDay = dateOnly(weddingField.value);
+  openField.min = today;
+  openField.max = weddingDay ? addDays(weddingDay, -1) : "";
+  if (!openField.value || openField.value < today) openField.value = today;
+  if (weddingDay && openField.value > openField.max) openField.value = openField.max;
+  closeField.min = openField.value || today;
+  closeField.max = weddingDay ? addDays(weddingDay, 3) : "";
+  if (weddingDay && (forceCloseToWedding || !closeField.value || closeField.value < closeField.min || closeField.value > closeField.max)) closeField.value = weddingDay;
+}
+
 function decorateRangeDefaults(root = document) {
   root.querySelectorAll('input[type="range"]').forEach((range) => {
     if (!range.dataset.defaultValue) range.dataset.defaultValue = range.defaultValue || range.getAttribute("value") || range.value;
@@ -371,19 +384,7 @@ function renderLogin(message = "") {
     if (event.target.closest("[data-signup-prev]")) setSignupStep(Math.max(0, Number(signupForm.dataset.step || 0) - 1));
   });
   const syncSignupPublicPeriod = (forceCloseToWedding = false) => {
-    const weddingField = signupForm?.elements.weddingDate;
-    const openField = signupForm?.elements.publicOpenDate;
-    const closeField = signupForm?.elements.publicCloseDate;
-    if (!weddingField || !openField || !closeField) return;
-    const weddingDay = dateOnly(weddingField.value);
-    openField.min = today;
-    openField.max = weddingDay ? addDays(weddingDay, -1) : "";
-    if (!openField.value) openField.value = today;
-    if (weddingDay) {
-      closeField.min = openField.value || today;
-      closeField.max = addDays(weddingDay, 3);
-      if (forceCloseToWedding || !closeField.value || closeField.value < closeField.min || closeField.value > closeField.max) closeField.value = weddingDay;
-    }
+    syncPublicPeriodFields({ weddingField: signupForm?.elements.weddingDate, openField: signupForm?.elements.publicOpenDate, closeField: signupForm?.elements.publicCloseDate, forceCloseToWedding });
   };
   signupForm?.elements.weddingDate?.addEventListener("change", () => syncSignupPublicPeriod(true));
   signupForm?.elements.publicOpenDate?.addEventListener("change", () => syncSignupPublicPeriod(false));
@@ -407,10 +408,25 @@ function renderLogin(message = "") {
     const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo: `${location.origin}${location.pathname}` });
     alert(error ? `비밀번호 재설정 메일을 보내지 못했습니다.\n${error.message}` : "비밀번호 재설정 메일을 보냈습니다.");
   });
+  const startOAuth = async (button, event) => {
+    event?.preventDefault();
+    if (button.dataset.oauthBusy === "true") return;
+    const label = button.textContent;
+    button.dataset.oauthBusy = "true";
+    button.disabled = true;
+    button.textContent = "연결 중...";
+    try {
+      await window.RSVP_STORAGE.signInWithProvider(button.dataset.oauthProvider);
+    } catch (error) {
+      renderLogin(`${label} 연동을 시작하지 못했습니다. ${error.message || "Provider 설정을 확인해 주세요."}`);
+    }
+  };
   document.querySelectorAll("[data-oauth-provider]").forEach((button) => {
-    button.addEventListener("click", async () => {
+    button.addEventListener("pointerup", (event) => startOAuth(button, event));
+    button.addEventListener("click", async (event) => {
+      if (button.dataset.oauthBusy === "true") return;
       try {
-        await window.RSVP_STORAGE.signInWithProvider(button.dataset.oauthProvider);
+        await startOAuth(button, event);
       } catch (error) {
         renderLogin(`${button.textContent} 연동을 시작하지 못했습니다. ${error.message || "Provider 설정을 확인해 주세요."}`);
       }
@@ -437,22 +453,13 @@ function renderBasicInfoOnboarding(message = "") {
           <label class="field"><span>청첩장 공개 시작일</span><input name="publicOpenDate" type="date" value="${today}" min="${today}" data-public-open></label>
           <label class="field"><span>청첩장 공개 종료일</span><input name="publicCloseDate" type="date" data-public-close></label>
         </div>
+        <p class="admin-message micro-help">공개 종료일은 예식일 기준 이후 3일까지만 설정할 수 있습니다.</p>
         <button class="btn btn-primary">내 일반관리자 페이지 만들기</button>
       </form>
     </section>`;
   const form = document.querySelector("#basic-info-form");
   const syncPublicPeriod = (forceCloseToWedding = false) => {
-    const weddingDay = dateOnly(form.elements.weddingDate.value);
-    const openField = form.elements.publicOpenDate;
-    const closeField = form.elements.publicCloseDate;
-    openField.min = today;
-    openField.max = weddingDay ? addDays(weddingDay, -1) : "";
-    if (!openField.value) openField.value = today;
-    if (weddingDay) {
-      closeField.min = openField.value || today;
-      closeField.max = addDays(weddingDay, 3);
-      if (forceCloseToWedding || !closeField.value || closeField.value < closeField.min || closeField.value > closeField.max) closeField.value = weddingDay;
-    }
+    syncPublicPeriodFields({ weddingField: form.elements.weddingDate, openField: form.elements.publicOpenDate, closeField: form.elements.publicCloseDate, forceCloseToWedding });
   };
   form.elements.weddingDate.addEventListener("change", () => syncPublicPeriod(true));
   form.elements.publicOpenDate.addEventListener("change", () => syncPublicPeriod(false));
@@ -1580,7 +1587,10 @@ function noticeManager(notices = []) {
     <section class="editor-subsection"><div class="editor-subsection-head"><strong>식장 안내</strong><span>식사, 주차, 촬영 등 하객에게 알릴 내용을 관리합니다.</span></div>
     <div class="notice-manager" data-notice-manager>
       <div class="notice-manager-list" data-notice-list>${notices.slice(0, 3).map(noticeEditor).join("")}</div>
-      <button class="btn notice-add" type="button" data-notice-add>＋ 식장 안내 추가</button>
+      <div class="notice-ai-actions">
+        <button class="btn ai-generate-btn" type="button" data-ai-venue-guide>AI로 식장안내 생성</button>
+        <button class="btn notice-add" type="button" data-notice-add>＋ 식장 안내 추가</button>
+      </div>
     </div></section>`;
 }
 
@@ -1600,7 +1610,10 @@ function transportManager(items = []) {
     <p class="admin-message micro-help">AI 연결 시에는 식장 주소 기준 가장 가까운 기차/지하철역과 버스정류장을 찾아 차량·버스·지하철·도보 소요시간을 생성합니다. 도보는 20분 이하일 때만 표시하는 기준으로 작성해 주세요.</p>
     <div class="notice-manager" data-transport-manager>
       <div class="notice-manager-list" data-transport-list>${items.map(transportEditor).join("")}</div>
-      <button class="btn notice-add" type="button" data-transport-add>＋ 교통 안내 추가</button>
+      <div class="notice-ai-actions">
+        <button class="btn ai-generate-btn" type="button" data-ai-transport-guide>AI로 교통안내 생성</button>
+        <button class="btn notice-add" type="button" data-transport-add>＋ 교통 안내 추가</button>
+      </div>
     </div></section>`;
 }
 
@@ -1702,6 +1715,16 @@ function renderEditor(message = "", focus = "") {
   const gallery = Array.from({ length: GALLERY_MAX }, (_, index) => invitationData.gallery[index] || "");
   const editorTitle = focus === "share" ? "공유 설정" : focus === "gallery" ? "갤러리 설정" : focus === "copy" ? "편집 기능" : focus === "sections" ? "섹션 설정" : "청첩장 기본 설정";
   const editorActiveMenu = focus === "copy" ? "copy" : focus === "share" ? "share" : focus === "gallery" ? "content" : focus === "sections" ? "sections" : "editor";
+  const publicToday = dateInputToday();
+  const publicWeddingDay = dateOnly(invitationData.wedding.date);
+  const publicOpenMax = publicWeddingDay ? addDays(publicWeddingDay, -1) : "";
+  let publicOpenValue = invitationData.publicPeriod?.openDate || publicToday;
+  if (publicOpenValue < publicToday) publicOpenValue = publicToday;
+  if (publicOpenMax && publicOpenValue > publicOpenMax) publicOpenValue = publicOpenMax;
+  const publicCloseMax = publicWeddingDay ? addDays(publicWeddingDay, 3) : "";
+  let publicCloseValue = invitationData.publicPeriod?.closeDate || publicWeddingDay;
+  if (publicCloseValue && publicOpenValue && publicCloseValue < publicOpenValue) publicCloseValue = publicWeddingDay || publicOpenValue;
+  if (publicCloseMax && publicCloseValue > publicCloseMax) publicCloseValue = publicCloseMax;
   adminApp.innerHTML = `
     ${adminHeader(editorActiveMenu)}
     ${focus === "gallery" ? contentBackBar("갤러리") : ""}
@@ -1794,6 +1817,7 @@ function renderEditor(message = "", focus = "") {
           ${select("wedding.displayDateFormat", "화면 표시 일시 형식", invitationData.wedding.displayDateFormat || "long_ko", [["long_ko", "2026. 10. 04. 일요일 오후 12시 20분"], ["short_ko", "26-10-04 (일) 12시 20분"], ["dot_numeric", "2026.10.04 (일) 12:20"], ["english", "2026. 10. 04. 일요일 · 12:20"], ["custom", "직접 입력"]])}
           ${input("wedding.displayDateCustom", "화면 표시 일시 · 선택 후 수정 가능", invitationData.wedding.displayDateCustom || invitationData.wedding.displayDate)}
           ${input("wedding.address", "주소", invitationData.wedding.address)}
+          ${input("wedding.officialUrl", "식장 공식홈페이지 URL", invitationData.wedding.officialUrl || "", "url")}
           <div class="venue-actions">
             <button class="btn btn-primary" type="button" data-address-search>주소 검색</button>
           </div>
@@ -1805,12 +1829,12 @@ function renderEditor(message = "", focus = "") {
         </div></details>
         <details class="editor-details basic-pane guided-step" open data-guided-step="guestPhotos" data-step-requires="wedding"><summary>5. 공개기간과 하객앨범</summary><div class="editor-details-body">
           <div class="quick-input-grid">
-            ${input("publicPeriod.openDate", "청첩장 공개 시작일", invitationData.publicPeriod?.openDate || dateInputToday(), "date")}
-            ${input("publicPeriod.closeDate", "청첩장 공개 종료일", invitationData.publicPeriod?.closeDate || dateOnly(invitationData.wedding.date), "date")}
+            <label class="field"><span>청첩장 공개 시작일</span><input name="publicPeriod.openDate" type="date" value="${escapeAdminHtml(publicOpenValue)}" min="${escapeAdminHtml(publicToday)}" max="${escapeAdminHtml(publicOpenMax)}"></label>
+            <label class="field"><span>청첩장 공개 종료일</span><input name="publicPeriod.closeDate" type="date" value="${escapeAdminHtml(publicCloseValue)}" min="${escapeAdminHtml(publicOpenValue)}" max="${escapeAdminHtml(publicCloseMax)}"></label>
             ${input("guestPhotos.eventDate", "하객 업로드 오픈 날짜", invitationData.guestPhotos?.eventDate || dateOnly(invitationData.wedding.date) || "2026-10-04", "date")}
             ${select("guestPhotos.previewVisible", "하객앨범 미리보기", String(invitationData.guestPhotos?.previewVisible ?? true), [["true", "표시"], ["false", "숨김"]])}
           </div>
-          <p class="admin-message micro-help">이 값들은 각 일반관리자 계정의 청첩장에만 적용됩니다.</p>
+          <p class="admin-message micro-help">공개 종료일은 예식일 기준 이후 3일까지만 설정할 수 있습니다. 이 값들은 각 일반관리자 계정의 청첩장에만 적용됩니다.</p>
         </div></details>
         <section class="copy-pane" data-copy-editor-panel>
           <div class="copy-editor-page">
@@ -2807,6 +2831,11 @@ function bindEditor() {
     refreshFrameLists();
   };
   noticeManagerElement.addEventListener("click", (event) => {
+    const aiButton = event.target.closest("[data-ai-venue-guide]");
+    if (aiButton) {
+      generateVenueGuide(aiButton);
+      return;
+    }
     if (event.target.closest("[data-notice-add]")) {
       const items = noticeItems();
       if (items.length < 3) renderNoticeItems([...items, { title: "", text: "" }]);
@@ -2842,7 +2871,56 @@ function bindEditor() {
     transportList.innerHTML = items.map(transportEditor).join("");
     refreshFrameLists();
   };
+  const aiGuideContext = () => ({
+    venue: form.elements["wedding.venue"]?.value?.trim() || invitationData.wedding?.venue || "",
+    hall: form.elements["wedding.hall"]?.value?.trim() || invitationData.wedding?.hall || "",
+    address: form.elements["wedding.address"]?.value?.trim() || invitationData.wedding?.address || "",
+    officialUrl: form.elements["wedding.officialUrl"]?.value?.trim() || invitationData.wedding?.officialUrl || "",
+    date: form.elements["wedding.date"]?.value || invitationData.wedding?.date || "",
+    notices: noticeItems(),
+  });
+  const generateVenueGuide = async (button) => {
+    if (!window.AI_DESIGN_SERVICE?.generateVenueGuide) return alert("AI 서비스 스크립트를 불러오지 못했습니다.");
+    button.disabled = true;
+    const original = button.textContent;
+    button.textContent = "AI 생성 중...";
+    try {
+      const result = await window.AI_DESIGN_SERVICE.generateVenueGuide(aiGuideContext());
+      const notices = (result.notices || []).slice(0, 3).map((notice) => ({ title: notice.title || "", text: notice.text || "", hidden: false }));
+      if (!notices.length) throw new Error("생성된 식장 안내가 없습니다.");
+      renderNoticeItems(notices);
+      alert(result.caution ? `식장 안내 초안을 생성했습니다.\n${result.caution}` : "식장 안내 초안을 생성했습니다. 확인 후 저장해 주세요.");
+    } catch (error) {
+      alert(`식장 안내를 생성하지 못했습니다.\n${error.message || "AI 설정을 확인해 주세요."}`);
+    } finally {
+      button.disabled = false;
+      button.textContent = original;
+    }
+  };
+  const generateTransportGuide = async (button) => {
+    if (!window.AI_DESIGN_SERVICE?.generateTransportGuide) return alert("AI 서비스 스크립트를 불러오지 못했습니다.");
+    button.disabled = true;
+    const original = button.textContent;
+    button.textContent = "AI 생성 중...";
+    try {
+      const result = await window.AI_DESIGN_SERVICE.generateTransportGuide(aiGuideContext());
+      const items = (result.items || []).map((item) => ({ title: item.title || "", text: item.text || "", hidden: false }));
+      if (!items.length) throw new Error("생성된 교통 안내가 없습니다.");
+      renderTransportItems(items);
+      alert(result.caution ? `교통 안내 초안을 생성했습니다.\n${result.caution}` : "교통 안내 초안을 생성했습니다. 확인 후 저장해 주세요.");
+    } catch (error) {
+      alert(`교통 안내를 생성하지 못했습니다.\n${error.message || "AI 설정을 확인해 주세요."}`);
+    } finally {
+      button.disabled = false;
+      button.textContent = original;
+    }
+  };
   transportManagerElement.addEventListener("click", (event) => {
+    const aiButton = event.target.closest("[data-ai-transport-guide]");
+    if (aiButton) {
+      generateTransportGuide(aiButton);
+      return;
+    }
     if (event.target.closest("[data-transport-add]")) renderTransportItems([...transportItems(), { title: "", text: "", hidden: false }]);
     const removeButton = event.target.closest("[data-transport-remove]");
     if (!removeButton) return;
@@ -2858,9 +2936,20 @@ function bindEditor() {
     if (!force && form.elements["wedding.displayDateCustom"].value.trim()) return;
     form.elements["wedding.displayDateCustom"].value = weddingDisplayDate(form.elements["wedding.date"].value, format);
   };
-  form.elements["wedding.date"].addEventListener("change", () => updateDisplayDate(true));
+  const syncEditorPublicPeriod = (forceCloseToWedding = false) => syncPublicPeriodFields({
+    weddingField: form.elements["wedding.date"],
+    openField: form.elements["publicPeriod.openDate"],
+    closeField: form.elements["publicPeriod.closeDate"],
+    forceCloseToWedding,
+  });
+  form.elements["wedding.date"].addEventListener("change", () => {
+    updateDisplayDate(true);
+    syncEditorPublicPeriod(true);
+  });
+  form.elements["publicPeriod.openDate"]?.addEventListener("change", () => syncEditorPublicPeriod(false));
   form.elements["wedding.displayDateFormat"].addEventListener("change", () => updateDisplayDate(true));
   updateDisplayDate();
+  syncEditorPublicPeriod();
 
   const venueInput = form.elements["wedding.venue"];
   const addressInput = form.elements["wedding.address"];
@@ -3115,6 +3204,7 @@ function bindEditor() {
           : document.querySelector(".admin-editor-view")?.classList.contains("view-gallery") ? "gallery"
             : document.querySelector(".admin-editor-view")?.classList.contains("view-sections") ? "sections"
             : "";
+      syncEditorPublicPeriod();
       invitationData = editorData(form);
       applyAppearance(invitationData.appearance);
       await window.RSVP_STORAGE.saveInvitationData(invitationData);

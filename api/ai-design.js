@@ -3,7 +3,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || "https://cimyjsqjpenljpywhgso.s
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "sb_publishable_jxY5QiiuKHV-5VSBO1F8Ow_wWeYjcDV";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_API_KEY;
 
-const schema = {
+const designSchema = {
   type: "object",
   properties: {
     name: { type: "string" },
@@ -20,10 +20,68 @@ const schema = {
     heroTextTheme: { type: "string", enum: ["editorial_left", "minimal_center"] },
     sectionIconDirection: { type: "string" },
     backgroundDirection: { type: "string" },
+    fontDirection: { type: "string" },
+    fontId: { type: "string" },
+    fontFamily: { type: "string" },
+    fontLicense: { type: "string" },
+    galleryFrameDirection: { type: "string" },
+    buttonShapeDirection: { type: "string" },
   },
-  required: ["name", "palette", "heroDecoration", "heroTextTheme", "sectionIconDirection", "backgroundDirection"],
+  required: ["name", "palette", "heroDecoration", "heroTextTheme", "sectionIconDirection", "backgroundDirection", "fontDirection", "fontId", "fontFamily", "fontLicense", "galleryFrameDirection", "buttonShapeDirection"],
   additionalProperties: false,
 };
+
+const transportSchema = {
+  type: "object",
+  properties: {
+    items: {
+      type: "array",
+      minItems: 2,
+      maxItems: 4,
+      items: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          text: { type: "string" },
+        },
+        required: ["title", "text"],
+        additionalProperties: false,
+      },
+    },
+    caution: { type: "string" },
+  },
+  required: ["items", "caution"],
+  additionalProperties: false,
+};
+
+const venueSchema = {
+  type: "object",
+  properties: {
+    notices: {
+      type: "array",
+      minItems: 2,
+      maxItems: 3,
+      items: {
+        type: "object",
+        properties: {
+          title: { type: "string" },
+          text: { type: "string" },
+        },
+        required: ["title", "text"],
+        additionalProperties: false,
+      },
+    },
+    caution: { type: "string" },
+  },
+  required: ["notices", "caution"],
+  additionalProperties: false,
+};
+
+function schemaFor(type) {
+  if (type === "transportGuide") return transportSchema;
+  if (type === "venueGuide") return venueSchema;
+  return designSchema;
+}
 
 function outputText(response) {
   for (const item of response.output || []) {
@@ -44,25 +102,89 @@ async function registeredAdmin(request) {
   const adminResponse = await fetch(`${SUPABASE_URL}/rest/v1/rsvp_admins?select=user_id&user_id=eq.${encodeURIComponent(user.id)}`, {
     headers: { apikey: SUPABASE_ANON_KEY, Authorization: authorization },
   });
-  return adminResponse.ok && (await adminResponse.json()).length > 0;
+  if (adminResponse.ok && (await adminResponse.json()).length > 0) return true;
+  const ownerResponse = await fetch(`${SUPABASE_URL}/rest/v1/invitation_sites?select=slug&owner_id=eq.${encodeURIComponent(user.id)}&limit=1`, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: authorization },
+  });
+  return ownerResponse.ok && (await ownerResponse.json()).length > 0;
 }
 
 function designPrompt(type, context) {
-  return `모바일 청첩장 디자인 보조 도구입니다. 메인 사진은 절대 교체하지 마세요.
+  const settings = context.settings || {};
+  const prompts = settings.prompts || {};
+  const refs = String(settings.referenceImages || "").split(/\n+/).map((item) => item.trim()).filter(Boolean);
+  const fonts = Array.isArray(context.fonts) ? context.fonts : [];
+  const designPromptForType = () => {
+    if (type === "palette") return prompts.colorTheme || "";
+    if (type === "movie") return prompts.movieTheme || "";
+    if (type === "frame") return prompts.frameAsset || "";
+    if (type === "textTheme") return prompts.textThemeAsset || "";
+    if (type === "sectionIcon" || type === "background") return prompts.iconAsset || "";
+    return "";
+  };
+  const promptHeader = `${prompts.base || ""}
+참고 레퍼런스 이미지 URL:
+${refs.length ? refs.map((url, index) => `${index + 1}. ${url}`).join("\n") : "없음"}
+주의: 참고 이미지는 분위기, 여백, 색감, 구성만 참고하고 특정 이미지를 복제하지 않는다.
+사용 가능한 상업적 무료/업로드 폰트:
+${fonts.length ? fonts.map((font) => `- ${font.id}: ${font.name || font.family} / family=${font.family || ""} / license=${font.license || ""}`).join("\n") : "- noto-serif-kr: Noto Serif KR / family=Noto Serif KR / license=SIL Open Font License"}`;
+  if (type === "transportGuide") {
+    return `${promptHeader}
+${prompts.transport || ""}
+모바일 청첩장의 교통안내 초안을 작성하세요.
+예식장명: ${context.venue || ""}
+홀 정보: ${context.hall || ""}
+주소: ${context.address || ""}
+공식홈페이지 URL: ${context.officialUrl || ""}
+예식일시: ${context.date || ""}
+요구사항:
+- 예식장과 가장 가까운 기차역/지하철역 기준 경로를 1개 이상 작성하세요.
+- 가장 가까운 버스정류장 기준 경로를 1개 이상 작성하세요.
+- 예: 창원중앙역에서 식장까지 차량 몇 분, 버스 몇 번과 몇 분, 지하철/기차 이용 가능 여부, 도보 몇 분을 작성하세요.
+- 버스정류장은 정류장 이름을 제목 또는 본문에 명확히 적고, 정류장에서 식장까지 이동 방법을 작성하세요.
+- 차량, 버스, 지하철/기차, 도보 소요시간을 알 수 있는 범위에서 간결히 작성하세요.
+- 도보는 20분 이하일 때만 적고, 확실하지 않은 정보는 단정하지 말고 확인 필요라고 적으세요.
+- 한국어로 작성하고 하객이 바로 이해할 수 있게 제목과 본문으로 나누세요.`;
+  }
+  if (type === "venueGuide") {
+    return `${promptHeader}
+${prompts.venue || ""}
+모바일 청첩장의 식장 안내사항 초안을 작성하세요.
+예식장명: ${context.venue || ""}
+홀 정보: ${context.hall || ""}
+주소: ${context.address || ""}
+공식홈페이지 URL: ${context.officialUrl || ""}
+예식일시: ${context.date || ""}
+현재 안내사항: ${JSON.stringify(context.notices || [])}
+요구사항:
+- 주차, 식사/연회, 홀 위치/이동, 사진/축의/화환 등 하객에게 필요한 안내를 2~3개로 정리하세요.
+- 기본 안내사항은 반드시 주차 안내와 식사 안내를 포함하세요.
+- 식사 안내에는 식권 받는 곳, 연회장 위치, 식사 가능 시간을 알 수 있으면 포함하세요.
+- 주차 안내에는 주차권 받는 곳, 주차권 필요 여부, 여러 주차장이 있으면 가능한 주차장 이름을 포함하세요.
+- 공식홈페이지 URL이 있으면 공식 안내 기준으로 작성하되, 이 서버가 실제 웹페이지 내용을 가져오지 못하면 확인 필요라고 적으세요.
+- 모르는 사실은 지어내지 말고 "확인 후 안내 예정"처럼 안전하게 작성하세요.
+- 문장은 짧고 정중하게 작성하세요.`;
+  }
+  return `${promptHeader}
+${designPromptForType()}
+모바일 청첩장 디자인 보조 도구입니다. 메인 사진은 절대 교체하지 마세요.
 요청 유형: ${type}
 사용자 요청: ${context.instruction || context.mood || ""}
 영화 또는 컨셉: ${context.concept || ""}
-팔레트는 CSS에서 바로 사용할 수 있는 색상으로 제안하고, 프레임과 문구 테마는 제공된 enum 중 하나를 선택하세요.`;
+팔레트는 CSS에서 바로 사용할 수 있는 색상으로 제안하고, 프레임과 문구 테마는 제공된 enum 중 하나를 선택하세요.
+폰트는 반드시 위 폰트 목록 중 하나만 고르고 fontId, fontFamily, fontLicense에 그대로 적으세요.
+컬러테마 요청이면 색상 팔레트 추천에 집중하세요.
+영화테마 요청이면 테마명, 색상, 폰트 방향, 메인이미지 꾸밈, 메인문구테마, 섹션 아이콘, 갤러리 프레임, 버튼 모양까지 함께 제안하세요.`;
 }
 
-async function callOpenAI(prompt) {
+async function callOpenAI(prompt, responseSchema) {
   const openai = await fetch(API_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
     body: JSON.stringify({
       model: process.env.OPENAI_MODEL,
       input: prompt,
-      text: { format: { type: "json_schema", name: "wedding_design", strict: true, schema } },
+      text: { format: { type: "json_schema", name: "wedding_ai_result", strict: true, schema: responseSchema } },
     }),
   });
   const payload = await openai.json();
@@ -70,14 +192,14 @@ async function callOpenAI(prompt) {
   return JSON.parse(outputText(payload));
 }
 
-async function callGemini(prompt) {
+async function callGemini(prompt, responseSchema) {
   const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
   const gemini = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: "application/json", responseJsonSchema: schema },
+      generationConfig: { responseMimeType: "application/json", responseJsonSchema: responseSchema },
     }),
   });
   const payload = await gemini.json();
@@ -100,8 +222,9 @@ module.exports = async function aiDesign(request, response) {
 
   const { type = "palette", context = {} } = request.body || {};
   const prompt = designPrompt(type, context);
+  const responseSchema = schemaFor(type);
   try {
-    const result = provider === "Gemini" ? await callGemini(prompt) : await callOpenAI(prompt);
+    const result = provider === "Gemini" ? await callGemini(prompt, responseSchema) : await callOpenAI(prompt, responseSchema);
     if (type === "sectionIcon") result.direction = result.sectionIconDirection;
     if (type === "background") result.direction = result.backgroundDirection;
     return response.status(200).json({ ...result, prompt, createdAt: new Date().toISOString() });

@@ -93,21 +93,26 @@ function emptyMediaInvitation(fallback, { slug = "", groomName = "", brideName =
   next.hero = { ...(next.hero || {}), image: "", video: "", activeMedia: "image" };
   next.couple = {
     ...(next.couple || {}),
-    groom: { ...(next.couple?.groom || {}), name: groomName || next.couple?.groom?.name || "", birthday: groomBirthday || next.couple?.groom?.birthday || "", photo: "" },
-    bride: { ...(next.couple?.bride || {}), name: brideName || next.couple?.bride?.name || "", birthday: brideBirthday || next.couple?.bride?.birthday || "", photo: "" },
+    groom: { ...(next.couple?.groom || {}), name: groomName || "", birthday: groomBirthday || "", parents: "", phone: "", photo: "", tags: [] },
+    bride: { ...(next.couple?.bride || {}), name: brideName || "", birthday: brideBirthday || "", parents: "", phone: "", photo: "", tags: [] },
   };
   next.wedding = {
     ...(next.wedding || {}),
-    date: weddingDate ? `${weddingDate}:00+09:00` : next.wedding?.date,
-    venue: weddingVenue || next.wedding?.venue || "",
-    hall: weddingHall || next.wedding?.hall || "",
+    date: weddingDate ? `${weddingDate}:00+09:00` : "",
+    venue: weddingVenue || "",
+    hall: weddingHall || "",
+    address: "",
+    officialUrl: "",
   };
+  next.accounts = [];
   next.gallery = Array.from({ length: 30 }, () => "");
   next.ending = { ...(next.ending || {}), image: "" };
   next.meta = { ...(next.meta || {}), shareImage: "" };
   next.guestPhotos = { ...(next.guestPhotos || {}), uploadSlug: slug || next.guestPhotos?.uploadSlug || "wedding-day" };
   next.publicPeriod = { ...(next.publicPeriod || {}), openDate: publicOpenDate || "", closeDate: publicCloseDate || "" };
-  return window.WEDDING_DESIGN.normalize(next);
+  const normalized = window.WEDDING_DESIGN.normalize(next);
+  normalized.accounts = [];
+  return normalized;
 }
 
 async function currentUserInvitationSite(client) {
@@ -326,11 +331,14 @@ async function signUpInvitationAdmin({ email, password, groomName = "", brideNam
 async function signInWithProvider(provider) {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
-  const { error } = await client.auth.signInWithOAuth({
+  const redirectTo = `${location.origin}${location.pathname}`;
+  const { data, error } = await client.auth.signInWithOAuth({
     provider,
-    options: { redirectTo: `${location.origin}${location.pathname}` },
+    options: { redirectTo, skipBrowserRedirect: true },
   });
   if (error) throw error;
+  if (!data?.url) throw new Error("소셜 로그인 이동 URL을 받지 못했습니다.");
+  location.assign(data.url);
 }
 
 async function listInvitationSites() {
@@ -486,14 +494,18 @@ async function uploadInvitationMedia(file, slot) {
 async function uploadDesignAsset(file, slot = "asset") {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
-  const allowed = ["image/svg+xml", "image/png", "image/webp", "image/jpeg"];
-  const limit = file.type === "image/svg+xml" ? 300 * 1024 : 2 * 1024 * 1024;
-  if (!allowed.includes(file.type) || file.size > limit) {
-    throw new Error("SVG는 300KB 이하, PNG/WebP/JPG는 2MB 이하만 등록할 수 있습니다.");
+  const fontTypes = ["font/woff", "font/woff2", "application/font-woff", "application/font-woff2", "application/x-font-woff", "application/x-font-woff2", "font/ttf", "font/otf", "application/x-font-ttf", "application/x-font-otf"];
+  const inferredFontType = /\.(woff2?)$/i.test(file.name || "") ? `font/${file.name.split(".").pop().toLowerCase()}` : /\.(ttf|otf)$/i.test(file.name || "") ? `font/${file.name.split(".").pop().toLowerCase()}` : "";
+  const contentType = file.type || inferredFontType;
+  const allowed = ["image/svg+xml", "image/png", "image/webp", "image/jpeg", ...fontTypes];
+  const isFont = fontTypes.includes(file.type) || /\.(woff2?|ttf|otf)$/i.test(file.name || "");
+  const limit = isFont ? 4 * 1024 * 1024 : file.type === "image/svg+xml" ? 300 * 1024 : 2 * 1024 * 1024;
+  if (!allowed.includes(contentType) || file.size > limit) {
+    throw new Error("SVG는 300KB 이하, PNG/WebP/JPG는 2MB 이하, 폰트는 4MB 이하만 등록할 수 있습니다.");
   }
   const extension = file.name.split(".").pop()?.toLowerCase() || "png";
   const path = `design-assets/${slot}/${Date.now()}-${crypto.randomUUID?.() || "asset"}.${extension}`;
-  const { error } = await client.storage.from("invitation-media").upload(path, file, { cacheControl: "3600", contentType: file.type });
+  const { error } = await client.storage.from("invitation-media").upload(path, file, { cacheControl: "3600", contentType });
   if (error) throw error;
   return client.storage.from("invitation-media").getPublicUrl(path).data.publicUrl;
 }

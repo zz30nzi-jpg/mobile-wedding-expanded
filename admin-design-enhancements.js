@@ -26,8 +26,8 @@ function textThemeSample(item = {}) {
   const cardBorderColor = theme.cardBorderColor || "#ffffff";
   const cardBorderStyle = ["solid", "dashed", "dotted", "double"].includes(theme.cardBorderStyle) ? theme.cardBorderStyle : "solid";
   const cardRadius = Math.max(0, Math.min(40, Number(theme.cardRadius) || 8));
-  const previewImage = theme.previewImage || invitationData.hero.image || "";
-  return `<div class="text-theme-sample layout-${layout} position-${position} is-free-layout ${theme.boxEnabled ? "has-box" : ""} ${theme.shadow === false ? "no-shadow" : ""}" style="--sample-align:${align};--sample-name-size:${nameSize}px;--sample-date-size:${dateSize}px;--sample-opacity:${opacity};--sample-blend-mode:${blendMode};--sample-x:${xPercent}%;--sample-y:${yPercent}%;--sample-width:${widthPercent}%;--sample-gap:${gap}px;--sample-eyebrow-name-gap:${eyebrowNameGap}px;--sample-name-date-gap:${nameDateGap}px;--sample-eyebrow-size:${eyebrowSize}px;--sample-shadow-opacity:${shadowOpacity};--sample-shadow-blur:${shadowBlur}px;--sample-card-opacity:${theme.cardBackgroundEnabled === false ? 0 : cardOpacity};--sample-card-color:${cardColor};--sample-card-border-width:${theme.cardBorderEnabled === false ? 0 : cardBorderWidth}px;--sample-card-border-color:${cardBorderColor};--sample-card-border-style:${cardBorderStyle};--sample-card-radius:${cardRadius}px;${previewImage ? `background-image:url('${escapeAdminHtml(previewImage)}')` : ""}">
+  const font = (designData().designSystem.assets.fonts || []).find((fontItem) => fontItem.id === theme.fontId);
+  return `<div class="text-theme-sample layout-${layout} position-${position} is-free-layout ${theme.boxEnabled ? "has-box" : ""} ${theme.shadow === false ? "no-shadow" : ""}" style="--sample-align:${align};--sample-name-size:${nameSize}px;--sample-date-size:${dateSize}px;--sample-opacity:${opacity};--sample-blend-mode:${blendMode};--sample-x:${xPercent}%;--sample-y:${yPercent}%;--sample-width:${widthPercent}%;--sample-gap:${gap}px;--sample-eyebrow-name-gap:${eyebrowNameGap}px;--sample-name-date-gap:${nameDateGap}px;--sample-eyebrow-size:${eyebrowSize}px;--sample-shadow-opacity:${shadowOpacity};--sample-shadow-blur:${shadowBlur}px;--sample-card-opacity:${theme.cardBackgroundEnabled === false ? 0 : cardOpacity};--sample-card-color:${cardColor};--sample-card-border-width:${theme.cardBorderEnabled === false ? 0 : cardBorderWidth}px;--sample-card-border-color:${cardBorderColor};--sample-card-border-style:${cardBorderStyle};--sample-card-radius:${cardRadius}px;--sample-font-family:'${escapeAdminHtml(font?.family || "Cormorant Garamond")}','Noto Serif KR',serif;">
     <div class="text-theme-sample-copy"><small>WE ARE GETTING MARRIED</small><strong>조성호 · 전지연</strong><span>2026. 10. 04</span></div>
   </div>`;
 }
@@ -40,7 +40,7 @@ function frameEditorSample(item = {}) {
   const yPercent = Math.max(0, Math.min(100, Number(item.yPercent) || 50));
   const sizePercent = Math.max(20, Math.min(140, Number(item.sizePercent) || 100));
   const tintColor = item.tintColor || "#ffffff";
-  return `<div class="frame-editor-canvas mode-${item.mode === "outer" ? "outer" : "overlay"}" style="${invitationData.hero.image ? `background-image:url('${escapeAdminHtml(invitationData.hero.image)}')` : ""}">
+  return `<div class="frame-editor-canvas mode-${item.mode === "outer" ? "outer" : "overlay"}">
     ${source ? `<span class="frame-editor-decoration" style="--frame-opacity:${opacity};--frame-blend-mode:${blendMode};--frame-x:${xPercent}%;--frame-y:${yPercent}%;--frame-size:${sizePercent}%;--frame-tint:${tintColor};--frame-image:url('${escapeAdminHtml(source)}')"><img src="${escapeAdminHtml(source)}" alt="메인 이미지 꾸밈 미리보기"></span>` : '<span class="frame-editor-empty">이미지를 업로드하거나 AI로 생성해 주세요.</span>'}
   </div>`;
 }
@@ -57,7 +57,6 @@ function designCombinedHeroPreview({ frame = {}, textTheme = {}, tintColor = "#f
     ? `;left:${Number(xPercent)}%;right:auto;top:${Number(yPercent)}%;width:${Number(textTheme?.widthPercent || 88)}%;transform:translate(-50%,-50%)`
     : "";
   return `<div class="design-combined-preview mode-${frame?.mode === "outer" ? "outer" : "overlay"}">
-    ${invitationData.hero.image ? `<img class="design-combined-background" src="${escapeAdminHtml(invitationData.hero.image)}" alt="">` : ""}
     ${source ? `<span class="frame-editor-decoration" style="--frame-opacity:${frame.opacity ?? 1};--frame-blend-mode:${frame.blendMode || "normal"};--frame-x:${frame.xPercent ?? 50}%;--frame-y:${frame.yPercent ?? 50}%;--frame-size:${frame.sizePercent ?? 100}%;--frame-tint:${tintColor};--frame-image:url('${escapeAdminHtml(source)}')"><img src="${escapeAdminHtml(source)}" alt=""></span>` : ""}
     <div class="design-combined-copy ${positionClass}" style="text-align:${align};--combined-name-size:${nameSize}px;--combined-date-size:${dateSize}px;--combined-eyebrow-size:${eyebrowSize}px${freePositionStyle}">
       ${eyebrowEnabled ? `<small>${escapeAdminHtml(invitationData.hero.eyebrow || "our wedding day")}</small>` : ""}
@@ -86,6 +85,7 @@ function assetPreview(type, item = {}) {
   if (previewUrl) return `<div class="asset-source-preview asset-source-image ${type === "background" ? "is-background" : ""}"><img src="${escapeAdminHtml(previewUrl)}" alt="${escapeAdminHtml(item.name || "디자인 소스")} 미리보기"></div>`;
   if (type === "frame") return `<div class="asset-source-preview"><span class="hero-decoration-preview" data-decoration-preview="${escapeAdminHtml(item.heroDecoration || item.id || "none")}"><i></i></span></div>`;
   if (type === "textTheme") return `<div class="asset-source-preview">${textThemeSample(item)}</div>`;
+  if (type === "font") return `<div class="asset-source-preview asset-placeholder-background"><span style="font-family:${escapeAdminHtml(item.family || "serif")}">가나다 Aa</span><small>${escapeAdminHtml(item.license || "상업적 무료 확인 필요")}</small></div>`;
   if (type === "sectionIcon") return `<div class="asset-source-preview asset-placeholder-icon"><span>◇</span><small>${escapeAdminHtml(item.direction || "ICON")}</small></div>`;
   return `<div class="asset-source-preview asset-placeholder-background"><span>${escapeAdminHtml(item.direction || "BACKGROUND")}</span></div>`;
 }
@@ -168,6 +168,7 @@ function renderDesignAssets(message = "", filter = "all") {
 }
 
 function assetModalFields(type, item = {}) {
+  const fonts = designData().designSystem.assets.fonts || [];
   const range = (name, label, value, min, max, step = 1) => `<label class="text-layout-control"><span>${label}</span><input name="${name}" type="range" min="${min}" max="${max}" step="${step}" value="${escapeAdminHtml(value)}"><output data-range-output="${name}">${escapeAdminHtml(value)}</output></label>`;
   return `<div class="asset-modal-fields">
     ${type === "frame" ? `<div class="mobile-frame-editor">
@@ -180,7 +181,9 @@ function assetModalFields(type, item = {}) {
       ${select("frameBlendMode", "사진과 어우러짐", item.blendMode || "normal", [["normal", "기본"], ["screen", "밝게"], ["multiply", "진하게"], ["overlay", "선명하게"], ["soft-light", "은은하게"]])}
     </div>` : ""}
     ${type === "textTheme" ? `<div class="mobile-text-editor">
-      <div class="mobile-text-canvas" data-text-theme-live-preview>${textThemeSample({ ...item, previewImage: invitationData.hero.image })}</div>
+      ${designSelect("fontId", "사용 폰트", fonts, item.fontId || "noto-serif-kr")}
+      <label class="btn image-upload">폰트 파일 업로드<input type="file" accept=".woff,.woff2,.ttf,.otf,font/woff,font/woff2,font/ttf,font/otf" data-font-upload></label>
+      <div class="mobile-text-canvas" data-text-theme-live-preview>${textThemeSample(item)}</div>
       <div class="mobile-tool-tabs">
         <button class="is-active" type="button" data-text-tool="layout">배치</button><button type="button" data-text-tool="text">글자</button><button type="button" data-text-tool="shadow">그림자</button><button type="button" data-text-tool="card">카드</button>
       </div>
@@ -191,11 +194,12 @@ function assetModalFields(type, item = {}) {
         <section class="mobile-tool-panel" data-text-panel="card"><label class="consent"><input type="checkbox" name="boxEnabled" ${item.boxEnabled ? "checked" : ""}> <span>카드 영역 사용</span></label><label class="consent"><input type="checkbox" name="cardBackgroundEnabled" ${item.cardBackgroundEnabled !== false ? "checked" : ""}> <span>카드 배경색 사용</span></label><label class="consent"><input type="checkbox" name="cardBorderEnabled" ${item.cardBorderEnabled !== false ? "checked" : ""}> <span>카드 획 사용</span></label><div class="text-layout-editor">${input("cardColor", "카드 색상", item.cardColor || "#ffffff", "color")}${range("cardOpacity", "카드 투명도", item.cardOpacity ?? 0.82, 0, 1, 0.05)}${input("cardBorderColor", "테두리 색상", item.cardBorderColor || "#ffffff", "color")}${range("cardBorderWidth", "테두리 굵기", item.cardBorderWidth ?? 0, 0, 10)}${select("cardBorderStyle", "테두리 모양", item.cardBorderStyle || "solid", [["solid", "실선"], ["dashed", "긴 점선"], ["dotted", "둥근 점선"], ["double", "이중선"]])}${range("cardRadius", "모서리 둥글기", item.cardRadius ?? 8, 0, 40)}</div></section>
       </div>
     </div>` : ""}
+    ${type === "font" ? `<label class="field"><span>폰트 패밀리명</span><input name="fontFamily" value="${escapeAdminHtml(item.family || "")}" placeholder="예: My Wedding Font"></label><label class="field"><span>라이선스</span><input name="fontLicense" value="${escapeAdminHtml(item.license || "상업적 무료 확인 완료")}"></label><label class="btn image-upload">폰트 파일 업로드<input type="file" accept=".woff,.woff2,.ttf,.otf,font/woff,font/woff2,font/ttf,font/otf" data-font-upload></label>` : ""}
   </div>`;
 }
 
 function assetUploadFields(type) {
-  return type !== "textTheme" ? `<div class="asset-upload-row"><label class="btn image-upload">SVG/이미지 업로드<input type="file" accept="image/svg+xml,image/png,image/webp,image/jpeg" data-asset-modal-upload></label><button class="btn" type="button" data-asset-upload-remove>업로드 이미지 삭제</button><small>${type === "frame" ? "프레임: SVG 300KB 이하, PNG/WebP/JPG 2MB 이하 · 블랙 디자인, 투명 배경 권장" : type === "sectionIcon" ? "아이콘: SVG 300KB 이하, PNG/WebP/JPG 2MB 이하 · 512x512 권장" : "배경: SVG 300KB 이하, PNG/WebP/JPG 2MB 이하 · 1920x1080 권장"}</small></div>` : "";
+  return !["textTheme", "font"].includes(type) ? `<div class="asset-upload-row"><label class="btn image-upload">SVG/이미지 업로드<input type="file" accept="image/svg+xml,image/png,image/webp,image/jpeg" data-asset-modal-upload></label><button class="btn" type="button" data-asset-upload-remove>업로드 이미지 삭제</button><small>${type === "frame" ? "프레임: SVG 300KB 이하, PNG/WebP/JPG 2MB 이하 · 블랙 디자인, 투명 배경 권장" : type === "sectionIcon" ? "아이콘: SVG 300KB 이하, PNG/WebP/JPG 2MB 이하 · 512x512 권장" : "배경: SVG 300KB 이하, PNG/WebP/JPG 2MB 이하 · 1920x1080 권장"}</small></div>` : "";
 }
 
 function syncAssetDraftFromForm(type, form) {
@@ -211,6 +215,7 @@ function syncAssetDraftFromForm(type, form) {
   });
   if (type === "textTheme") Object.assign(window.assetSourceDraft, {
     layout: form.elements.layout.value,
+    fontId: form.elements.fontId?.value || window.assetSourceDraft.fontId || "noto-serif-kr",
     align: form.elements.align.value,
     nameSize: Number(form.elements.nameSize.value) || 34,
     dateSize: Number(form.elements.dateSize.value) || 12,
@@ -236,6 +241,12 @@ function syncAssetDraftFromForm(type, form) {
     cardBorderStyle: form.elements.cardBorderStyle.value,
     cardRadius: Math.max(0, Math.min(40, Number(form.elements.cardRadius.value) || 0)),
   });
+  if (type === "font") Object.assign(window.assetSourceDraft, {
+    family: form.elements.fontFamily?.value?.trim() || window.assetSourceDraft.family || "",
+    license: form.elements.fontLicense?.value?.trim() || window.assetSourceDraft.license || "상업적 무료 확인 필요",
+    source: window.assetSourceDraft.source || "업로드",
+    commercialFree: true,
+  });
   updateAssetModalPreview();
 }
 
@@ -243,7 +254,7 @@ function bindAssetModal(type, assetId = "") {
   const form = document.querySelector("#asset-source-form");
   const applyTextLayoutRules = () => {
     if (type !== "textTheme") return;
-    document.querySelector("[data-text-theme-live-preview]").innerHTML = textThemeSample({ ...window.assetSourceDraft, previewImage: invitationData.hero.image });
+    document.querySelector("[data-text-theme-live-preview]").innerHTML = textThemeSample(window.assetSourceDraft);
   };
   const applyFrameRules = () => {
     if (type !== "frame") return;
@@ -286,11 +297,28 @@ function bindAssetModal(type, assetId = "") {
     form.elements.frameXPercent.dispatchEvent(new Event("input", { bubbles: true }));
     document.querySelectorAll("[data-frame-align]").forEach((item) => item.classList.toggle("is-active", item === button));
   }));
+  document.querySelector("[data-font-upload]")?.addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+      const url = await window.RSVP_STORAGE.uploadDesignAsset(file, "fonts");
+      const id = `font-${Date.now()}`;
+      const family = form.elements.fontFamily?.value?.trim() || file.name.replace(/\.(woff2?|ttf|otf)$/i, "");
+      const fontItem = { id, name: family, family, url, source: "업로드", license: form.elements.fontLicense?.value?.trim() || "상업적 무료 확인 필요", commercialFree: true };
+      invitationData.designSystem.assets.fonts ||= [];
+      invitationData.designSystem.assets.fonts.push(fontItem);
+      window.assetSourceDraft = { ...(window.assetSourceDraft || {}), ...fontItem, fontId: id };
+      updateAssetModalPreview();
+      alert("폰트 파일을 업로드하고 폰트 목록에 추가했습니다.");
+    } catch (error) {
+      alert(`폰트를 업로드하지 못했습니다.\n${error.message || "Storage 정책을 확인해 주세요."}`);
+    }
+  });
   document.querySelector("[data-asset-ai-send]").addEventListener("click", async () => {
-    const methods = { frame: "generateFrameDecoration", textTheme: "generateHeroTextTheme", sectionIcon: "generateSectionIcon", background: "generateBackgroundDecoration" };
+    const methods = { frame: "generateFrameDecoration", textTheme: "generateHeroTextTheme", sectionIcon: "generateSectionIcon", background: "generateBackgroundDecoration", font: "generateHeroTextTheme" };
     const instruction = document.querySelector("[data-asset-ai-instruction]").value;
     document.querySelector("[data-asset-ai-chat]").insertAdjacentHTML("beforeend", `<p>사용자: ${escapeAdminHtml(instruction)}</p><p>AI: 요청에 맞는 미리보기를 만들었습니다.</p>`);
-    renderAssetModalAIResult(type, await AI_DESIGN_SERVICE[methods[type]]({ instruction, settings: invitationData.designSystem.aiSettings }));
+    renderAssetModalAIResult(type, await AI_DESIGN_SERVICE[methods[type]]({ instruction, settings: invitationData.designSystem.aiSettings, fonts: designData().designSystem.assets.fonts || [] }));
   });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
