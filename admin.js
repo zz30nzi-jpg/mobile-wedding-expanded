@@ -1663,8 +1663,8 @@ function renderEditor(message = "", focus = "") {
             ${visibilitySelect("displaySettings.showProfileBirthdays", "두 사람 소개 생일", invitationData.displaySettings?.showProfileBirthdays)}
           </div>
           <p class="admin-message micro-help">비공개로 바꿔도 계좌 항목 자동 생성에는 부모님 성함을 그대로 사용합니다.</p>
-          <button class="btn btn-secondary quick-apply" type="button" data-quick-apply>1번 입력값을 아래 항목에 반영</button>
-          <p class="admin-message micro-help">이 버튼은 화면 안의 관련 항목만 맞춰줍니다. 최종 저장은 우측 하단의 변경사항 저장 버튼에서 완료됩니다.</p>
+          <button class="btn quick-apply" type="button" data-quick-apply><span>권장</span> 1번 입력값을 아래 항목에 반영하기</button>
+          <p class="admin-message micro-help">이 버튼으로 관련 항목을 먼저 맞춘 뒤, 우측 하단의 변경사항 저장 버튼으로 최종 저장합니다.</p>
         </fieldset>
         <fieldset class="basic-pane guided-step" id="main-media-settings" data-guided-step="media" data-step-requires="core"><legend>2. 첫 화면</legend>
           ${heroActiveMediaField(invitationData.hero)}
