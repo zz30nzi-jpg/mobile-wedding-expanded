@@ -5,4 +5,5 @@
 window.RSVP_CONFIG = {
   supabaseUrl: "https://cimyjsqjpenljpywhgso.supabase.co",
   supabaseAnonKey: "sb_publishable_jxY5QiiuKHV-5VSBO1F8Ow_wWeYjcDV",
+  aiEndpoint: "https://mobile-wedding-expanded.vercel.app/api/ai-design",
 };

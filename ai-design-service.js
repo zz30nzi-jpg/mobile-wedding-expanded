@@ -6,16 +6,22 @@
   ];
   const choose = (items, seed = "") => items[Math.abs([...seed].reduce((sum, char) => sum + char.charCodeAt(0), Date.now())) % items.length];
   const settings = (context = {}) => ({ ...(window.WEDDING_AI_SETTINGS?.() || {}), ...(context.settings || {}) });
+  const isLocalPage = () => ["localhost", "127.0.0.1", ""].includes(window.location.hostname) || window.location.protocol === "file:";
+  const configuredEndpoint = () => window.RSVP_CONFIG?.aiEndpoint || "/api/ai-design";
   const normalizeEndpoint = (endpoint = "") => {
     const value = String(endpoint || "").trim();
-    if (!value || value === "undefined" || value === "null") return "/api/ai-design";
-    if (/^https?:\/\/localhost(?::\d+)?\/api\/ai-design/i.test(value)) return "/api/ai-design";
-    if (/^https?:\/\/127\.0\.0\.1(?::\d+)?\/api\/ai-design/i.test(value)) return "/api/ai-design";
+    const fallback = isLocalPage() ? configuredEndpoint() : "/api/ai-design";
+    if (!value || value === "undefined" || value === "null") return fallback;
+    if (/^https?:\/\/localhost(?::\d+)?\/api\/ai-design/i.test(value)) return fallback;
+    if (/^https?:\/\/127\.0\.0\.1(?::\d+)?\/api\/ai-design/i.test(value)) return fallback;
     try {
       const url = new URL(value, window.location.origin);
-      if (url.pathname === "/api/ai-design") return `/api/ai-design${url.search}`;
+      if (url.pathname === "/api/ai-design") {
+        if (url.origin !== window.location.origin) return url.href;
+        return isLocalPage() ? configuredEndpoint() : `/api/ai-design${url.search}`;
+      }
     } catch {}
-    return "/api/ai-design";
+    return fallback;
   };
   const storedAccessToken = () => {
     try {
@@ -54,7 +60,7 @@
         body: JSON.stringify({ type, provider: current.provider || "OpenAI", context: { ...context, settings: promptSettings } }),
       });
     } catch (error) {
-      throw new Error(`AI 서버에 연결하지 못했습니다. AI 설정의 엔드포인트를 /api/ai-design 로 저장하고 Vercel 배포 상태를 확인해 주세요. (${error.message || "Failed to fetch"})`);
+      throw new Error(`AI 서버에 연결하지 못했습니다. 현재 요청 주소: ${endpoint}. 배포 사이트에서는 /api/ai-design, 로컬 테스트에서는 ${configuredEndpoint()} 를 사용해야 합니다. (${error.message || "Failed to fetch"})`);
     }
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || "AI 서버 호출에 실패했습니다.");
@@ -110,7 +116,7 @@
     try {
       response = await fetch(`${endpoint}${separator}provider=${encodeURIComponent(settings.provider || "OpenAI")}`, { headers: await authHeaders() });
     } catch (error) {
-      return { ok: false, mockMode: false, message: `AI 서버에 연결하지 못했습니다. 엔드포인트는 /api/ai-design 로 저장해 주세요. (${error.message || "Failed to fetch"})` };
+      return { ok: false, mockMode: false, message: `AI 서버에 연결하지 못했습니다. 현재 요청 주소: ${endpoint}. 배포 사이트에서는 /api/ai-design, 로컬 테스트에서는 ${configuredEndpoint()} 를 사용해야 합니다. (${error.message || "Failed to fetch"})` };
     }
     const payload = await response.json().catch(() => ({}));
     const providerName = settings.provider === "Gemini" ? "Gemini" : "OpenAI";
