@@ -1,8 +1,8 @@
 (function () {
   const palettes = [
-    { background: "#f7f0e7", card: "#fffaf4", ink: "#463a34", muted: "#88776e", accent: "#8d3440", line: "rgba(125,38,51,0.2)" },
-    { background: "#f3eee5", card: "#fffdf8", ink: "#4f443d", muted: "#8b7b71", accent: "#a46f5b", line: "rgba(164,111,91,0.22)" },
-    { background: "#f4f0df", card: "#fbf7ea", ink: "#37463f", muted: "#718076", accent: "#56725d", line: "rgba(86,114,93,0.18)" },
+    { side: "#fbf7ee", background: "#f7f0e7", card: "#fffaf4", ink: "#463a34", muted: "#88776e", accent: "#8d3440", label: "#6c8baf", button: "#fff4df", line: "#d8c8bd" },
+    { side: "#faf5ef", background: "#f3eee5", card: "#fffdf8", ink: "#4f443d", muted: "#8b7b71", accent: "#a46f5b", label: "#8d7568", button: "#f7eadf", line: "#dcc7bc" },
+    { side: "#faf8ea", background: "#f4f0df", card: "#fbf7ea", ink: "#37463f", muted: "#718076", accent: "#56725d", label: "#647b6b", button: "#edf1df", line: "#d4d8c5" },
   ];
   const choose = (items, seed = "") => items[Math.abs([...seed].reduce((sum, char) => sum + char.charCodeAt(0), Date.now())) % items.length];
   const settings = (context = {}) => ({ ...(window.WEDDING_AI_SETTINGS?.() || {}), ...(context.settings || {}) });

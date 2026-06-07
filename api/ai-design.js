@@ -10,10 +10,10 @@ const designSchema = {
     palette: {
       type: "object",
       properties: {
-        background: { type: "string" }, card: { type: "string" }, ink: { type: "string" },
-        muted: { type: "string" }, accent: { type: "string" }, line: { type: "string" },
+        side: { type: "string" }, background: { type: "string" }, card: { type: "string" }, ink: { type: "string" },
+        muted: { type: "string" }, accent: { type: "string" }, label: { type: "string" }, button: { type: "string" }, line: { type: "string" },
       },
-      required: ["background", "card", "ink", "muted", "accent", "line"],
+      required: ["side", "background", "card", "ink", "muted", "accent", "label", "button", "line"],
       additionalProperties: false,
     },
     heroDecoration: { type: "string", enum: ["none", "doodle_hearts", "organic_heart", "wedding_rings", "poster_card"] },
@@ -172,7 +172,8 @@ ${designPromptForType()}
 사용자 요청: ${context.instruction || context.mood || ""}
 영화 또는 컨셉: ${context.concept || ""}
 팔레트는 CSS에서 바로 사용할 수 있는 색상으로 제안하고, 프레임과 문구 테마는 제공된 enum 중 하나를 선택하세요.
-폰트는 반드시 위 폰트 목록 중 하나만 고르고 fontId, fontFamily, fontLicense에 그대로 적으세요.
+팔레트의 ink는 본문 글자색이므로 반드시 충분히 어두운 계열로 지정하세요. side는 모바일 청첩장 좌우 빈 여백 색상이며 background보다 연하고 밝아 청첩장 영역과 구분되어야 합니다. accent는 버튼/강조색, label은 영문 섹션 라벨색, button은 연한 버튼 배경색입니다.
+폰트 파일이나 새 폰트 생성은 하지 마세요. fontId는 사용 가능한 목록 중 하나만 참고값으로 고르세요.
 컬러테마 요청이면 색상 팔레트 추천에 집중하세요.
 영화테마 요청이면 테마명, 색상, 폰트 방향, 메인이미지 꾸밈, 메인문구테마, 섹션 아이콘, 갤러리 프레임, 버튼 모양까지 함께 제안하세요.`;
 }

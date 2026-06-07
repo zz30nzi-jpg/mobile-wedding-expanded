@@ -158,11 +158,14 @@ function renderDesignApplication(message = "") {
 function paletteFields(theme = {}) {
   const item = theme.palette || {};
   return `<div class="palette-grid">
-    ${input("background", "배경색", item.background || "#f7f0e7", "color")}
+    ${input("side", "좌우 여백", item.side || item.background || "#fbf7ee", "color")}
+    ${input("background", "청첩장 배경", item.background || "#f7f0e7", "color")}
     ${input("card", "카드/종이색", item.card || "#fffaf4", "color")}
-    ${input("ink", "메인 텍스트색", item.ink || "#463a34", "color")}
+    ${input("ink", "본문 글자색", item.ink || "#463a34", "color")}
     ${input("muted", "서브 텍스트색", item.muted || "#88776e", "color")}
-    ${input("accent", "포인트색", item.accent || "#8d3440", "color")}
+    ${input("accent", "포인트/버튼색", item.accent || "#8d3440", "color")}
+    ${input("label", "영문 라벨색", item.label || item.accent || "#8d3440", "color")}
+    ${input("button", "연한 버튼색", item.button || item.card || "#fff4df", "color")}
     ${input("line", "라인색", /^#/.test(item.line || "") ? item.line : "#d6bfc1", "color")}
   </div>`;
 }
@@ -297,7 +300,7 @@ function openThemeModal(themeId = "") {
       concept: fields.get("concept"), mood: fields.get("mood"), heroDecoration: fields.get("heroDecoration"), heroTextTheme: fields.get("heroTextTheme"),
       sectionIcon: fields.get("sectionIcon"), backgroundDecoration: fields.get("backgroundDecoration"),
       fontDirection: fields.get("fontDirection"), galleryFrameDirection: fields.get("galleryFrameDirection"), buttonShapeDirection: fields.get("buttonShapeDirection"),
-      palette: Object.fromEntries(["background", "card", "ink", "muted", "accent", "line"].map((key) => [key, fields.get(key)])),
+      palette: Object.fromEntries(["side", "background", "card", "ink", "muted", "accent", "label", "button", "line"].map((key) => [key, fields.get(key)])),
     };
     const index = system.themes.findIndex((item) => item.id === id);
     if (index >= 0) system.themes[index] = next; else system.themes.push(next);
@@ -309,6 +312,7 @@ function openThemeModal(themeId = "") {
     const label = progress?.querySelector("b");
     let percent = 8;
     if (progress) progress.hidden = false;
+    progress?.setAttribute("aria-busy", "true");
     const timer = setInterval(() => {
       percent = Math.min(92, percent + Math.ceil((100 - percent) / 9));
       if (bar) bar.style.width = `${percent}%`;
@@ -325,6 +329,7 @@ function openThemeModal(themeId = "") {
       if (progress) {
         setTimeout(() => {
           progress.hidden = true;
+          progress.removeAttribute("aria-busy");
           if (bar) bar.style.width = "0%";
           if (label) label.textContent = "0%";
         }, 260);
@@ -398,7 +403,7 @@ function applyAIResult(result, form, scope = "all") {
 }
 
 function aiPalettePreview(palette = {}) {
-  const labels = { background: "배경", card: "카드", ink: "메인 글자", muted: "서브 글자", accent: "포인트", line: "라인" };
+  const labels = { side: "좌우 여백", background: "청첩장 배경", card: "카드", ink: "본문 글자", muted: "서브 글자", accent: "포인트", label: "영문 라벨", button: "연한 버튼", line: "라인" };
   return `<div class="ai-palette-preview">${Object.entries(labels).map(([key, label]) => `
     <div class="ai-color-chip"><i style="background:${escapeAdminHtml(palette[key] || "#ffffff")}"></i><span>${label}<small>${escapeAdminHtml(palette[key] || "-")}</small></span></div>`).join("")}</div>`;
 }
@@ -410,7 +415,6 @@ function aiVisualPreview(result) {
     ${result.heroTextTheme ? `<div><strong>추천 문구 테마</strong><div class="ai-text-preview" data-ai-text-theme="${escapeAdminHtml(result.heroTextTheme)}">조성호 · 전지연<small>2026. 10. 04</small></div></div>` : ""}
     ${result.sectionIconDirection ? `<div class="ai-direction"><strong>섹션 아이콘 방향</strong><p>${escapeAdminHtml(result.sectionIconDirection)}</p></div>` : ""}
     ${result.backgroundDirection ? `<div class="ai-direction"><strong>배경 장식 방향</strong><p>${escapeAdminHtml(result.backgroundDirection)}</p></div>` : ""}
-    ${result.fontDirection ? `<div class="ai-direction"><strong>폰트 방향</strong><p>${escapeAdminHtml(result.fontDirection)}</p></div>` : ""}
     ${result.galleryFrameDirection ? `<div class="ai-direction"><strong>갤러리 프레임</strong><p>${escapeAdminHtml(result.galleryFrameDirection)}</p></div>` : ""}
     ${result.buttonShapeDirection ? `<div class="ai-direction"><strong>버튼 모양</strong><p>${escapeAdminHtml(result.buttonShapeDirection)}</p></div>` : ""}
   </div>`;
@@ -430,8 +434,13 @@ function showAIResult(result, form) {
   document.querySelector("[data-ai-preview]").addEventListener("click", () => document.querySelector(".ai-visual-preview").classList.toggle("is-emphasized"));
   document.querySelector("[data-ai-ignore]").addEventListener("click", () => { document.querySelector("[data-ai-results]").innerHTML = ""; });
   document.querySelector("[data-ai-regenerate]").addEventListener("click", async () => {
-    const next = await AI_DESIGN_SERVICE.regenerateAIResult(result, document.querySelector("[data-ai-instruction]").value);
-    rememberAIResult(next); showAIResult(next, form);
+    try {
+      const next = await runAIWithProgress(() => AI_DESIGN_SERVICE.regenerateAIResult(result, document.querySelector("[data-ai-instruction]").value));
+      rememberAIResult(next); showAIResult(next, form);
+      document.querySelector("[data-ai-chat]")?.insertAdjacentHTML("beforeend", `<p>AI: 재생성이 완료되어 새 결과로 교체했습니다.</p>`);
+    } catch (error) {
+      document.querySelector("[data-ai-results]")?.insertAdjacentHTML("afterbegin", `<p class="admin-message">재생성에 실패했습니다. ${escapeAdminHtml(error.message || "")}</p>`);
+    }
   });
 }
 
@@ -526,8 +535,15 @@ function renderAssetModalAIResult(type, result) {
   document.querySelector("[data-asset-ai-accept]").addEventListener("click", applyDraft);
   document.querySelector("[data-asset-ai-ignore]").addEventListener("click", () => { root.innerHTML = ""; });
   document.querySelector("[data-asset-ai-regenerate]").addEventListener("click", async () => {
-    const next = await AI_DESIGN_SERVICE.regenerateAIResult(result, document.querySelector("[data-asset-ai-instruction]").value);
-    rememberAIResult(next); renderAssetModalAIResult(type, next);
+    root.insertAdjacentHTML("afterbegin", `<div class="ai-progress is-inline" data-asset-regenerate-progress><span><i style="width:72%"></i></span><b>생성 중</b></div>`);
+    try {
+      const next = await AI_DESIGN_SERVICE.regenerateAIResult(result, document.querySelector("[data-asset-ai-instruction]").value);
+      rememberAIResult(next); renderAssetModalAIResult(type, next);
+      document.querySelector("[data-asset-ai-chat]")?.insertAdjacentHTML("beforeend", `<p>AI: 재생성이 완료되어 새 결과로 교체했습니다.</p>`);
+    } catch (error) {
+      root.querySelector("[data-asset-regenerate-progress]")?.remove();
+      root.insertAdjacentHTML("afterbegin", `<p class="admin-message">재생성에 실패했습니다. ${escapeAdminHtml(error.message || "")}</p>`);
+    }
   });
 }
 

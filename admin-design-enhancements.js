@@ -153,17 +153,65 @@ function bindAssetLibraryActions(filter) {
   }));
 }
 
+function fontDefaultSettingsMarkup() {
+  const system = designData().designSystem;
+  const fonts = system.assets.fonts || [];
+  const defaults = system.fontDefaults || {};
+  const fontSelect = (name, label, value) => designSelect(`fontDefaults.${name}`, label, fonts, value || "noto-serif-kr");
+  return `<section class="asset-library-section font-management-section">
+    <div class="admin-toolbar"><div><h3>폰트 기본값 설정</h3><p>등록된 폰트를 확인하고, 영역별 기본 폰트를 지정합니다.</p></div><span class="badge">${fonts.length}개</span></div>
+    <form class="font-default-form" data-font-default-form>
+      <div class="quick-input-grid">
+        ${fontSelect("englishTitle", "영문 타이틀", defaults.englishTitle)}
+        ${fontSelect("koreanTitle", "국문 타이틀", defaults.koreanTitle)}
+        ${fontSelect("koreanBody", "국문 설명", defaults.koreanBody)}
+        ${fontSelect("subTitle", "서브 제목", defaults.subTitle)}
+        ${fontSelect("subText", "서브 텍스트", defaults.subText)}
+      </div>
+      <div class="compact-actions">
+        <label class="btn image-upload">폰트 파일 업로드<input type="file" accept=".woff,.woff2,.ttf,.otf,font/woff,font/woff2,font/ttf,font/otf" data-font-direct-upload></label>
+        <button class="btn btn-primary" type="submit">폰트 기본값 저장</button>
+      </div>
+    </form>
+  </section>`;
+}
+
 function renderDesignAssets(message = "", filter = "all") {
   designData();
   adminApp.innerHTML = `${adminHeader("assets")}<section class="admin-card">
     <div class="admin-toolbar"><div><p class="section-label">Super Admin</p><h2>디자인 요소 생성</h2></div><button class="btn btn-primary" type="button" data-new-asset>새 디자인 소스 만들기</button></div>
     <p class="admin-message">${escapeAdminHtml(message || "테마에 연결할 디자인 소스를 카테고리별로 확인하고, 하나의 생성 모달에서 AI 또는 파일 업로드로 추가합니다.")}</p>
     <div class="filter-row"><button class="btn ${filter === "all" ? "btn-primary" : ""}" data-asset-filter="all">전체</button>${Object.entries(assetCategories).map(([type, category]) => `<button class="btn ${filter === type ? "btn-primary" : ""}" data-asset-filter="${type}">${category.label}</button>`).join("")}</div>
+    ${filter === "all" || filter === "font" ? fontDefaultSettingsMarkup() : ""}
     ${assetLibrarySections(filter)}
   </section><div id="asset-create-modal"></div>`;
   bindAdminNavigation();
   document.querySelector("[data-new-asset]").addEventListener("click", () => openAssetCreateModal());
   document.querySelectorAll("[data-asset-filter]").forEach((button) => button.addEventListener("click", () => renderDesignAssets("", button.dataset.assetFilter)));
+  document.querySelector("[data-font-default-form]")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const fields = new FormData(event.currentTarget);
+    invitationData.designSystem.fontDefaults = {
+      englishTitle: fields.get("fontDefaults.englishTitle"),
+      koreanTitle: fields.get("fontDefaults.koreanTitle"),
+      koreanBody: fields.get("fontDefaults.koreanBody"),
+      subTitle: fields.get("fontDefaults.subTitle"),
+      subText: fields.get("fontDefaults.subText"),
+    };
+    await saveDesignData("폰트 기본값을 저장했습니다.", () => renderDesignAssets("", filter));
+  });
+  document.querySelector("[data-font-direct-upload]")?.addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+      const url = await window.RSVP_STORAGE.uploadDesignAsset(file, "fonts");
+      const family = file.name.replace(/\.(woff2?|ttf|otf)$/i, "");
+      invitationData.designSystem.assets.fonts.push({ id: `font-${Date.now()}`, name: family, family, url, source: "업로드", license: "상업적 무료 확인 필요", commercialFree: true });
+      await saveDesignData("폰트를 업로드하고 목록에 추가했습니다.", () => renderDesignAssets("", "font"));
+    } catch (error) {
+      alert(`폰트를 업로드하지 못했습니다.\n${error.message || "Storage 정책을 확인해 주세요."}`);
+    }
+  });
   bindAssetLibraryActions(filter);
 }
 
@@ -314,7 +362,7 @@ function bindAssetModal(type, assetId = "") {
       alert(`폰트를 업로드하지 못했습니다.\n${error.message || "Storage 정책을 확인해 주세요."}`);
     }
   });
-  document.querySelector("[data-asset-ai-send]").addEventListener("click", async () => {
+  document.querySelector("[data-asset-ai-send]")?.addEventListener("click", async () => {
     const methods = { frame: "generateFrameDecoration", textTheme: "generateHeroTextTheme", sectionIcon: "generateSectionIcon", background: "generateBackgroundDecoration", font: "generateHeroTextTheme" };
     const instruction = document.querySelector("[data-asset-ai-instruction]").value;
     document.querySelector("[data-asset-ai-chat]").insertAdjacentHTML("beforeend", `<p>사용자: ${escapeAdminHtml(instruction)}</p><p>AI: 요청에 맞는 미리보기를 만들었습니다.</p>`);
@@ -354,9 +402,9 @@ function openAssetCreateModal(type = "frame", assetId = "") {
       <div class="asset-type-tabs">${Object.entries(assetCategories).map(([value, item]) => `<button class="${value === type ? "is-active" : ""}" type="button" data-asset-type-tab="${value}">${item.label}</button>`).join("")}</div>
       <input type="hidden" name="assetType" value="${type}">
       ${input("assetName", "디자인 소스 이름", source.name || "")}
-      <section class="ai-assistant"><h3>AI 디자인 어시스턴트</h3><div class="ai-chat" data-asset-ai-chat><p>AI: 원하는 ${category.label}의 분위기와 형태를 알려주세요.</p></div>
+      ${type !== "font" ? `<section class="ai-assistant"><h3>AI 디자인 어시스턴트</h3><div class="ai-chat" data-asset-ai-chat><p>AI: 원하는 ${category.label}의 분위기와 형태를 알려주세요.</p></div>
         <div class="ai-input-row"><input data-asset-ai-instruction placeholder="따뜻한 빈티지 필름 느낌으로 만들어줘"><button class="btn" type="button" data-asset-ai-send>AI로 생성</button></div><div data-asset-ai-results></div>
-      </section>
+      </section>` : ""}
       ${assetUploadFields(type)}
       <p class="admin-message">${category.guide}</p>${assetModalFields(type, source)}
       <button class="btn btn-primary" type="submit">${assetId ? "수정 내용 저장" : "디자인 소스 저장"}</button>

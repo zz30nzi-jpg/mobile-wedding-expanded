@@ -75,6 +75,14 @@
     // Color presets always use the neutral invitation defaults. Movie presets
     // may still provide their own frame and text layout.
     system.colorDefaults = { heroDecoration: "none", heroTextTheme: "default_center", ...(system.colorDefaults || {}) };
+    system.fontDefaults = {
+      englishTitle: "cormorant-garamond",
+      koreanTitle: "noto-serif-kr",
+      koreanBody: "noto-serif-kr",
+      subTitle: "gowun-batang",
+      subText: "noto-sans-kr",
+      ...(system.fontDefaults || {}),
+    };
     const defaultPrompts = {
       base: "고급 모바일 청첩장 디자인 시스템을 만든다. 결과는 과하게 장식적이지 않고, 모바일 세로 화면에서 읽기 쉬워야 한다. 메인 사진을 가리지 않는 프레임, 한국어 이름과 날짜가 잘 보이는 문구 구조, 섹션 사이를 부드럽게 이어주는 작은 아이콘을 우선한다. 색상은 한 가지 색만 반복하지 말고 배경, 카드, 본문, 보조 글자, 포인트, 라인이 서로 구분되게 제안한다.",
       colorTheme: "컬러테마는 색상값 추천에 집중한다. 배경, 카드, 본문 글자, 보조 글자, 포인트, 라인 색상을 모바일 청첩장에 맞게 제안한다.",
@@ -211,8 +219,19 @@
     root.classList?.toggle("hide-hero-date", data.appearance.design.heroDateEnabled === false);
     root.classList?.toggle("custom-hero-positioned", Number.isFinite(Number(resolved.heroTextThemeAsset?.xPercent)) && Number.isFinite(Number(resolved.heroTextThemeAsset?.yPercent)));
     root.classList?.toggle("has-custom-background-decoration", Boolean(resolved.backgroundDecoration));
-    const vars = { background: ["--paper", "--body-bg"], card: ["--card"], ink: ["--ink"], muted: ["--muted"], accent: ["--accent", "--accent-dark"], line: ["--line"] };
+    const vars = {
+      background: ["--paper", "--hero-bg", "--media-start"],
+      side: ["--body-bg", "--admin-bg"],
+      card: ["--card", "--surface", "--input-bg", "--button-hover"],
+      ink: ["--ink", "--copy"],
+      muted: ["--muted"],
+      accent: ["--accent-dark", "--save", "--save-hover"],
+      button: ["--accent", "--nav-button", "--nav-hover", "--media-end"],
+      label: ["--label", "--nav-text"],
+      line: ["--line", "--nav-border"],
+    };
     Object.entries(vars).forEach(([key, cssVars]) => appliedPalette[key] && cssVars.forEach((cssVar) => root.style.setProperty(cssVar, appliedPalette[key])));
+    if (!appliedPalette.side && appliedPalette.background) root.style.setProperty("--body-bg", `color-mix(in srgb, ${appliedPalette.background} 72%, #ffffff)`);
     root.style.setProperty("--design-background-decoration", resolved.backgroundDecoration ? `url("${mediaUrl(resolved.backgroundDecoration)}")` : "none");
     root.style.setProperty("--design-section-icon", resolved.sectionIcon ? `url("${mediaUrl(resolved.sectionIcon)}")` : "var(--section-divider)");
     root.style.setProperty("--custom-hero-decoration", resolved.heroDecorationAsset?.url ? `url("${mediaUrl(resolved.heroDecorationAsset.url)}")` : "none");

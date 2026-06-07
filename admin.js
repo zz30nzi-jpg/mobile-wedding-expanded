@@ -1533,11 +1533,17 @@ function openAddressSearchModal({ venue = "", address = "", onSelect }) {
 }
 
 function parentNames(value = "") {
-  return value.split("·").map((item) => item.trim()).filter(Boolean);
+  const parts = String(value || "").split("·").map((item) => item.trim());
+  return parts.length > 1 ? [parts[0] || "", parts[1] || ""] : [parts[0] || "", ""];
 }
 
 function joinParentNames(...names) {
-  return names.map((name) => String(name || "").trim()).filter(Boolean).join(" · ");
+  const [father = "", mother = ""] = names.map((name) => String(name || "").trim());
+  return father || mother ? `${father} · ${mother}` : "";
+}
+
+function displayParentNames(value = "") {
+  return parentNames(value).filter(Boolean).join(" · ");
 }
 
 function quickInput(key, label, value = "", type = "text") {
@@ -1799,7 +1805,7 @@ function renderEditor(message = "", focus = "") {
           <input type="hidden" name="couple.groom.name" value="${escapeAdminHtml(groom.name)}">
           <input type="hidden" name="couple.groom.parents" value="${escapeAdminHtml(groom.parents)}">
           <input type="hidden" name="couple.groom.birthday" value="${escapeAdminHtml(birthdayInputValue(groom.birthday))}">
-          <div class="auto-filled-fields"><strong>${escapeAdminHtml(groom.name)}</strong><span><b>부모님</b>${escapeAdminHtml(groom.parents || "미입력")}</span><span><b>생일</b>${escapeAdminHtml(groom.birthday || "미입력")}</span></div>
+          <div class="auto-filled-fields"><strong>${escapeAdminHtml(groom.name)}</strong><span><b>부모님</b>${escapeAdminHtml(displayParentNames(groom.parents) || "미입력")}</span><span><b>생일</b>${escapeAdminHtml(groom.birthday || "미입력")}</span></div>
           ${input("couple.groom.relation", "부모님 성함 뒤 관계 문구 · 직접 수정", groom.relation)}
           ${input("couple.groom.phone", "연락처", groom.phone)}
           ${input("couple.groom.mbti", "별칭·MBTI 등", groom.mbti)}
@@ -1810,7 +1816,7 @@ function renderEditor(message = "", focus = "") {
           <input type="hidden" name="couple.bride.name" value="${escapeAdminHtml(bride.name)}">
           <input type="hidden" name="couple.bride.parents" value="${escapeAdminHtml(bride.parents)}">
           <input type="hidden" name="couple.bride.birthday" value="${escapeAdminHtml(birthdayInputValue(bride.birthday))}">
-          <div class="auto-filled-fields"><strong>${escapeAdminHtml(bride.name)}</strong><span><b>부모님</b>${escapeAdminHtml(bride.parents || "미입력")}</span><span><b>생일</b>${escapeAdminHtml(bride.birthday || "미입력")}</span></div>
+          <div class="auto-filled-fields"><strong>${escapeAdminHtml(bride.name)}</strong><span><b>부모님</b>${escapeAdminHtml(displayParentNames(bride.parents) || "미입력")}</span><span><b>생일</b>${escapeAdminHtml(bride.birthday || "미입력")}</span></div>
           ${input("couple.bride.relation", "부모님 성함 뒤 관계 문구 · 직접 수정", bride.relation)}
           ${input("couple.bride.phone", "연락처", bride.phone)}
           ${input("couple.bride.mbti", "별칭·MBTI 등", bride.mbti)}
