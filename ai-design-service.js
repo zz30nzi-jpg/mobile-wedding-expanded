@@ -13,14 +13,34 @@
     if (/^https?:\/\/127\.0\.0\.1(?::\d+)?\/api\/ai-design/i.test(value)) return "/api/ai-design";
     try {
       const url = new URL(value, window.location.origin);
-      if (url.origin === window.location.origin) return `${url.pathname}${url.search}`;
+      if (url.pathname === "/api/ai-design") return `/api/ai-design${url.search}`;
     } catch {}
-    return value;
+    return "/api/ai-design";
+  };
+  const storedAccessToken = () => {
+    try {
+      const projectRef = new URL(window.RSVP_CONFIG?.supabaseUrl || "").hostname.split(".")[0];
+      const keys = projectRef ? [`sb-${projectRef}-auth-token`] : [];
+      for (let index = 0; index < localStorage.length; index += 1) {
+        const key = localStorage.key(index);
+        if (key?.startsWith("sb-") && key.endsWith("-auth-token") && !keys.includes(key)) keys.push(key);
+      }
+      for (const key of keys) {
+        const session = JSON.parse(localStorage.getItem(key) || "null");
+        const token = session?.access_token || session?.currentSession?.access_token;
+        if (token) return token;
+      }
+    } catch {}
+    return "";
   };
   const authHeaders = async () => {
     const client = window.RSVP_STORAGE?.getSupabaseClient?.();
-    const { data } = client ? await client.auth.getSession() : { data: {} };
-    return data.session?.access_token ? { Authorization: `Bearer ${data.session.access_token}` } : {};
+    try {
+      const { data } = client ? await client.auth.getSession() : { data: {} };
+      if (data.session?.access_token) return { Authorization: `Bearer ${data.session.access_token}` };
+    } catch {}
+    const token = storedAccessToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
   };
   const request = async (type, context, mock) => {
     const current = settings(context);
