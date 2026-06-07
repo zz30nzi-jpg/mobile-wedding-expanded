@@ -334,8 +334,12 @@ function openThemeModal(themeId = "") {
   const requestAI = async () => {
     const instruction = document.querySelector("[data-ai-instruction]").value || form.elements.name.value || "고급스럽고 따뜻한 모바일 청첩장 테마";
     const context = { concept: instruction, mood: instruction, instruction, name: form.elements.name.value, settings: invitationData.designSystem.aiSettings, fonts: designData().designSystem.assets.fonts || [] };
-    const aiResult = await runAIWithProgress(() => form.elements.type.value === "movie" ? AI_DESIGN_SERVICE.recommendMovieTheme(context) : AI_DESIGN_SERVICE.recommendColorPalette(context));
-    rememberAIResult(aiResult); showAIResult(aiResult, form);
+    try {
+      const aiResult = await runAIWithProgress(() => form.elements.type.value === "movie" ? AI_DESIGN_SERVICE.recommendMovieTheme(context) : AI_DESIGN_SERVICE.recommendColorPalette(context));
+      rememberAIResult(aiResult); showAIResult(aiResult, form);
+    } catch (error) {
+      document.querySelector("[data-ai-results]").innerHTML = `<article class="ai-result-card"><strong>AI 결과 생성 실패</strong><p class="admin-message">${escapeAdminHtml(error.message || "AI 설정을 확인해 주세요.")}</p></article>`;
+    }
   };
   document.querySelector("[data-ai-send]").addEventListener("click", () => requestAI());
 }
@@ -440,7 +444,7 @@ const assetCategories = {
 };
 
 function assetPreview(type, item = {}) {
-  const previewUrl = item.url || item.previewUrl;
+  const previewUrl = window.adminMediaUrl?.(item.url || item.previewUrl) || item.url || item.previewUrl;
   if (previewUrl) return `<div class="asset-source-preview asset-source-image ${type === "background" ? "is-background" : ""}"><img src="${escapeAdminHtml(previewUrl)}" alt="${escapeAdminHtml(item.name || "디자인 소스")} 미리보기"></div>`;
   if (type === "frame") return `<div class="asset-source-preview"><span class="hero-decoration-preview" data-decoration-preview="${escapeAdminHtml(item.heroDecoration || item.id || "none")}"><i></i></span></div>`;
   if (type === "textTheme") {
@@ -581,6 +585,8 @@ function bindAssetModal(type) {
       if (bar) bar.style.width = "100%";
       if (label) label.textContent = "100%";
       renderAssetModalAIResult(type, result);
+    } catch (error) {
+      document.querySelector("[data-asset-ai-results]").innerHTML = `<article class="ai-result-card"><strong>AI 결과 생성 실패</strong><p class="admin-message">${escapeAdminHtml(error.message || "AI 설정을 확인해 주세요.")}</p></article>`;
     } finally {
       clearInterval(timer);
       setTimeout(() => {
@@ -656,7 +662,17 @@ function renderAISettings(message = "") {
     </form></section>`;
   bindAdminNavigation();
   const form = document.querySelector("#ai-settings-form");
-  document.querySelector("[data-ai-test]").addEventListener("click", async () => alert((await AI_DESIGN_SERVICE.testAIConnection(settings)).message));
+  document.querySelector("[data-ai-test]").addEventListener("click", async () => {
+    const fields = new FormData(form);
+    const draftSettings = {
+      ...settings,
+      enabled: fields.get("enabled") === "on",
+      mockMode: fields.get("mockMode") === "on",
+      provider: fields.get("provider"),
+      endpoint: fields.get("endpoint") || "/api/ai-design",
+    };
+    alert((await AI_DESIGN_SERVICE.testAIConnection(draftSettings)).message);
+  });
   document.querySelector("[data-ai-reference-upload]")?.addEventListener("change", async (event) => {
     const files = [...(event.target.files || [])];
     if (!files.length) return;

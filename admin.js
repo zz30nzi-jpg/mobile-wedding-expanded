@@ -1,6 +1,8 @@
 const adminApp = document.querySelector("#admin-app");
 const escapeAdminHtml = (value = "") =>
   String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+const adminMediaUrl = (value = "") => window.RSVP_STORAGE?.mediaPublicUrl?.(value) || value || "";
+window.adminMediaUrl = adminMediaUrl;
 const supabaseClient = window.RSVP_STORAGE.getSupabaseClient();
 let invitationData = window.INVITATION_DATA;
 const adminArea = document.body.dataset.adminArea === "super" ? "super" : "general";
@@ -30,6 +32,18 @@ const defaultWelcomeOverlay = {
   shadowColor: "#3b6674",
   shadowOpacity: 24,
 };
+
+function themeWelcomePalette(source = invitationData) {
+  const resolved = window.WEDDING_DESIGN?.resolve?.(source);
+  const palette = resolved?.palette || source.designSystem?.themes?.find((theme) => theme.id === source.appearance?.design?.presetId)?.palette || {};
+  return {
+    backgroundColor: palette.background || defaultWelcomeOverlay.backgroundColor,
+    cardColor: palette.card || defaultWelcomeOverlay.cardColor,
+    textColor: palette.accent || palette.ink || defaultWelcomeOverlay.textColor,
+    borderColor: palette.line && /^#/.test(palette.line) ? palette.line : palette.accent || defaultWelcomeOverlay.borderColor,
+    shadowColor: palette.accent || palette.ink || defaultWelcomeOverlay.shadowColor,
+  };
+}
 
 function applyTheme(theme) {
   const selected = themes.includes(theme) ? theme : "sky";
@@ -545,6 +559,7 @@ function renderDefaultSettings(message = "") {
   const selectedTextTheme = invitationData.appearance?.design?.heroTextTheme || "auto";
   const selectedDecoration = invitationData.appearance?.design?.heroDecoration || "inherit";
   const welcome = { ...defaultWelcomeOverlay, ...(invitationData.adminDefaults?.welcomeOverlay || {}) };
+  const welcomePalette = themeWelcomePalette(invitationData);
   const heroFieldOptions = [
     ["eyebrow", "영문문구"],
     ["names", "신랑신부 이름"],
@@ -579,10 +594,9 @@ function renderDefaultSettings(message = "") {
               </label>`).join("")}
           </div>
           <div class="quick-input-grid">
-            ${input("guestPhotos.eventDate", "하객 업로드 오픈 날짜", invitationData.guestPhotos?.eventDate || "2026-10-04", "date")}
             ${select("guestPhotos.previewVisible", "하객 앨범 미리보기", String(invitationData.guestPhotos?.previewVisible ?? true), [["true", "표시"], ["false", "숨김"]])}
           </div>
-          <p class="admin-message micro-help">텍스트 값이 아니라, 신규 일반관리자가 어떤 정보를 먼저 입력하게 할지 정하는 구성값입니다.</p>
+          <p class="admin-message micro-help">하객 업로드 오픈 날짜는 신규 가입자가 입력한 예식일자로 자동 설정됩니다. 이 영역에서는 신규 일반관리자가 어떤 정보를 먼저 입력하게 할지만 정합니다.</p>
         </fieldset>
         <fieldset><legend>메인이미지 위 기본 표시 항목</legend>
           <div class="hero-field-defaults">
@@ -607,18 +621,11 @@ function renderDefaultSettings(message = "") {
         </fieldset>
         <fieldset><legend>일반관리자 첫 로그인 웰컴 화면</legend>
           <div class="welcome-default-editor">
-            <div class="admin-welcome-card welcome-default-preview" style="--admin-welcome-card-bg:${escapeAdminHtml(hexToRgba(welcome.cardColor, (Number(welcome.cardOpacity) || defaultWelcomeOverlay.cardOpacity) / 100))};--admin-welcome-text:${escapeAdminHtml(welcome.textColor)};--admin-welcome-size:${Number(welcome.textSize) || 30}px;--admin-welcome-border:${Number(welcome.borderWidth ?? defaultWelcomeOverlay.borderWidth) || 0}px solid ${escapeAdminHtml(welcome.borderColor || defaultWelcomeOverlay.borderColor)};--admin-welcome-radius:${Number(welcome.borderRadius ?? defaultWelcomeOverlay.borderRadius) || 0}px;--admin-welcome-shadow:${welcome.shadowEnabled === false ? "none" : `0 28px 80px ${escapeAdminHtml(hexToRgba(welcome.shadowColor || welcome.textColor || defaultWelcomeOverlay.shadowColor, (Number(welcome.shadowOpacity) || defaultWelcomeOverlay.shadowOpacity) / 100))}`};">
+            <div class="admin-welcome-card welcome-default-preview" style="--admin-welcome-card-bg:${escapeAdminHtml(hexToRgba(welcomePalette.cardColor, (Number(welcome.cardOpacity) || defaultWelcomeOverlay.cardOpacity) / 100))};--admin-welcome-text:${escapeAdminHtml(welcomePalette.textColor)};--admin-welcome-size:${Number(welcome.textSize) || 30}px;--admin-welcome-border:${Number(welcome.borderWidth ?? defaultWelcomeOverlay.borderWidth) || 0}px solid ${escapeAdminHtml(welcomePalette.borderColor)};--admin-welcome-radius:${Number(welcome.borderRadius ?? defaultWelcomeOverlay.borderRadius) || 0}px;--admin-welcome-shadow:${welcome.shadowEnabled === false ? "none" : `0 28px 80px ${escapeAdminHtml(hexToRgba(welcomePalette.shadowColor, (Number(welcome.shadowOpacity) || defaultWelcomeOverlay.shadowOpacity) / 100))}`};">
               <span class="section-label">${escapeAdminHtml(welcome.eyebrow || "Vivid Vows")}</span>
               <p>${escapeAdminHtml(welcome.text || defaultWelcomeOverlay.text)}</p>
             </div>
             ${input("adminDefaults.welcomeOverlay.eyebrow", "상단 라벨", welcome.eyebrow || "", "text")}
-            <div class="welcome-color-grid">
-              ${input("adminDefaults.welcomeOverlay.backgroundColor", "오버레이 배경색", welcome.backgroundColor || "#eff7fa", "color")}
-              ${input("adminDefaults.welcomeOverlay.cardColor", "카드 배경색", welcome.cardColor || "#ffffff", "color")}
-              ${input("adminDefaults.welcomeOverlay.textColor", "문구 색상", welcome.textColor || "#3b6674", "color")}
-              ${input("adminDefaults.welcomeOverlay.borderColor", "테두리 색상", welcome.borderColor || defaultWelcomeOverlay.borderColor, "color")}
-              ${input("adminDefaults.welcomeOverlay.shadowColor", "그림자 색상", welcome.shadowColor || welcome.textColor || defaultWelcomeOverlay.shadowColor, "color")}
-            </div>
             ${select("adminDefaults.welcomeOverlay.shadowEnabled", "배경 그림자", String(welcome.shadowEnabled !== false), [["true", "사용"], ["false", "사용 안 함"]])}
             ${textarea("adminDefaults.welcomeOverlay.text", "타이핑 문구", welcome.text || defaultWelcomeOverlay.text, 3)}
             <div class="quick-input-grid">
@@ -630,7 +637,7 @@ function renderDefaultSettings(message = "") {
               ${rangeInput("adminDefaults.welcomeOverlay.shadowOpacity", "그림자 투명도", Number(welcome.shadowOpacity) || 24, 0, 70)}
             </div>
           </div>
-          <p class="admin-message micro-help">일반관리자가 로그인 직후 처음 보는 화면입니다. 문구와 색상은 각 컬러테마 무드에 맞춰 바꿀 수 있습니다.</p>
+          <p class="admin-message micro-help">일반관리자가 로그인 직후 처음 보는 화면입니다. 색상은 위에서 선택한 기본 컬러/영화 테마에 맞춰 자동 적용됩니다.</p>
         </fieldset>
         <fieldset><legend>청첩장페이지 진입 화면</legend>
           ${introDesignEditor(invitationData.couple?.groom || {}, invitationData.couple?.bride || {})}
@@ -668,27 +675,27 @@ function renderDefaultSettings(message = "") {
   const updateWelcomePreview = () => {
     const preview = form.querySelector(".welcome-default-preview");
     if (!preview) return;
+    const draft = JSON.parse(JSON.stringify(invitationData));
+    setNested(draft, "appearance.design.presetId", form.elements["appearance.design.presetId"]?.value || selectedPreset);
+    window.WEDDING_DESIGN?.normalize(draft);
+    const palette = themeWelcomePalette(draft);
     const nextWelcome = {
       eyebrow: form.elements["adminDefaults.welcomeOverlay.eyebrow"]?.value || defaultWelcomeOverlay.eyebrow,
       text: form.elements["adminDefaults.welcomeOverlay.text"]?.value || defaultWelcomeOverlay.text,
       textSize: form.elements["adminDefaults.welcomeOverlay.textSize"]?.value || defaultWelcomeOverlay.textSize,
-      cardColor: form.elements["adminDefaults.welcomeOverlay.cardColor"]?.value || defaultWelcomeOverlay.cardColor,
-      textColor: form.elements["adminDefaults.welcomeOverlay.textColor"]?.value || defaultWelcomeOverlay.textColor,
       cardOpacity: form.elements["adminDefaults.welcomeOverlay.cardOpacity"]?.value || defaultWelcomeOverlay.cardOpacity,
-      borderColor: form.elements["adminDefaults.welcomeOverlay.borderColor"]?.value || defaultWelcomeOverlay.borderColor,
       borderWidth: form.elements["adminDefaults.welcomeOverlay.borderWidth"]?.value ?? defaultWelcomeOverlay.borderWidth,
       borderRadius: form.elements["adminDefaults.welcomeOverlay.borderRadius"]?.value ?? defaultWelcomeOverlay.borderRadius,
       shadowEnabled: form.elements["adminDefaults.welcomeOverlay.shadowEnabled"]?.value !== "false",
-      shadowColor: form.elements["adminDefaults.welcomeOverlay.shadowColor"]?.value || defaultWelcomeOverlay.shadowColor,
       shadowOpacity: form.elements["adminDefaults.welcomeOverlay.shadowOpacity"]?.value || defaultWelcomeOverlay.shadowOpacity,
     };
-    preview.style.setProperty("--admin-welcome-card-bg", hexToRgba(nextWelcome.cardColor, Number(nextWelcome.cardOpacity) / 100));
-    preview.style.setProperty("--admin-welcome-text", nextWelcome.textColor);
+    preview.style.setProperty("--admin-welcome-card-bg", hexToRgba(palette.cardColor, Number(nextWelcome.cardOpacity) / 100));
+    preview.style.setProperty("--admin-welcome-text", palette.textColor);
     preview.style.setProperty("--admin-welcome-size", `${nextWelcome.textSize}px`);
-    preview.style.setProperty("--admin-welcome-border", `${Number(nextWelcome.borderWidth) || 0}px solid ${nextWelcome.borderColor}`);
+    preview.style.setProperty("--admin-welcome-border", `${Number(nextWelcome.borderWidth) || 0}px solid ${palette.borderColor}`);
     preview.style.setProperty("--admin-welcome-radius", `${Number(nextWelcome.borderRadius) || 0}px`);
     preview.style.setProperty("--admin-welcome-shadow", nextWelcome.shadowEnabled
-      ? `0 28px 80px ${hexToRgba(nextWelcome.shadowColor, Number(nextWelcome.shadowOpacity) / 100)}`
+      ? `0 28px 80px ${hexToRgba(palette.shadowColor, Number(nextWelcome.shadowOpacity) / 100)}`
       : "none");
     preview.querySelector(".section-label").textContent = nextWelcome.eyebrow;
     preview.querySelector("p").textContent = nextWelcome.text;
@@ -705,7 +712,7 @@ function renderDefaultSettings(message = "") {
     preview.style.setProperty("--intro-name-date-gap", `${value("nameDateGap", 10)}px`);
     preview.style.setProperty("--intro-offset-y", `${value("offsetY", 0)}px`);
     preview.querySelector("[data-intro-preview-eyebrow]").textContent = form.elements["hero.introEyebrow"].value || invitationData.hero.eyebrow || "our wedding day";
-    preview.querySelector("[data-intro-preview-name]").textContent = form.elements["hero.introName"].value || `${invitationData.couple?.groom?.name || "신랑"} · ${invitationData.couple?.bride?.name || "신부"}`;
+    preview.querySelector("[data-intro-preview-name]").textContent = form.elements["hero.introName"].value || "신랑 · 신부";
     preview.querySelector("[data-intro-preview-date]").textContent = form.elements["hero.introDate"].value || invitationData.wedding.displayDate;
   };
   form.addEventListener("input", (event) => {
@@ -716,7 +723,7 @@ function renderDefaultSettings(message = "") {
     }
   });
   form.addEventListener("change", (event) => {
-    if (event.target.name?.startsWith("adminDefaults.welcomeOverlay.")) updateWelcomePreview();
+    if (event.target.name?.startsWith("adminDefaults.welcomeOverlay.") || event.target.name === "appearance.design.presetId") updateWelcomePreview();
   });
   form.querySelector('[name="hero.introDesign.align"]')?.addEventListener("change", updateDefaultIntroPreview);
   updateDefaultIntroPreview();
@@ -843,7 +850,9 @@ function introRange(name, label, value, min, max) {
 
 function introDesignEditor(groom, bride) {
   const design = invitationData.hero.introDesign || {};
-  const introName = invitationData.hero.introName || `${groom.name} · ${bride.name}`;
+  const defaultNames = adminArea === "super" ? "신랑 · 신부" : `${groom.name} · ${bride.name}`;
+  const introName = invitationData.hero.introName || defaultNames;
+  const introNameValue = adminArea === "super" ? "" : introName;
   return `
     <div class="copy-editor-intro-preview" data-intro-design-preview>
       <small data-intro-preview-eyebrow>${escapeAdminHtml(invitationData.hero.introEyebrow || invitationData.hero.eyebrow || "our wedding day")}</small>
@@ -852,7 +861,7 @@ function introDesignEditor(groom, bride) {
     </div>
     <p class="admin-message micro-help">기본값은 신랑·신부 이름 조합입니다. 필요하면 진입화면 전용 문구로 직접 바꿀 수 있습니다.</p>
     ${input("hero.introEyebrow", "진입 화면 영문 문구", invitationData.hero.introEyebrow || invitationData.hero.eyebrow || "")}
-    ${input("hero.introName", "진입 화면 메인 문구", introName)}
+    ${input("hero.introName", "진입 화면 메인 문구", introNameValue)}
     ${input("hero.introDate", "진입 화면 날짜 문구 · 비우면 예식 일시 사용", invitationData.hero.introDate || "")}
     ${select("hero.introDesign.align", "문구 정렬", design.align || "center", [["left", "왼쪽"], ["center", "가운데"], ["right", "오른쪽"]])}
     <div class="text-layout-editor">
@@ -931,7 +940,7 @@ function imageField(name, label, value = "") {
       ${isProfile ? `<input name="${originalName}" type="hidden" value="${escapeAdminHtml(originalValue)}">` : ""}
       ${isProfile ? `<input name="${cropName}" type="hidden" value="${escapeAdminHtml(cropValue)}">` : ""}
       <div class="image-preview" data-image-preview="${name}">
-        ${value ? `<img src="${escapeAdminHtml(value)}" alt="${label} 미리보기">` : '<span>등록된 사진이 없습니다.</span>'}
+        ${value ? `<img src="${escapeAdminHtml(adminMediaUrl(value))}" alt="${label} 미리보기">` : '<span>등록된 사진이 없습니다.</span>'}
       </div>
       <div class="image-field-controls">
         <strong>${label}</strong>
@@ -950,7 +959,7 @@ function videoField(name, label, value = "") {
     <div class="image-field">
       <input name="${name}" type="hidden" value="${escapeAdminHtml(value)}">
       <div class="image-preview" data-video-preview="${name}">
-        ${value ? `<video src="${escapeAdminHtml(value)}" muted controls playsinline></video>` : '<span>등록된 영상이 없습니다.</span>'}
+        ${value ? `<video src="${escapeAdminHtml(adminMediaUrl(value))}" muted controls playsinline></video>` : '<span>등록된 영상이 없습니다.</span>'}
       </div>
       <div class="image-field-controls">
         <strong>${label}</strong>
@@ -993,7 +1002,7 @@ function heroMediaDock(hero = {}) {
   return `
     <div class="editor-hero-media-tools">
       <button class="editor-media-card ${hero.image ? "has-media" : ""}" type="button" data-tool-action="hero-image" data-tool-context="hero">
-        <span class="editor-media-thumb" data-hero-image-thumb style="${hero.image ? `background-image:url('${escapeAdminHtml(hero.image)}')` : ""}"></span>
+        <span class="editor-media-thumb" data-hero-image-thumb style="${hero.image ? `background-image:url('${escapeAdminHtml(adminMediaUrl(hero.image))}')` : ""}"></span>
         <strong>${hero.image ? "이미지 등록됨" : "이미지 업로드"}</strong>
       </button>
       <div class="editor-media-actions" data-hero-media-actions="image" hidden>
@@ -1305,7 +1314,7 @@ function galleryManagerPreview(images) {
   return photos.length
     ? photos.map((image, index) => `
       <article class="gallery-manager-item">
-        <img src="${escapeAdminHtml(image)}" alt="갤러리 ${index + 1} 미리보기">
+        <img src="${escapeAdminHtml(adminMediaUrl(image))}" alt="갤러리 ${index + 1} 미리보기">
         <div class="gallery-manager-item-actions">
           <label class="btn image-upload">변경<input type="file" accept="image/*" data-gallery-replace="${index}"></label>
           <button class="btn btn-danger" type="button" data-gallery-remove="${index}">삭제</button>
@@ -1316,8 +1325,8 @@ function galleryManagerPreview(images) {
 
 function copyEditorVisual(key) {
   if (key === "invitation") return `<div class="copy-editor-notice">${invitationData.invitation.paragraphs.map((text) => `<p>${escapeAdminHtml(text)}</p>`).join("")}</div>`;
-  if (key === "aboutUs") return `<div class="copy-editor-profile-grid">${[invitationData.couple.groom, invitationData.couple.bride].map((person) => `<img src="${escapeAdminHtml(person.photo)}" alt="">`).join("")}</div>`;
-  if (key === "gallery") return `<div class="copy-editor-gallery">${invitationData.gallery.filter(Boolean).slice(0, 4).map((photo) => `<img src="${escapeAdminHtml(photo)}" alt="">`).join("")}</div>`;
+  if (key === "aboutUs") return `<div class="copy-editor-profile-grid">${[invitationData.couple.groom, invitationData.couple.bride].map((person) => `<img src="${escapeAdminHtml(adminMediaUrl(person.photo))}" alt="">`).join("")}</div>`;
+  if (key === "gallery") return `<div class="copy-editor-gallery">${invitationData.gallery.filter(Boolean).slice(0, 4).map((photo) => `<img src="${escapeAdminHtml(adminMediaUrl(photo))}" alt="">`).join("")}</div>`;
   if (key === "location") return `<div class="copy-editor-location"><strong>${escapeAdminHtml(invitationData.wedding.venue)}</strong><span>${escapeAdminHtml(invitationData.wedding.hall || "")}</span><small>${escapeAdminHtml(invitationData.wedding.address)}</small></div>`;
   if (key === "weddingDay") return `<p class="copy-editor-date">${escapeAdminHtml(invitationData.wedding.displayDate)}</p>`;
   if (key === "information") return `<div class="copy-editor-notice">${invitationData.notices.filter((notice) => !notice.hidden).slice(0, 1).map((notice) => `<strong>${escapeAdminHtml(notice.title)}</strong><p>${escapeAdminHtml(notice.text)}</p>`).join("")}</div>`;
@@ -1831,7 +1840,7 @@ function renderEditor(message = "", focus = "") {
           <div class="quick-input-grid">
             <label class="field"><span>청첩장 공개 시작일</span><input name="publicPeriod.openDate" type="date" value="${escapeAdminHtml(publicOpenValue)}" min="${escapeAdminHtml(publicToday)}" max="${escapeAdminHtml(publicOpenMax)}"></label>
             <label class="field"><span>청첩장 공개 종료일</span><input name="publicPeriod.closeDate" type="date" value="${escapeAdminHtml(publicCloseValue)}" min="${escapeAdminHtml(publicOpenValue)}" max="${escapeAdminHtml(publicCloseMax)}"></label>
-            ${input("guestPhotos.eventDate", "하객 업로드 오픈 날짜", invitationData.guestPhotos?.eventDate || dateOnly(invitationData.wedding.date) || "2026-10-04", "date")}
+            ${input("guestPhotos.eventDate", "하객 업로드 오픈 날짜", invitationData.guestPhotos?.eventDate || dateOnly(invitationData.wedding.date) || "", "date")}
             ${select("guestPhotos.previewVisible", "하객앨범 미리보기", String(invitationData.guestPhotos?.previewVisible ?? true), [["true", "표시"], ["false", "숨김"]])}
           </div>
           <p class="admin-message micro-help">공개 종료일은 예식일 기준 이후 3일까지만 설정할 수 있습니다. 이 값들은 각 일반관리자 계정의 청첩장에만 적용됩니다.</p>
@@ -2110,7 +2119,7 @@ function bindEditor() {
     if (!galleryGrid) return;
     galleryGrid.innerHTML = images.slice(0, 6).map((image, index) => `
       <button class="gallery-item" data-gallery="${index}" aria-label="사진 ${index + 1} 크게 보기">
-        <span class="media" style="background-image:url('${escapeAdminHtml(image)}')"></span>
+        <span class="media" style="background-image:url('${escapeAdminHtml(adminMediaUrl(image))}')"></span>
       </button>`).join("");
     frameDocumentRef.querySelector("#gallery")?.classList.add("copy-editable-target");
     frameDocumentRef.querySelector("#gallery")?.setAttribute("data-edit-label", "갤러리 사진");
@@ -2175,7 +2184,7 @@ function bindEditor() {
     form.querySelectorAll('[name="hero.activeMedia"]').forEach((field) => { field.checked = field.value === active; });
     copyEditor.querySelectorAll("[data-hero-active]").forEach((button) => button.classList.toggle("is-active", button.dataset.heroActive === active));
     const imageThumb = copyEditor.querySelector("[data-hero-image-thumb]");
-    if (imageThumb) imageThumb.style.backgroundImage = image ? `url("${image.replace(/"/g, "%22")}")` : "";
+    if (imageThumb) imageThumb.style.backgroundImage = image ? `url("${adminMediaUrl(image).replace(/"/g, "%22")}")` : "";
     const videoThumb = copyEditor.querySelector("[data-hero-video-thumb]");
     if (videoThumb) videoThumb.textContent = video ? "VIDEO" : "＋";
     copyEditor.querySelector('[data-tool-action="hero-image"]')?.classList.toggle("has-media", Boolean(image));
@@ -2192,16 +2201,16 @@ function bindEditor() {
     const image = form.elements["hero.image"]?.value?.trim() || "";
     const video = form.elements["hero.video"]?.value?.trim() || "";
     const active = currentHeroActiveMedia();
-    heroMedia.style.backgroundImage = image ? `url("${image.replace(/"/g, "%22")}")` : "";
+    heroMedia.style.backgroundImage = image ? `url("${adminMediaUrl(image).replace(/"/g, "%22")}")` : "";
     heroMedia.dataset.activeMedia = active;
     heroMedia.innerHTML = active === "video" && video
-      ? `<video class="hero-video" src="${escapeAdminHtml(video)}" poster="${escapeAdminHtml(image)}" autoplay muted loop playsinline preload="metadata"></video>`
+      ? `<video class="hero-video" src="${escapeAdminHtml(adminMediaUrl(video))}" poster="${escapeAdminHtml(adminMediaUrl(image))}" autoplay muted loop playsinline preload="metadata"></video>`
       : "";
     refreshEditHandles();
   };
   const refreshFrameMedia = (target, url, type = "image") => {
     if (!frameDocumentRef) return;
-    const mediaStyleText = url ? `url("${url.replace(/"/g, "%22")}")` : "";
+    const mediaStyleText = url ? `url("${adminMediaUrl(url).replace(/"/g, "%22")}")` : "";
     if (target === "hero.image" || target === "hero.video") {
       updateHeroMediaControls();
       renderHeroFrameMedia();
@@ -3031,8 +3040,8 @@ function bindEditor() {
           if (imageActive) imageActive.checked = true;
         }
         const preview = form.querySelector(`[data-image-preview="${fileInput.dataset.imageTarget}"]`);
-        preview.innerHTML = `<img src="${escapeAdminHtml(url)}" alt="업로드한 사진 미리보기">`;
-        refreshFrameMedia(fileInput.dataset.imageTarget, url);
+        preview.innerHTML = `<img src="${escapeAdminHtml(adminMediaUrl(url))}" alt="업로드한 사진 미리보기">`;
+        refreshFrameMedia(fileInput.dataset.imageTarget, adminMediaUrl(url));
         label.firstChild.textContent = "업로드 완료";
       } catch (error) {
         label.firstChild.textContent = "업로드 실패";
@@ -3044,7 +3053,7 @@ function bindEditor() {
     button.addEventListener("click", async () => {
       const target = button.dataset.imageCropEdit;
       const originalUrl = form.elements[`${target}Original`]?.value || "";
-      const currentUrl = originalUrl || form.elements[target].value;
+      const currentUrl = adminMediaUrl(originalUrl || form.elements[target].value);
       if (!currentUrl) return;
       button.disabled = true;
       button.textContent = "불러오는 중...";
@@ -3065,8 +3074,8 @@ function bindEditor() {
         form.elements[target].value = url;
         if (!originalUrl && form.elements[`${target}Original`]) form.elements[`${target}Original`].value = currentUrl;
         if (form.elements[`${target}Crop`]) form.elements[`${target}Crop`].value = JSON.stringify(cropResult.settings);
-        form.querySelector(`[data-image-preview="${target}"]`).innerHTML = `<img src="${escapeAdminHtml(url)}" alt="업로드한 사진 미리보기">`;
-        refreshFrameMedia(target, url);
+        form.querySelector(`[data-image-preview="${target}"]`).innerHTML = `<img src="${escapeAdminHtml(adminMediaUrl(url))}" alt="업로드한 사진 미리보기">`;
+        refreshFrameMedia(target, adminMediaUrl(url));
       } catch (error) {
         alert(`대표사진 영역을 적용하지 못했습니다.\n${error.message || "잠시 후 다시 시도해 주세요."}`);
       } finally {
@@ -3088,8 +3097,8 @@ function bindEditor() {
           const videoActive = form.querySelector('[name="hero.activeMedia"][value="video"]');
           if (videoActive) videoActive.checked = true;
         }
-        form.querySelector(`[data-video-preview="${fileInput.dataset.videoTarget}"]`).innerHTML = `<video src="${escapeAdminHtml(url)}" muted controls playsinline></video>`;
-        refreshFrameMedia(fileInput.dataset.videoTarget, url, "video");
+        form.querySelector(`[data-video-preview="${fileInput.dataset.videoTarget}"]`).innerHTML = `<video src="${escapeAdminHtml(adminMediaUrl(url))}" muted controls playsinline></video>`;
+        refreshFrameMedia(fileInput.dataset.videoTarget, adminMediaUrl(url), "video");
         label.firstChild.textContent = "업로드 완료";
       } catch (error) {
         label.firstChild.textContent = "업로드 실패";
@@ -3233,6 +3242,7 @@ function showAdminWelcomeOverlay(force = false) {
   if (!force && sessionStorage.getItem(key)) return;
   sessionStorage.setItem(key, "1");
   const settings = { ...defaultWelcomeOverlay, ...(invitationData.adminDefaults?.welcomeOverlay || {}) };
+  const palette = themeWelcomePalette(invitationData);
   const overlay = document.createElement("div");
   overlay.className = "admin-welcome-intro";
   overlay.innerHTML = `
@@ -3243,15 +3253,15 @@ function showAdminWelcomeOverlay(force = false) {
   const opacity = Math.max(0, Math.min(1, Number(settings.overlayOpacity ?? defaultWelcomeOverlay.overlayOpacity) / 100));
   const shadowOpacity = Math.max(0, Math.min(0.7, Number(settings.shadowOpacity ?? defaultWelcomeOverlay.shadowOpacity) / 100));
   const shadowEnabled = settings.shadowEnabled !== false;
-  const shadowColor = settings.shadowColor || settings.textColor || defaultWelcomeOverlay.shadowColor;
+  const shadowColor = palette.shadowColor;
   const shadowLayer = shadowEnabled
     ? `radial-gradient(circle at 50% 25%, ${hexToRgba(shadowColor, shadowOpacity)}, transparent 42%)`
     : "linear-gradient(transparent, transparent)";
-  overlay.style.background = `${shadowLayer}, ${hexToRgba(settings.backgroundColor || defaultWelcomeOverlay.backgroundColor, opacity)}`;
-  overlay.style.setProperty("--admin-welcome-card-bg", hexToRgba(settings.cardColor || defaultWelcomeOverlay.cardColor, Math.max(0, Math.min(1, Number(settings.cardOpacity ?? defaultWelcomeOverlay.cardOpacity) / 100))));
-  overlay.style.setProperty("--admin-welcome-text", settings.textColor || defaultWelcomeOverlay.textColor);
+  overlay.style.background = `${shadowLayer}, ${hexToRgba(palette.backgroundColor, opacity)}`;
+  overlay.style.setProperty("--admin-welcome-card-bg", hexToRgba(palette.cardColor, Math.max(0, Math.min(1, Number(settings.cardOpacity ?? defaultWelcomeOverlay.cardOpacity) / 100))));
+  overlay.style.setProperty("--admin-welcome-text", palette.textColor);
   overlay.style.setProperty("--admin-welcome-size", `${Number(settings.textSize) || 30}px`);
-  overlay.style.setProperty("--admin-welcome-border", `${Number(settings.borderWidth ?? defaultWelcomeOverlay.borderWidth) || 0}px solid ${settings.borderColor || defaultWelcomeOverlay.borderColor}`);
+  overlay.style.setProperty("--admin-welcome-border", `${Number(settings.borderWidth ?? defaultWelcomeOverlay.borderWidth) || 0}px solid ${palette.borderColor}`);
   overlay.style.setProperty("--admin-welcome-radius", `${Number(settings.borderRadius ?? defaultWelcomeOverlay.borderRadius) || 0}px`);
   overlay.style.setProperty("--admin-welcome-shadow", shadowEnabled
     ? `0 28px 80px ${hexToRgba(shadowColor, shadowOpacity)}`

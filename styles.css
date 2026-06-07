@@ -2085,8 +2085,6 @@ input[type="range"]::-moz-range-track {
 .admin-page input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
 .admin-page input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 2px; }
 .admin-page input[type="color"]::-moz-color-swatch { border: 0; border-radius: 2px; }
-.welcome-color-grid .field { min-width: 0; }
-
 .content-settings-card.is-gallery-modal {
   border: 2px solid color-mix(in srgb, var(--accent-dark) 48%, var(--line)) !important;
   outline: 1px solid color-mix(in srgb, var(--card) 88%, var(--accent-dark)) !important;
@@ -2246,7 +2244,6 @@ input[type="range"]::-moz-range-track {
 }
 .admin-welcome-card .section-label { color: var(--admin-welcome-text, var(--accent-dark)); }
 .welcome-default-editor { display: grid; gap: 12px; }
-.welcome-color-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
 .welcome-default-preview { min-height: 170px; margin: 0 auto; transform: none; }
 .welcome-default-preview p { font-size: var(--admin-welcome-size, 30px); }
 

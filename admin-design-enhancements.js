@@ -33,7 +33,7 @@ function textThemeSample(item = {}) {
 }
 
 function frameEditorSample(item = {}) {
-  const source = item.url || item.previewUrl || "";
+  const source = window.adminMediaUrl?.(item.url || item.previewUrl) || item.url || item.previewUrl || "";
   const opacity = Math.max(0.1, Math.min(1, Number(item.opacity) || 1));
   const blendMode = ["normal", "screen", "multiply", "overlay", "soft-light"].includes(item.blendMode) ? item.blendMode : "normal";
   const xPercent = Math.max(0, Math.min(100, Number(item.xPercent) || 50));
@@ -80,7 +80,7 @@ function aiVisualPreview(result) {
 }
 
 function assetPreview(type, item = {}) {
-  const previewUrl = item.url || item.previewUrl;
+  const previewUrl = window.adminMediaUrl?.(item.url || item.previewUrl) || item.url || item.previewUrl;
   if (type === "frame" && previewUrl) return `<div class="asset-source-preview asset-frame-preview">${frameEditorSample(item)}</div>`;
   if (previewUrl) return `<div class="asset-source-preview asset-source-image ${type === "background" ? "is-background" : ""}"><img src="${escapeAdminHtml(previewUrl)}" alt="${escapeAdminHtml(item.name || "디자인 소스")} 미리보기"></div>`;
   if (type === "frame") return `<div class="asset-source-preview"><span class="hero-decoration-preview" data-decoration-preview="${escapeAdminHtml(item.heroDecoration || item.id || "none")}"><i></i></span></div>`;
@@ -318,7 +318,11 @@ function bindAssetModal(type, assetId = "") {
     const methods = { frame: "generateFrameDecoration", textTheme: "generateHeroTextTheme", sectionIcon: "generateSectionIcon", background: "generateBackgroundDecoration", font: "generateHeroTextTheme" };
     const instruction = document.querySelector("[data-asset-ai-instruction]").value;
     document.querySelector("[data-asset-ai-chat]").insertAdjacentHTML("beforeend", `<p>사용자: ${escapeAdminHtml(instruction)}</p><p>AI: 요청에 맞는 미리보기를 만들었습니다.</p>`);
-    renderAssetModalAIResult(type, await AI_DESIGN_SERVICE[methods[type]]({ instruction, settings: invitationData.designSystem.aiSettings, fonts: designData().designSystem.assets.fonts || [] }));
+    try {
+      renderAssetModalAIResult(type, await AI_DESIGN_SERVICE[methods[type]]({ instruction, settings: invitationData.designSystem.aiSettings, fonts: designData().designSystem.assets.fonts || [] }));
+    } catch (error) {
+      document.querySelector("[data-asset-ai-results]").innerHTML = `<article class="ai-result-card"><strong>AI 결과 생성 실패</strong><p class="admin-message">${escapeAdminHtml(error.message || "AI 설정을 확인해 주세요.")}</p></article>`;
+    }
   });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();

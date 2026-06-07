@@ -210,6 +210,11 @@ async function callGemini(prompt, responseSchema) {
 }
 
 module.exports = async function aiDesign(request, response) {
+  response.setHeader("Access-Control-Allow-Origin", request.headers.origin || "*");
+  response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  response.setHeader("Vary", "Origin");
+  if (request.method === "OPTIONS") return response.status(204).end();
   if (!await registeredAdmin(request)) return response.status(401).json({ error: "등록된 관리자 로그인 후 이용해 주세요." });
   const provider = request.method === "POST" ? request.body?.provider || "OpenAI" : request.query?.provider || "OpenAI";
   if (request.method === "GET") {

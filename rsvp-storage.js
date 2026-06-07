@@ -70,6 +70,10 @@ function fallbackSlug(seed = "") {
   return normalizeSlug(seed) || `card-${Date.now().toString(36)}`;
 }
 
+function dateOnly(value = "") {
+  return String(value || "").slice(0, 10);
+}
+
 function getUrlInvitationSlug() {
   const params = new URLSearchParams(location.search);
   return normalizeSlug(params.get("card") || params.get("invitation") || "");
@@ -88,9 +92,28 @@ function invitationLocalKey(slug = getActiveInvitationSlug()) {
   return slug && slug !== DEFAULT_INVITATION_ID ? `${INVITATION_LOCAL_KEY}:${slug}` : INVITATION_LOCAL_KEY;
 }
 
+const isStoragePath = (value = "") => /^invitations\/[^/]+\//.test(String(value || ""));
+
+function mediaPublicUrl(path = "") {
+  const value = String(path || "");
+  if (!isStoragePath(value)) return value;
+  const client = getSupabaseClient();
+  return client ? client.storage.from("invitation-media").getPublicUrl(value).data.publicUrl : "";
+}
+
+function mediaRoleFromSlot(slot = "") {
+  const value = String(slot || "");
+  if (value === "hero-image") return { folder: "hero", filename: "hero.webp" };
+  if (value === "ending-image") return { folder: "ending", filename: "ending.webp" };
+  if (value === "meta-shareImage") return { folder: "share", filename: "og-image.webp" };
+  const gallery = value.match(/^gallery-(\d+)$/);
+  if (gallery) return { folder: "gallery", filename: `${String(gallery[1]).padStart(3, "0")}.webp` };
+  return { folder: "design-assets", filename: `${value || "image"}-${Date.now()}.webp` };
+}
+
 function emptyMediaInvitation(fallback, { slug = "", groomName = "", brideName = "", groomBirthday = "", brideBirthday = "", weddingDate = "", weddingVenue = "", weddingHall = "", publicOpenDate = "", publicCloseDate = "" } = {}) {
   const next = normalizeInvitationData(fallback, JSON.parse(JSON.stringify(fallback)));
-  next.hero = { ...(next.hero || {}), image: "", video: "", activeMedia: "image" };
+  next.hero = { ...(next.hero || {}), image: "", video: "", activeMedia: "image", introName: [groomName, brideName].filter(Boolean).join(" · "), introDate: "" };
   next.couple = {
     ...(next.couple || {}),
     groom: { ...(next.couple?.groom || {}), name: groomName || "", birthday: groomBirthday || "", parents: "", phone: "", photo: "", tags: [] },
@@ -108,7 +131,7 @@ function emptyMediaInvitation(fallback, { slug = "", groomName = "", brideName =
   next.gallery = Array.from({ length: 30 }, () => "");
   next.ending = { ...(next.ending || {}), image: "" };
   next.meta = { ...(next.meta || {}), shareImage: "" };
-  next.guestPhotos = { ...(next.guestPhotos || {}), uploadSlug: slug || next.guestPhotos?.uploadSlug || "wedding-day" };
+  next.guestPhotos = { ...(next.guestPhotos || {}), eventDate: dateOnly(weddingDate), uploadSlug: slug || next.guestPhotos?.uploadSlug || "wedding-day" };
   next.publicPeriod = { ...(next.publicPeriod || {}), openDate: publicOpenDate || "", closeDate: publicCloseDate || "" };
   const normalized = window.WEDDING_DESIGN.normalize(next);
   normalized.accounts = [];
@@ -361,7 +384,7 @@ async function listInvitationSites() {
     const content = contentBySlug.get(site.slug) || {};
     const guestSlug = content.guestPhotos?.uploadSlug || site.slug || "wedding-day";
     const [invitationFiles, guestFiles] = await Promise.all([
-      listStorageFolder(client, "invitation-media", site.slug).catch(() => []),
+      listStorageFolder(client, "invitation-media", `invitations/${site.slug}`).catch(() => []),
       listStorageFolder(client, "guest-photos", guestSlug).catch(() => []),
     ]);
     const invitationBytes = storageBytes(invitationFiles);
@@ -413,7 +436,7 @@ async function removeInvitationSite(slug) {
     .maybeSingle();
   const guestSlug = setting?.content?.guestPhotos?.uploadSlug || slug;
   const [invitationFiles, guestFiles] = await Promise.all([
-    listStorageFolder(client, "invitation-media", slug).catch(() => []),
+    listStorageFolder(client, "invitation-media", `invitations/${slug}`).catch(() => []),
     listStorageFolder(client, "guest-photos", guestSlug).catch(() => []),
   ]);
   const invitationPaths = invitationFiles.map((file) => file.path);
@@ -427,25 +450,24 @@ async function removeInvitationSite(slug) {
 }
 
 async function optimizeInvitationImage(file) {
-  if (!file.type.startsWith("image/") || file.type === "image/gif" || file.type === "image/svg+xml") return file;
-  if (!("createImageBitmap" in window)) return file;
+  if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+    throw new Error("JPG, PNG, WEBP 이미지만 업로드할 수 있습니다.");
+  }
+  if (!("createImageBitmap" in window)) throw new Error("이 브라우저에서는 이미지 최적화를 지원하지 않습니다.");
   try {
     const bitmap = await createImageBitmap(file);
-    const maxDimension = 1600;
+    const maxDimension = 1200;
     const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
-    if (scale === 1 && file.size <= 2 * 1024 * 1024) {
-      bitmap.close();
-      return file;
-    }
     const canvas = document.createElement("canvas");
     canvas.width = Math.max(1, Math.round(bitmap.width * scale));
     canvas.height = Math.max(1, Math.round(bitmap.height * scale));
     canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close();
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.82));
-    return blob || file;
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", 0.78));
+    if (!blob) throw new Error("이미지를 WebP로 변환하지 못했습니다.");
+    return blob;
   } catch {
-    return file;
+    throw new Error("이미지를 최적화하지 못했습니다. JPG, PNG, WEBP 이미지를 다시 선택해 주세요.");
   }
 }
 
@@ -463,13 +485,13 @@ async function uploadInvitationImage(file, slot) {
       reader.readAsDataURL(optimized);
     });
   }
-  const extension = optimized.type === "image/webp" ? "webp" : file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const path = `${getActiveInvitationSlug()}/${slot}/${Date.now()}-${crypto.randomUUID?.() || "image"}.${extension}`;
+  const role = mediaRoleFromSlot(slot);
+  const path = `invitations/${getActiveInvitationSlug()}/${role.folder}/${role.filename}`;
   const { error } = await client.storage
     .from("invitation-media")
-    .upload(path, optimized, { cacheControl: "31536000", contentType: optimized.type || file.type });
+    .upload(path, optimized, { cacheControl: "31536000", contentType: "image/webp", upsert: true });
   if (error) throw error;
-  return client.storage.from("invitation-media").getPublicUrl(path).data.publicUrl;
+  return path;
 }
 
 async function uploadInvitationMedia(file, slot) {
@@ -480,15 +502,15 @@ async function uploadInvitationMedia(file, slot) {
     throw new Error("50MB 이하 MP4, WebM 또는 MOV 영상만 업로드할 수 있습니다.");
   }
   const extension = file.type === "video/webm" ? "webm" : file.type === "video/quicktime" ? "mov" : "mp4";
-  const path = `${getActiveInvitationSlug()}/${slot}/${Date.now()}-${crypto.randomUUID?.() || "video"}.${extension}`;
-  const { error } = await client.storage.from("invitation-media").upload(path, file, { cacheControl: "31536000", contentType: file.type });
+  const path = `invitations/${getActiveInvitationSlug()}/hero/hero-video.${extension}`;
+  const { error } = await client.storage.from("invitation-media").upload(path, file, { cacheControl: "31536000", contentType: file.type, upsert: true });
   if (error) {
     if (/mime type|not supported/i.test(error.message || "")) {
       throw new Error("영상 MIME 정책이 적용되지 않았습니다. Supabase SQL Editor에서 supabase-guest-photo-policy-fix.sql을 다시 실행해 주세요.");
     }
     throw error;
   }
-  return client.storage.from("invitation-media").getPublicUrl(path).data.publicUrl;
+  return path;
 }
 
 async function uploadDesignAsset(file, slot = "asset") {
@@ -504,10 +526,11 @@ async function uploadDesignAsset(file, slot = "asset") {
     throw new Error("SVG는 300KB 이하, PNG/WebP/JPG는 2MB 이하, 폰트는 4MB 이하만 등록할 수 있습니다.");
   }
   const extension = file.name.split(".").pop()?.toLowerCase() || "png";
-  const path = `design-assets/${slot}/${Date.now()}-${crypto.randomUUID?.() || "asset"}.${extension}`;
-  const { error } = await client.storage.from("invitation-media").upload(path, file, { cacheControl: "3600", contentType });
+  const filename = `${slot}-${Date.now()}-${crypto.randomUUID?.() || "asset"}.${extension}`.replace(/[^a-z0-9가-힣._-]/gi, "-");
+  const path = `invitations/${getActiveInvitationSlug()}/design-assets/${filename}`;
+  const { error } = await client.storage.from("invitation-media").upload(path, file, { cacheControl: "3600", contentType, upsert: true });
   if (error) throw error;
-  return client.storage.from("invitation-media").getPublicUrl(path).data.publicUrl;
+  return path;
 }
 
 async function uploadGuestPhotos(files, onProgress = () => {}) {
@@ -612,6 +635,7 @@ async function removeGuestPhoto(path) {
 
 window.RSVP_STORAGE = {
   getSupabaseClient,
+  mediaPublicUrl,
   getActiveInvitationSlug,
   setActiveInvitationSlug,
   getCurrentInvitationSite,

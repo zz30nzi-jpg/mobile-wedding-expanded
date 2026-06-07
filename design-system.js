@@ -43,6 +43,7 @@
   const mergeUnique = (defaults, saved = []) => [...defaults.map((item) => ({ ...item, ...(saved.find((savedItem) => savedItem.id === item.id) || {}) })), ...saved.filter((item) => !defaults.some((fallback) => fallback.id === item.id))];
   const themePresetId = (appearance = {}) => appearance.movieConcept && appearance.movieConcept !== "none" ? appearance.movieConcept : (appearance.theme || "sky");
   const cssString = (value) => String(value || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  const mediaUrl = (value = "") => window.RSVP_STORAGE?.mediaPublicUrl?.(value) || value || "";
 
   function ensureFontFace(font = {}) {
     if (!font.url || !font.family || !document?.head) return;
@@ -52,7 +53,7 @@
     const format = extension === "woff2" ? "woff2" : extension === "woff" ? "woff" : extension === "otf" ? "opentype" : "truetype";
     const style = document.createElement("style");
     style.id = id;
-    style.textContent = `@font-face{font-family:"${cssString(font.family)}";src:url("${cssString(font.url)}") format("${format}");font-display:swap;}`;
+    style.textContent = `@font-face{font-family:"${cssString(font.family)}";src:url("${cssString(mediaUrl(font.url))}") format("${format}");font-display:swap;}`;
     document.head.appendChild(style);
   }
 
@@ -106,7 +107,7 @@
     data.hero ||= {};
     data.hero.activeMedia = data.hero.activeMedia === "video" && data.hero.video ? "video" : "image";
     data.guestPhotos = {
-      eventDate: "2026-10-04",
+      eventDate: data.wedding?.date || "",
       previewVisible: true,
       uploadSlug: "wedding-day",
       manageDescription: "이 휴대폰에서 보낸 사진과 영상을 확인하거나 삭제할 수 있습니다.",
@@ -212,9 +213,9 @@
     root.classList?.toggle("has-custom-background-decoration", Boolean(resolved.backgroundDecoration));
     const vars = { background: ["--paper", "--body-bg"], card: ["--card"], ink: ["--ink"], muted: ["--muted"], accent: ["--accent", "--accent-dark"], line: ["--line"] };
     Object.entries(vars).forEach(([key, cssVars]) => appliedPalette[key] && cssVars.forEach((cssVar) => root.style.setProperty(cssVar, appliedPalette[key])));
-    root.style.setProperty("--design-background-decoration", resolved.backgroundDecoration ? `url("${resolved.backgroundDecoration}")` : "none");
-    root.style.setProperty("--design-section-icon", resolved.sectionIcon ? `url("${resolved.sectionIcon}")` : "var(--section-divider)");
-    root.style.setProperty("--custom-hero-decoration", resolved.heroDecorationAsset?.url ? `url("${resolved.heroDecorationAsset.url}")` : "none");
+    root.style.setProperty("--design-background-decoration", resolved.backgroundDecoration ? `url("${mediaUrl(resolved.backgroundDecoration)}")` : "none");
+    root.style.setProperty("--design-section-icon", resolved.sectionIcon ? `url("${mediaUrl(resolved.sectionIcon)}")` : "var(--section-divider)");
+    root.style.setProperty("--custom-hero-decoration", resolved.heroDecorationAsset?.url ? `url("${mediaUrl(resolved.heroDecorationAsset.url)}")` : "none");
     root.style.setProperty("--custom-decoration-opacity", String(resolved.heroDecorationAsset?.opacity ?? 1));
     root.style.setProperty("--custom-decoration-blend-mode", resolved.heroDecorationAsset?.blendMode || "normal");
     root.style.setProperty("--custom-decoration-position", `${resolved.heroDecorationAsset?.xPercent ?? 50}% ${resolved.heroDecorationAsset?.yPercent ?? 50}%`);

@@ -5,11 +5,12 @@ const modalRoot = document.querySelector("#modal-root");
 const escapeHtml = (value = "") =>
   String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
 const escapeLineHtml = (value = "") => escapeHtml(value).replace(/\n/g, "<br>");
-const mediaStyle = (src) => src ? `style="background-image:url('${escapeHtml(src)}')"` : "";
-const lazyMediaStyle = (src) => src ? `data-lazy-background="${escapeHtml(src)}"` : "";
+const mediaUrl = (src = "") => window.RSVP_STORAGE?.mediaPublicUrl?.(src) || src || "";
+const mediaStyle = (src) => mediaUrl(src) ? `style="background-image:url('${escapeHtml(mediaUrl(src))}')"` : "";
+const lazyMediaStyle = (src) => mediaUrl(src) ? `data-lazy-background="${escapeHtml(mediaUrl(src))}"` : "";
 const heroActiveMedia = () => data.hero.activeMedia === "video" && data.hero.video ? "video" : "image";
 const heroMediaMarkup = () => heroActiveMedia() === "video"
-  ? `<video class="hero-video" src="${escapeHtml(data.hero.video)}" poster="${escapeHtml(data.hero.image)}" autoplay muted loop playsinline preload="metadata" onerror="this.hidden=true"></video>`
+  ? `<video class="hero-video" src="${escapeHtml(mediaUrl(data.hero.video))}" poster="${escapeHtml(mediaUrl(data.hero.image))}" autoplay muted loop playsinline preload="metadata" onerror="this.hidden=true"></video>`
   : "";
 const tel = (number) => `tel:${String(number).replace(/[^0-9+]/g, "")}`;
 const isVideoMedia = (value = "") => /\.(mp4|webm|mov)(?:$|[?#])/i.test(value);
@@ -79,7 +80,7 @@ function updateSocialMeta() {
   setMetaProperty("og:title", data.meta.title);
   setMetaProperty("og:description", description);
   setMetaProperty("og:url", location.href);
-  setMetaProperty("og:image", data.meta.shareImage || data.hero.image);
+  setMetaProperty("og:image", mediaUrl(data.meta.shareImage || data.hero.image));
 }
 
 function sectionHeader(label, title) {
@@ -496,7 +497,7 @@ function shareWithKakaoTalk() {
   const configuredShareUrl = window.KAKAO_SHARE_CONFIG?.shareBaseUrl?.trim();
   const shareUrl = configuredShareUrl || `${location.origin}/`;
   const locationUrl = `${shareUrl.replace(/\/$/, "")}/#location`;
-  const imageUrl = data.meta.shareImage || data.hero.image;
+  const imageUrl = mediaUrl(data.meta.shareImage || data.hero.image);
 
   if (!imageUrl) {
     throw new Error("카카오톡 공유용 이미지 또는 메인 사진을 먼저 등록해 주세요.");
@@ -710,7 +711,7 @@ function gallerySlider(index = 0) {
       <div class="gallery-slide">
         <button class="gallery-nav gallery-prev" type="button" data-gallery-move="-1" aria-label="이전 사진">‹</button>
         <div class="gallery-slide-photo ${data.galleryDisplayMode === "original" ? "is-original" : "is-portrait"}">
-          <img src="${escapeHtml(images[safeIndex])}" alt="갤러리 사진 ${safeIndex + 1}" data-gallery-image decoding="async">
+          <img src="${escapeHtml(mediaUrl(images[safeIndex]))}" alt="갤러리 사진 ${safeIndex + 1}" data-gallery-image decoding="async">
         </div>
         <button class="gallery-nav gallery-next" type="button" data-gallery-move="1" aria-label="다음 사진">›</button>
       </div>
@@ -726,7 +727,7 @@ function openGallerySlider(index = 0) {
     const images = galleryImages();
     [-1, 1].forEach((step) => {
       const image = new Image();
-      image.src = images[(activeIndex + step + images.length) % images.length];
+      image.src = mediaUrl(images[(activeIndex + step + images.length) % images.length]);
     });
   };
   const move = (step) => {
@@ -738,7 +739,7 @@ function openGallerySlider(index = 0) {
     slider.dataset.galleryIndex = String(next);
     image.classList.add("is-loading");
     image.onload = () => image.classList.remove("is-loading");
-    image.src = images[next];
+    image.src = mediaUrl(images[next]);
     image.alt = `갤러리 사진 ${next + 1}`;
     page.textContent = `${next + 1} / ${images.length}`;
     preloadAround(next);

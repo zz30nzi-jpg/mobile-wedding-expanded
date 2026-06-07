@@ -231,11 +231,46 @@ create policy "registered admins can upload invitation images"
 on storage.objects for insert
 to authenticated
 with check (
-  bucket_id = 'invitation-media' and exists (
-    select 1 from public.rsvp_admins where user_id = (select auth.uid())
-  ) or (
-    bucket_id = 'invitation-media' and exists (
-      select 1 from public.invitation_sites where owner_id = (select auth.uid())
+  bucket_id = 'invitation-media' and (
+    exists (
+      select 1 from public.rsvp_admins where user_id = (select auth.uid())
+    )
+    or exists (
+      select 1 from public.invitation_sites
+      where owner_id = (select auth.uid())
+      and (storage.foldername(name))[1] = 'invitations'
+      and slug = (storage.foldername(name))[2]
+    )
+  )
+);
+
+drop policy if exists "registered admins can update invitation media" on storage.objects;
+create policy "registered admins can update invitation media"
+on storage.objects for update
+to authenticated
+using (
+  bucket_id = 'invitation-media' and (
+    exists (
+      select 1 from public.rsvp_admins where user_id = (select auth.uid())
+    )
+    or exists (
+      select 1 from public.invitation_sites
+      where owner_id = (select auth.uid())
+      and (storage.foldername(name))[1] = 'invitations'
+      and slug = (storage.foldername(name))[2]
+    )
+  )
+)
+with check (
+  bucket_id = 'invitation-media' and (
+    exists (
+      select 1 from public.rsvp_admins where user_id = (select auth.uid())
+    )
+    or exists (
+      select 1 from public.invitation_sites
+      where owner_id = (select auth.uid())
+      and (storage.foldername(name))[1] = 'invitations'
+      and slug = (storage.foldername(name))[2]
     )
   )
 );
@@ -250,7 +285,24 @@ using (
     or exists (
       select 1 from public.invitation_sites
       where owner_id = (select auth.uid())
-      and slug = (storage.foldername(name))[1]
+      and (storage.foldername(name))[1] = 'invitations'
+      and slug = (storage.foldername(name))[2]
+    )
+  )
+);
+
+drop policy if exists "registered admins can delete invitation media" on storage.objects;
+create policy "registered admins can delete invitation media"
+on storage.objects for delete
+to authenticated
+using (
+  bucket_id = 'invitation-media' and (
+    exists (select 1 from public.rsvp_admins where user_id = (select auth.uid()))
+    or exists (
+      select 1 from public.invitation_sites
+      where owner_id = (select auth.uid())
+      and (storage.foldername(name))[1] = 'invitations'
+      and slug = (storage.foldername(name))[2]
     )
   )
 );

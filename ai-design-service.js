@@ -6,6 +6,17 @@
   ];
   const choose = (items, seed = "") => items[Math.abs([...seed].reduce((sum, char) => sum + char.charCodeAt(0), Date.now())) % items.length];
   const settings = (context = {}) => ({ ...(window.WEDDING_AI_SETTINGS?.() || {}), ...(context.settings || {}) });
+  const normalizeEndpoint = (endpoint = "") => {
+    const value = String(endpoint || "").trim();
+    if (!value || value === "undefined" || value === "null") return "/api/ai-design";
+    if (/^https?:\/\/localhost(?::\d+)?\/api\/ai-design/i.test(value)) return "/api/ai-design";
+    if (/^https?:\/\/127\.0\.0\.1(?::\d+)?\/api\/ai-design/i.test(value)) return "/api/ai-design";
+    try {
+      const url = new URL(value, window.location.origin);
+      if (url.origin === window.location.origin) return `${url.pathname}${url.search}`;
+    } catch {}
+    return value;
+  };
   const authHeaders = async () => {
     const client = window.RSVP_STORAGE?.getSupabaseClient?.();
     const { data } = client ? await client.auth.getSession() : { data: {} };
@@ -15,11 +26,17 @@
     const current = settings(context);
     if (current.mockMode !== false) return mock();
     const promptSettings = { prompts: current.prompts || {}, referenceImages: current.referenceImages || "" };
-    const response = await fetch(current.endpoint || "/api/ai-design", {
-      method: "POST", headers: { "Content-Type": "application/json", ...(await authHeaders()) },
-      body: JSON.stringify({ type, provider: current.provider || "OpenAI", context: { ...context, settings: promptSettings } }),
-    });
-    const payload = await response.json();
+    const endpoint = normalizeEndpoint(current.endpoint);
+    let response;
+    try {
+      response = await fetch(endpoint, {
+        method: "POST", headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+        body: JSON.stringify({ type, provider: current.provider || "OpenAI", context: { ...context, settings: promptSettings } }),
+      });
+    } catch (error) {
+      throw new Error(`AI 서버에 연결하지 못했습니다. AI 설정의 엔드포인트를 /api/ai-design 로 저장하고 Vercel 배포 상태를 확인해 주세요. (${error.message || "Failed to fetch"})`);
+    }
+    const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || "AI 서버 호출에 실패했습니다.");
     return { ...payload, id: payload.id || `ai-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, type, createdAt: payload.createdAt || new Date().toISOString() };
   };
@@ -67,10 +84,17 @@
   };
   const testAIConnection = async (settings = {}) => {
     if (settings.mockMode !== false) return { ok: Boolean(settings.enabled), mockMode: true, message: "Mock Mode 연결이 정상입니다." };
-    const separator = (settings.endpoint || "/api/ai-design").includes("?") ? "&" : "?";
-    const response = await fetch(`${settings.endpoint || "/api/ai-design"}${separator}provider=${encodeURIComponent(settings.provider || "OpenAI")}`, { headers: await authHeaders() });
-    const payload = await response.json();
-    return { ok: response.ok && payload.configured, mockMode: false, message: response.ok && payload.configured ? "OpenAI 서버 연결이 정상입니다." : (payload.error || "서버 환경변수를 확인해 주세요.") };
+    const endpoint = normalizeEndpoint(settings.endpoint);
+    const separator = endpoint.includes("?") ? "&" : "?";
+    let response;
+    try {
+      response = await fetch(`${endpoint}${separator}provider=${encodeURIComponent(settings.provider || "OpenAI")}`, { headers: await authHeaders() });
+    } catch (error) {
+      return { ok: false, mockMode: false, message: `AI 서버에 연결하지 못했습니다. 엔드포인트는 /api/ai-design 로 저장해 주세요. (${error.message || "Failed to fetch"})` };
+    }
+    const payload = await response.json().catch(() => ({}));
+    const providerName = settings.provider === "Gemini" ? "Gemini" : "OpenAI";
+    return { ok: response.ok && payload.configured, mockMode: false, message: response.ok && payload.configured ? `${providerName} 서버 연결이 정상입니다.` : (payload.error || "서버 환경변수를 확인해 주세요.") };
   };
   window.AI_DESIGN_SERVICE = { recommendColorPalette, recommendMovieTheme, generateFrameDecoration, generateHeroTextTheme, generateSectionIcon, generateBackgroundDecoration, generateTransportGuide, generateVenueGuide, regenerateAIResult, testAIConnection };
 })();
