@@ -182,6 +182,7 @@ function adminHeader(active) {
       <button class="btn ${active === "themes" ? "btn-primary" : ""}" data-admin-view="themes">테마 생성 및 수정</button>
       <button class="btn ${active === "assets" ? "btn-primary" : ""}" data-admin-view="assets">디자인 요소 생성</button>
       <button class="btn ${active === "defaults" ? "btn-primary" : ""}" data-admin-view="defaults">기본값 설정</button>
+      <button class="btn ${active === "fonts" ? "btn-primary" : ""}" data-admin-view="fonts">폰트 목록</button>
       <button class="btn ${active === "general-admins" ? "btn-primary" : ""}" data-admin-view="general-admins">일반관리자 관리</button>
       <button class="btn ${active === "ai-settings" ? "btn-primary" : ""}" data-admin-view="ai-settings">AI 설정</button>
       <button class="btn ${active === "ai-library" ? "btn-primary" : ""}" data-admin-view="ai-library">AI 생성물 라이브러리</button>
@@ -259,7 +260,7 @@ function rememberAdminView(view) {
 
 function renderAdminView(view = "") {
   if (adminArea === "super") {
-    const superViews = new Set(["themes", "assets", "defaults", "general-admins", "ai-settings", "ai-library"]);
+    const superViews = new Set(["themes", "assets", "defaults", "fonts", "general-admins", "ai-settings", "ai-library"]);
     rememberAdminView(superViews.has(view) ? view : "themes");
   } else {
     const generalViews = new Set(["editor", "copy-editor", "sections", "share-settings", "content", "gallery", "responses", "photos", "guestbook"]);
@@ -276,6 +277,7 @@ function renderAdminView(view = "") {
   else if (view === "themes") renderThemeManager();
   else if (view === "assets") renderDesignAssets();
   else if (view === "defaults") renderDefaultSettings();
+  else if (view === "fonts") (typeof renderFontManager === "function" ? renderFontManager() : renderDesignAssets("", "font"));
   else if (view === "general-admins") renderGeneralAdmins();
   else if (view === "ai-settings") renderAISettings();
   else if (view === "ai-library") renderAILibrary();
@@ -558,6 +560,8 @@ function renderDefaultSettings(message = "") {
   const selectedPreset = editorPresetValue(invitationData.appearance || {});
   const selectedTextTheme = invitationData.appearance?.design?.heroTextTheme || "auto";
   const selectedDecoration = invitationData.appearance?.design?.heroDecoration || "inherit";
+  const fontDefaults = system.fontDefaults || {};
+  const fontOptions = (system.assets?.fonts || []).filter((font) => font.enabled !== false).map((font) => [font.id, font.name || font.family || font.id]);
   const welcome = { ...defaultWelcomeOverlay, ...(invitationData.adminDefaults?.welcomeOverlay || {}) };
   const welcomePalette = themeWelcomePalette(invitationData);
   const heroFieldOptions = [
@@ -618,6 +622,16 @@ function renderDefaultSettings(message = "") {
             ${select("appearance.design.heroDateEnabled", "예식날짜 표시", String(invitationData.appearance?.design?.heroDateEnabled !== false), [["true", "표시"], ["false", "숨김"]])}
           </div>
           <p class="admin-message micro-help">새 일반관리자가 처음 가입했을 때 적용될 기본 디자인 구성입니다. 이후 각 커플은 자기 관리자페이지에서 따로 수정할 수 있습니다.</p>
+        </fieldset>
+        <fieldset><legend>영역별 폰트 기본값</legend>
+          <div class="quick-input-grid">
+            ${select("designSystem.fontDefaults.englishTitle", "영문 타이틀", fontDefaults.englishTitle || "cormorant-garamond", fontOptions)}
+            ${select("designSystem.fontDefaults.koreanTitle", "국문 타이틀", fontDefaults.koreanTitle || "noto-serif-kr", fontOptions)}
+            ${select("designSystem.fontDefaults.koreanBody", "국문 설명", fontDefaults.koreanBody || "noto-serif-kr", fontOptions)}
+            ${select("designSystem.fontDefaults.subTitle", "서브 제목", fontDefaults.subTitle || "gowun-batang", fontOptions)}
+            ${select("designSystem.fontDefaults.subText", "서브 텍스트", fontDefaults.subText || "noto-sans-kr", fontOptions)}
+          </div>
+          <p class="admin-message micro-help">폰트 파일 업로드와 목록 관리는 슈퍼관리자 > 폰트 목록에서 합니다. 이 값은 이후 일반관리자 영역별 폰트 선택 기능의 기본값으로 사용됩니다.</p>
         </fieldset>
         <fieldset><legend>일반관리자 첫 로그인 웰컴 화면</legend>
           <div class="welcome-default-editor">

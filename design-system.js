@@ -193,8 +193,12 @@
         const font = data.designSystem.assets.fonts.find((item) => item.id === asset?.fontId);
         return asset ? { ...asset, font, xPercent: design.heroTextXPercent ?? asset.xPercent, yPercent: design.heroTextYPercent ?? asset.yPercent } : asset;
       })(),
-      sectionIcon: theme.type === "movie" ? theme.sectionIcon || "" : "",
-      backgroundDecoration: theme.type === "movie" ? theme.backgroundDecoration || "" : "",
+      sectionIcon: theme.type === "movie"
+        ? (data.designSystem.assets.sectionIcons.find((item) => item.id === theme.sectionIcon)?.url || (/^https?:|^data:|^invitations\//.test(theme.sectionIcon || "") ? theme.sectionIcon : ""))
+        : "",
+      backgroundDecoration: theme.type === "movie"
+        ? (data.designSystem.assets.backgrounds.find((item) => item.id === theme.backgroundDecoration)?.url || (/^https?:|^data:|^invitations\//.test(theme.backgroundDecoration || "") ? theme.backgroundDecoration : ""))
+        : "",
     };
   }
 
@@ -206,7 +210,7 @@
     const appliedPalette = isSuperAdmin ? adminPalette : resolved.palette;
     root.dataset.theme = isSuperAdmin ? "white" : (resolved.theme.type === "color" && builtInThemes.some((item) => item.id === resolved.theme.id) ? resolved.theme.id : "sky");
     root.dataset.movieConcept = isSuperAdmin ? "none" : (resolved.theme.type === "movie" ? resolved.theme.id : "none");
-    root.dataset.heroDecoration = resolved.heroDecoration || "none";
+    root.dataset.heroDecoration = resolved.heroDecorationAsset?.heroDecoration || resolved.heroDecoration || "none";
     root.dataset.heroTextTheme = resolved.heroTextTheme || "auto";
     root.dataset.heroTextLayout = resolved.heroTextThemeAsset?.layout || "default";
     root.classList?.toggle("has-custom-hero-decoration", Boolean(resolved.heroDecorationAsset?.url));

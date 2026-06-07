@@ -176,42 +176,46 @@ function fontDefaultSettingsMarkup() {
   </section>`;
 }
 
+function renderFontManager(message = "") {
+  designData();
+  const fonts = invitationData.designSystem.assets.fonts || [];
+  adminApp.innerHTML = `${adminHeader("fonts")}<section class="admin-card">
+    <div class="admin-toolbar"><div><p class="section-label">Super Admin</p><h2>폰트 목록</h2></div><button class="btn btn-primary" type="button" data-font-open-upload>폰트 업로드</button></div>
+    <p class="admin-message">${escapeAdminHtml(message || "현재 등록된 상업적 무료/업로드 폰트를 확인합니다. 영역별 기본값은 기본값 설정 메뉴에서 지정합니다.")}</p>
+    <div class="asset-library-grid">
+      ${fonts.map((font) => `<article class="asset-library-card ${font.enabled === false ? "is-hidden" : ""}">
+        ${assetPreview("font", font)}
+        <div><strong>${escapeAdminHtml(font.name || font.family || font.id)}</strong><p>${escapeAdminHtml(font.source || "등록 폰트")} · ${escapeAdminHtml(font.license || "라이선스 확인 필요")}</p></div>
+        <div class="compact-actions">
+          <button class="btn" type="button" data-asset-edit="${escapeAdminHtml(font.id)}" data-asset-type="font">수정</button>
+          <button class="btn" type="button" data-asset-toggle="${escapeAdminHtml(font.id)}" data-asset-type="font">${font.enabled === false ? "표시" : "숨김"}</button>
+        </div>
+      </article>`).join("") || '<p class="admin-message">등록된 폰트가 없습니다.</p>'}
+    </div>
+  </section><div id="asset-create-modal"></div>`;
+  bindAdminNavigation();
+  document.querySelector("[data-font-open-upload]")?.addEventListener("click", () => openAssetCreateModal("font"));
+  bindAssetLibraryActions("font");
+}
+
+function designAssetLibrarySections(filter = "all") {
+  return Object.entries(assetCategories)
+    .filter(([type]) => type !== "font" && (filter === "all" || filter === type))
+    .map(([type, category]) => `<section class="asset-library-section"><div class="admin-toolbar"><div><h3>${category.label}</h3><p>${category.guide}</p></div><span class="badge">${(designData().designSystem.assets[category.key] || []).length}개</span></div><div class="asset-library-grid">${assetLibraryCards(type)}</div></section>`)
+    .join("");
+}
+
 function renderDesignAssets(message = "", filter = "all") {
   designData();
   adminApp.innerHTML = `${adminHeader("assets")}<section class="admin-card">
     <div class="admin-toolbar"><div><p class="section-label">Super Admin</p><h2>디자인 요소 생성</h2></div><button class="btn btn-primary" type="button" data-new-asset>새 디자인 소스 만들기</button></div>
     <p class="admin-message">${escapeAdminHtml(message || "테마에 연결할 디자인 소스를 카테고리별로 확인하고, 하나의 생성 모달에서 AI 또는 파일 업로드로 추가합니다.")}</p>
-    <div class="filter-row"><button class="btn ${filter === "all" ? "btn-primary" : ""}" data-asset-filter="all">전체</button>${Object.entries(assetCategories).map(([type, category]) => `<button class="btn ${filter === type ? "btn-primary" : ""}" data-asset-filter="${type}">${category.label}</button>`).join("")}</div>
-    ${filter === "all" || filter === "font" ? fontDefaultSettingsMarkup() : ""}
-    ${assetLibrarySections(filter)}
+    <div class="filter-row"><button class="btn ${filter === "all" ? "btn-primary" : ""}" data-asset-filter="all">전체</button>${Object.entries(assetCategories).filter(([type]) => type !== "font").map(([type, category]) => `<button class="btn ${filter === type ? "btn-primary" : ""}" data-asset-filter="${type}">${category.label}</button>`).join("")}</div>
+    ${designAssetLibrarySections(filter)}
   </section><div id="asset-create-modal"></div>`;
   bindAdminNavigation();
   document.querySelector("[data-new-asset]").addEventListener("click", () => openAssetCreateModal());
   document.querySelectorAll("[data-asset-filter]").forEach((button) => button.addEventListener("click", () => renderDesignAssets("", button.dataset.assetFilter)));
-  document.querySelector("[data-font-default-form]")?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const fields = new FormData(event.currentTarget);
-    invitationData.designSystem.fontDefaults = {
-      englishTitle: fields.get("fontDefaults.englishTitle"),
-      koreanTitle: fields.get("fontDefaults.koreanTitle"),
-      koreanBody: fields.get("fontDefaults.koreanBody"),
-      subTitle: fields.get("fontDefaults.subTitle"),
-      subText: fields.get("fontDefaults.subText"),
-    };
-    await saveDesignData("폰트 기본값을 저장했습니다.", () => renderDesignAssets("", filter));
-  });
-  document.querySelector("[data-font-direct-upload]")?.addEventListener("change", async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-    try {
-      const url = await window.RSVP_STORAGE.uploadDesignAsset(file, "fonts");
-      const family = file.name.replace(/\.(woff2?|ttf|otf)$/i, "");
-      invitationData.designSystem.assets.fonts.push({ id: `font-${Date.now()}`, name: family, family, url, source: "업로드", license: "상업적 무료 확인 필요", commercialFree: true });
-      await saveDesignData("폰트를 업로드하고 목록에 추가했습니다.", () => renderDesignAssets("", "font"));
-    } catch (error) {
-      alert(`폰트를 업로드하지 못했습니다.\n${error.message || "Storage 정책을 확인해 주세요."}`);
-    }
-  });
   bindAssetLibraryActions(filter);
 }
 

@@ -175,7 +175,10 @@ ${designPromptForType()}
 팔레트의 ink는 본문 글자색이므로 반드시 충분히 어두운 계열로 지정하세요. side는 모바일 청첩장 좌우 빈 여백 색상이며 background보다 연하고 밝아 청첩장 영역과 구분되어야 합니다. accent는 버튼/강조색, label은 영문 섹션 라벨색, button은 연한 버튼 배경색입니다.
 폰트 파일이나 새 폰트 생성은 하지 마세요. fontId는 사용 가능한 목록 중 하나만 참고값으로 고르세요.
 컬러테마 요청이면 색상 팔레트 추천에 집중하세요.
-영화테마 요청이면 테마명, 색상, 폰트 방향, 메인이미지 꾸밈, 메인문구테마, 섹션 아이콘, 갤러리 프레임, 버튼 모양까지 함께 제안하세요.`;
+영화테마 요청이면 실제 영화 포스터, 명장면, 시대감, 조명, 의상/소품, 대표 색감에서 무드를 추출하세요.
+표절이나 특정 포스터 복제는 피하고, 그 영화가 연상되는 색상·여백·구도·질감·장면 감정만 재해석하세요.
+생성 스타일은 사랑스럽고 키치하며, 드로잉 라인 장식이 많은 모바일 청첩장 디자인을 우선합니다.
+메인 이미지 프레임 모양, 갤러리 배치 레이아웃, 갤러리 미리보기 프레임 디자인, 전체 폰트 방향, 메인문구테마가 하나의 영화 무드로 일관되게 보이도록 제안하세요.`;
 }
 
 async function callOpenAI(prompt, responseSchema) {
@@ -193,8 +196,14 @@ async function callOpenAI(prompt, responseSchema) {
   return JSON.parse(outputText(payload));
 }
 
-async function callGemini(prompt, responseSchema) {
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function isGeminiBusy(payload = {}) {
+  const message = payload.error?.message || "";
+  return /high demand|overloaded|quota|rate|429|503/i.test(message);
+}
+
+async function callGeminiModel(model, prompt, responseSchema) {
   const gemini = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
@@ -204,10 +213,32 @@ async function callGemini(prompt, responseSchema) {
     }),
   });
   const payload = await gemini.json();
-  if (!gemini.ok) throw new Error(payload.error?.message || "Gemini API 호출에 실패했습니다.");
+  if (!gemini.ok) {
+    const error = new Error(payload.error?.message || "Gemini API 호출에 실패했습니다.");
+    error.retryable = gemini.status === 429 || gemini.status === 503 || isGeminiBusy(payload);
+    throw error;
+  }
   const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text).join("") || "";
   if (!text) throw new Error("Gemini 응답 본문이 없습니다.");
   return JSON.parse(text);
+}
+
+async function callGemini(prompt, responseSchema) {
+  const primary = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const models = [...new Set([primary, "gemini-2.0-flash"])];
+  let lastError;
+  for (const model of models) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        return await callGeminiModel(model, prompt, responseSchema);
+      } catch (error) {
+        lastError = error;
+        if (!error.retryable) throw error;
+        await sleep(450 + attempt * 700);
+      }
+    }
+  }
+  throw new Error(`Gemini가 일시적으로 혼잡합니다. 잠시 후 다시 시도해 주세요. ${lastError?.message || ""}`.trim());
 }
 
 module.exports = async function aiDesign(request, response) {

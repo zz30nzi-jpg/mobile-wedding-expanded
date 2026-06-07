@@ -63,6 +63,9 @@
       throw new Error(`AI 서버에 연결하지 못했습니다. 현재 요청 주소: ${endpoint}. 배포 사이트에서는 /api/ai-design, 로컬 테스트에서는 ${configuredEndpoint()} 를 사용해야 합니다. (${error.message || "Failed to fetch"})`);
     }
     const payload = await response.json().catch(() => ({}));
+    if (!response.ok && /혼잡|high demand|overloaded|temporarily|일시/i.test(payload.error || "")) {
+      return { ...mock(), fallbackReason: payload.error || "AI 서버가 일시적으로 혼잡해 임시 결과를 사용했습니다." };
+    }
     if (!response.ok) throw new Error(payload.error || "AI 서버 호출에 실패했습니다.");
     return { ...payload, id: payload.id || `ai-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, type, createdAt: payload.createdAt || new Date().toISOString() };
   };
