@@ -1156,7 +1156,7 @@ body[data-layout="navy_arch"] .hero-date { color: var(--muted); text-shadow: non
 /* 진주 웨이브 장식 */
 body[data-layout="navy_arch"] .hero::before { display: block; content: ""; position: absolute; z-index: 3; bottom: 14px; left: 50%; transform: translateX(-50%); width: 160px; height: 22px; pointer-events: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 22'%3E%3Cpath d='M4 11Q24 5 44 11Q64 17 84 11Q104 5 124 11Q144 17 156 11' fill='none' stroke='%23b8a898' stroke-width='1.2' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='7' r='4.5' fill='%23d8cab8'/%3E%3Ccircle cx='44' cy='7' r='2.5' fill='%23ede0d2'/%3E%3Ccircle cx='84' cy='15' r='4.5' fill='%23d8cab8'/%3E%3Ccircle cx='84' cy='15' r='2.5' fill='%23ede0d2'/%3E%3Ccircle cx='124' cy='7' r='4.5' fill='%23d8cab8'/%3E%3Ccircle cx='124' cy='7' r='2.5' fill='%23ede0d2'/%3E%3C/svg%3E") center/contain no-repeat; }
 /* 섹션 전체 컬러 패널 (테마 배경색 사용) */
-body[data-layout="navy_arch"] .section { border-radius: 0; margin: 0; padding: 40px 28px; }
+body[data-layout="navy_arch"] .section { border-radius: 0; margin: 0; padding: 40px 80px; }
 /* 원형 장소 사진 */
 body[data-layout="navy_arch"] #location .media,
 body[data-layout="navy_arch"] .location-map-static { display: block; width: 180px; height: 180px; margin: 16px auto; border-radius: 50%; overflow: hidden; border: 3px solid rgba(255,255,255,0.25); }
@@ -1166,15 +1166,15 @@ body[data-layout="navy_arch"] .invitation-intro-copy { text-align: center; }
 /* ═══════════════════════════════════════════════════════════════
    TEMPLATE: cream_organic  —  라벤더 아치 인사 섹션 · 오가닉 카드 · 도트 타임라인
    ════════════════════════════════════════════════════════════ */
-body[data-layout="cream_organic"] .hero { min-height: 520px; }
+body[data-layout="cream_organic"] .hero { min-height: 560px; padding-bottom: 20px; }
 body[data-layout="cream_organic"] .hero-names { letter-spacing: 0.05em; }
 /* 라벤더 아치 패널 - #invitation 섹션이 히어로 아래를 아치 모양으로 덮어 올라옴 */
-body[data-layout="cream_organic"] #invitation { position: relative; z-index: 1; background: var(--accent); border-radius: 180px 180px 0 0; margin: -36px 8px 0; padding: 64px 28px 44px; }
-body[data-layout="cream_organic"] #invitation .section-title { color: var(--card); }
-body[data-layout="cream_organic"] #invitation .section-label { color: color-mix(in srgb, var(--card) 78%, transparent); }
-body[data-layout="cream_organic"] #invitation p { color: color-mix(in srgb, var(--card) 85%, transparent); }
+body[data-layout="cream_organic"] #invitation { position: relative; z-index: 1; background: color-mix(in srgb, var(--accent) 90%, #4a3d6b); border-radius: 180px 180px 0 0; margin: -20px 8px 0; padding: 64px 70px 44px; }
+body[data-layout="cream_organic"] #invitation .section-title { color: #fff; }
+body[data-layout="cream_organic"] #invitation .section-label { color: rgba(255,255,255,0.82); }
+body[data-layout="cream_organic"] #invitation p { color: rgba(255,255,255,0.88); }
 /* 오가닉 섹션 카드 */
-body[data-layout="cream_organic"] .section { border-radius: 24px; margin: 6px 10px; padding: 40px 24px; background: var(--card); box-shadow: 0 2px 14px rgba(0,0,0,0.05); }
+body[data-layout="cream_organic"] .section { border-radius: 24px; margin: 6px 10px; padding: 40px 70px; background: var(--card); box-shadow: 0 2px 14px rgba(0,0,0,0.05); }
 body[data-layout="cream_organic"] .section-title { font-size: clamp(18px, 5vw, 26px); letter-spacing: 0.02em; }
 /* 도트 타임라인 */
 body[data-layout="cream_organic"] .timetable-item { position: relative; padding-left: 22px; }
@@ -1191,10 +1191,10 @@ body[data-layout="crimson_silk"] .hero-media { inset: 152px 26px 42px; border-ra
 body[data-layout="crimson_silk"] .hero-content,
 body[data-layout="crimson_silk"] .hero-content-top,
 body[data-layout="crimson_silk"] .hero-content-middle,
-body[data-layout="crimson_silk"] .hero-content-bottom { top: 44px !important; bottom: auto !important; transform: none !important; }
-body[data-layout="crimson_silk"] .hero-names { color: var(--card); font-size: clamp(26px, 7vw, 44px); letter-spacing: 0.04em; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
-body[data-layout="crimson_silk"] .hero-eyebrow,
-body[data-layout="crimson_silk"] .hero-date { color: color-mix(in srgb, var(--card) 72%, transparent); text-shadow: none; }
+body[data-layout="crimson_silk"] .hero-content-bottom { top: 18px !important; bottom: auto !important; transform: none !important; }
+body[data-layout="crimson_silk"] .hero-names { color: var(--card); font-size: clamp(14px, 3.5vw, 19px); letter-spacing: 0.08em; text-shadow: 0 1px 6px rgba(0,0,0,0.25); }
+body[data-layout="crimson_silk"] .hero-eyebrow { color: color-mix(in srgb, var(--card) 72%, transparent); text-shadow: none; font-size: 8px; letter-spacing: 0.26em; }
+body[data-layout="crimson_silk"] .hero-date { color: color-mix(in srgb, var(--card) 72%, transparent); text-shadow: none; font-size: 10px; letter-spacing: 0.12em; }
 body[data-layout="crimson_silk"] .invitation-intro { background: color-mix(in srgb, var(--accent-dark) 92%, transparent); backdrop-filter: blur(14px); }
 body[data-layout="crimson_silk"] .invitation-intro-copy { color: var(--card); text-align: center; }
 body[data-layout="crimson_silk"] .invitation-intro-copy p,
@@ -1212,13 +1212,13 @@ body[data-layout="editorial_red"] .hero { min-height: 540px; }
 /* 흑백 사진 */
 body[data-layout="editorial_red"] .hero-media { filter: grayscale(100%) contrast(1.08); }
 /* 잡지형 대형 이름 */
-body[data-layout="editorial_red"] .hero-names { font-size: clamp(46px, 13vw, 72px); letter-spacing: -0.02em; line-height: 0.95; text-transform: uppercase; }
+body[data-layout="editorial_red"] .hero-names { font-size: clamp(28px, 7.5vw, 40px); letter-spacing: -0.02em; line-height: 1; text-transform: uppercase; }
 body[data-layout="editorial_red"] .hero-eyebrow { font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase; opacity: 0.85; }
-body[data-layout="editorial_red"] .section { padding: 44px 28px; border-top: 1px solid var(--line); }
+body[data-layout="editorial_red"] .section { padding: 44px 80px; border-top: 1px solid var(--line); }
 body[data-layout="editorial_red"] .section-label { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; }
-body[data-layout="editorial_red"] .section-title { font-size: clamp(22px, 6vw, 32px); letter-spacing: -0.02em; }
-body[data-layout="editorial_red"] .invitation-intro-copy { text-align: left; padding: 36px; }
-body[data-layout="editorial_red"] .invitation-intro-copy strong { font-size: clamp(40px, 11vw, 62px); letter-spacing: -0.01em; display: block; line-height: 1; }
+body[data-layout="editorial_red"] .section-title { font-size: clamp(18px, 5vw, 24px); letter-spacing: -0.02em; }
+body[data-layout="editorial_red"] .invitation-intro-copy { text-align: left; padding: 36px 80px; }
+body[data-layout="editorial_red"] .invitation-intro-copy strong { font-size: clamp(22px, 5.5vw, 30px); letter-spacing: -0.01em; display: block; line-height: 1.1; }
 /* 폴라로이드 프로필 사진 */
 body[data-layout="editorial_red"] .profile-grid { grid-template-columns: 1fr; gap: 24px; }
 body[data-layout="editorial_red"] .profile-card { grid-template-columns: 96px minmax(0, 1fr); }
@@ -1244,7 +1244,7 @@ body[data-layout="garden_doodle"] .hero-content-bottom { top: 36px !important; b
 body[data-layout="garden_doodle"] .hero-names { font-size: clamp(36px, 10vw, 52px); font-weight: 900; letter-spacing: 0.03em; line-height: 1.05; text-transform: uppercase; }
 body[data-layout="garden_doodle"] .hero-eyebrow { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; }
 /* 낙서 대시 섹션 카드 */
-body[data-layout="garden_doodle"] .section { border-radius: 20px; margin: 4px 10px; padding: 40px 24px; border: 2px dashed color-mix(in srgb, var(--accent) 45%, transparent); }
+body[data-layout="garden_doodle"] .section { border-radius: 20px; margin: 4px 10px; padding: 40px 70px; border: 2px dashed color-mix(in srgb, var(--accent) 45%, transparent); }
 body[data-layout="garden_doodle"] .section-title { font-size: clamp(18px, 5vw, 24px); font-weight: 900; text-transform: uppercase; letter-spacing: 0.06em; }
 body[data-layout="garden_doodle"] .invitation-intro { background: color-mix(in srgb, var(--body-bg) 84%, transparent); }
 body[data-layout="garden_doodle"] .invitation-intro-copy { text-align: center; }
@@ -1280,7 +1280,7 @@ body[data-layout="crimson_silk"] .profile-photo { border-radius: 16px 16px 10px 
 body[data-layout="crimson_silk"] .gallery-item { border-radius: 12px; border-width: 2px; border-bottom-width: 2px; transform: none !important; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
 body[data-layout="crimson_silk"] .gallery-grid { gap: 8px; }
 body[data-layout="crimson_silk"] .btn { border-radius: 10px; }
-body[data-layout="crimson_silk"] .section { background: var(--card); border-radius: 0; margin: 0; border-bottom: 1px solid var(--line); padding: 40px 28px; }
+body[data-layout="crimson_silk"] .section { background: var(--card); border-radius: 0; margin: 0; border-bottom: 1px solid var(--line); padding: 40px 80px; }
 body[data-layout="crimson_silk"] .section:last-child { border-bottom: none; }
 body[data-layout="crimson_silk"] .section-title { font-size: clamp(20px, 5.5vw, 28px); letter-spacing: -0.01em; }
 
@@ -1298,7 +1298,7 @@ body[data-layout="editorial_red"] .gallery-grid { grid-template-columns: repeat(
 body[data-layout="editorial_red"] .gallery-item { border-radius: 2px; transform: none !important; border-color: var(--card); }
 body[data-layout="editorial_red"] .gallery-item:first-child,
 body[data-layout="editorial_red"] .gallery-item:nth-child(6) { grid-column: 1 / -1; aspect-ratio: 16/9; }
-body[data-layout="editorial_red"] .section { border-top: 2px solid var(--ink); padding: 40px 28px; }
+body[data-layout="editorial_red"] .section { border-top: 2px solid var(--ink); padding: 40px 80px; }
 body[data-layout="editorial_red"] .section-label { font-weight: 900; font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--accent-dark); }
 body[data-layout="editorial_red"] .btn { border-radius: 4px; font-weight: 700; letter-spacing: 0.04em; }
 body[data-layout="editorial_red"] .quick-nav a { border-radius: 4px; }
@@ -1385,7 +1385,7 @@ body[data-layout="cream_organic"] .section-label::after { content: " ✿"; color
 /* ── crimson_silk : 진홍 예식, 크림 on 다크 배경, 모던 미니멀 ── */
 body[data-layout="crimson_silk"] body,
 body[data-layout="crimson_silk"] { background: var(--side); }
-body[data-layout="crimson_silk"] #invitation { padding: 52px 28px; }
+body[data-layout="crimson_silk"] #invitation { padding: 52px 80px; }
 body[data-layout="crimson_silk"] #invitation .invitation-quote { font-family: "Libre Baskerville", serif; font-style: italic; }
 body[data-layout="crimson_silk"] #about-us .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 body[data-layout="crimson_silk"] #about-us .profile-card { display: grid; grid-template-rows: auto auto; justify-items: center; text-align: center; gap: 8px; }
@@ -1397,7 +1397,7 @@ body[data-layout="crimson_silk"] #guestbook .field input,
 body[data-layout="crimson_silk"] #guestbook .field textarea { border-radius: 8px; background: var(--surface); }
 
 /* ── editorial_red : 매거진 레이아웃, 강한 타이포, 레드 포인트 ── */
-body[data-layout="editorial_red"] #invitation { padding: 44px 28px; }
+body[data-layout="editorial_red"] #invitation { padding: 44px 80px; }
 body[data-layout="editorial_red"] #invitation .section-title { font-size: clamp(22px, 6vw, 30px); letter-spacing: -0.02em; }
 body[data-layout="editorial_red"] #about-us .profile-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
 body[data-layout="editorial_red"] #about-us .profile-body { padding: 0 4px; }
