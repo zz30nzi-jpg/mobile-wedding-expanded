@@ -75,6 +75,7 @@ function dateOnly(value = "") {
 }
 
 function getUrlInvitationSlug() {
+  if (window.__FORCE_CARD_SLUG) return normalizeSlug(window.__FORCE_CARD_SLUG);
   const params = new URLSearchParams(location.search);
   return normalizeSlug(params.get("card") || params.get("invitation") || "");
 }
@@ -280,6 +281,43 @@ async function submitGuestbookEntry(entry) {
   return { isPreview: false };
 }
 
+const INVITATION_CACHE_TTL = 60 * 60 * 1000; // 1시간 (밀리초)
+
+function invitationCacheKey(slug) {
+  return `wedding-inv-cache:${slug || DEFAULT_INVITATION_ID}`;
+}
+
+function readInvitationCache(slug) {
+  try {
+    const raw = localStorage.getItem(invitationCacheKey(slug));
+    if (!raw) return null;
+    const { data, cachedAt } = JSON.parse(raw);
+    if (!data || Date.now() - cachedAt > INVITATION_CACHE_TTL) return null;
+    return data;
+  } catch { return null; }
+}
+
+function writeInvitationCache(slug, data) {
+  try {
+    localStorage.setItem(invitationCacheKey(slug), JSON.stringify({ data, cachedAt: Date.now() }));
+  } catch {}
+}
+
+function clearInvitationCache(slug) {
+  try { localStorage.removeItem(invitationCacheKey(slug)); } catch {}
+}
+
+async function fetchAndCacheInvitation(client, fallback, slug) {
+  const { data, error } = await client
+    .from("invitation_settings")
+    .select("content")
+    .eq("id", slug)
+    .maybeSingle();
+  if (error || !data?.content) return null;
+  writeInvitationCache(slug, data.content);
+  return normalizeInvitationData(fallback, data.content);
+}
+
 async function loadInvitationData(fallback) {
   const client = getSupabaseClient();
   const urlSlug = getUrlInvitationSlug();
@@ -288,15 +326,23 @@ async function loadInvitationData(fallback) {
     const saved = JSON.parse(localStorage.getItem(invitationLocalKey()) || "null");
     return normalizeInvitationData(fallback, saved);
   }
+  // 로그인한 사용자가 있으면 소유한 사이트로 분기 (관리자 페이지용)
   const ownedSite = urlSlug ? null : await currentUserInvitationSite(client);
   const slug = setActiveInvitationSlug(urlSlug || ownedSite?.slug || DEFAULT_INVITATION_ID);
-  const { data, error } = await client
-    .from("invitation_settings")
-    .select("content")
-    .eq("id", slug)
-    .maybeSingle();
-  if (error || !data?.content) return window.WEDDING_DESIGN.normalize(fallback);
-  return normalizeInvitationData(fallback, data.content);
+
+  // 캐시에서 즉시 반환 후 백그라운드에서 최신 데이터 갱신 (stale-while-revalidate)
+  const cached = readInvitationCache(slug);
+  if (cached) {
+    // 백그라운드에서 갱신 (화면은 이미 렌더됨)
+    fetchAndCacheInvitation(client, fallback, slug).then((fresh) => {
+      if (fresh) window.__invitationFreshData = fresh;
+    }).catch(() => {});
+    return normalizeInvitationData(fallback, cached);
+  }
+
+  // 캐시 없으면 직접 fetch
+  const result = await fetchAndCacheInvitation(client, fallback, slug);
+  return result || window.WEDDING_DESIGN.normalize(fallback);
 }
 
 async function saveInvitationData(content) {
@@ -310,6 +356,7 @@ async function saveInvitationData(content) {
     .from("invitation_settings")
     .upsert({ id: slug, content, updated_at: new Date().toISOString() });
   if (error) throw error;
+  clearInvitationCache(slug); // 저장 후 캐시 즉시 무효화
   await client.from("invitation_sites").update({
     title: `${content.couple?.groom?.name || ""} · ${content.couple?.bride?.name || ""}`.trim() || "청첩장",
     groom_name: content.couple?.groom?.name || "",

@@ -1019,12 +1019,33 @@ function bindEvents() {
   });
 }
 
+function applyLayoutTemplate(layoutId) {
+  const urlOverride = new URLSearchParams(location.search).get("__layout");
+  const id = urlOverride || layoutId || "classic";
+  document.body.dataset.layout = id;
+  // 레이아웃 템플릿 커스텀 속성 적용 (heroBgImage, textScale)
+  const templates = data?.designSystem?.layoutTemplates || [];
+  const tpl = templates.find((t) => t.id === id);
+  const root = document.documentElement;
+  if (tpl?.heroBgImage) {
+    root.style.setProperty("--layout-hero-bg-image", `url("${tpl.heroBgImage}")`);
+  } else {
+    root.style.removeProperty("--layout-hero-bg-image");
+  }
+  if (tpl?.textScale && tpl.textScale !== 1) {
+    root.style.setProperty("--layout-text-scale", String(tpl.textScale));
+  } else {
+    root.style.removeProperty("--layout-text-scale");
+  }
+}
+
 async function start() {
   applyAppearance(data.appearance);
   data = await window.RSVP_STORAGE.loadInvitationData(data);
   try { guestbookEntries = await window.RSVP_STORAGE.loadGuestbookEntries(); }
   catch { guestbookEntries = []; }
   applyAppearance(data.appearance);
+  applyLayoutTemplate(data.designSystem?.activeLayoutId);
   weddingDate = new Date(data.wedding.date);
   document.title = data.meta.title;
   document.querySelector('meta[name="description"]')?.setAttribute("content", data.meta.description);

@@ -85,6 +85,7 @@
   const generateHeroTextTheme = async (context = {}) => request("textTheme", context, () => result("textTheme", context, { heroTextTheme: choose(["editorial_left", "minimal_center"], context.instruction), fontDirection: "상업적 무료 명조 계열 폰트", fontId: "noto-serif-kr", fontFamily: "Noto Serif KR", fontLicense: "SIL Open Font License", layout: { position: "poster-left", align: "left", shadow: true, boxEnabled: false, nameSize: 34, dateSize: 12 } }));
   const generateSectionIcon = async (context = {}) => request("sectionIcon", context, () => result("sectionIcon", context, { direction: "단색 또는 2색의 단순한 꽃과 별 조합", postprocess: window.AI_POSTPROCESS.describe(context.settings) }));
   const generateBackgroundDecoration = async (context = {}) => request("background", context, () => result("background", context, { direction: "본문 바깥에 머무르는 저채도 장식", postprocess: window.AI_POSTPROCESS.describe(context.settings) }));
+  const generateAssetImage = async (context = {}) => request("assetImage", context, () => result("assetImage", context, { imageDataUrl: "", direction: context.instruction || "AI 이미지 생성" }));
   const generateTransportGuide = async (context = {}) => request("transportGuide", context, () => ({
     ...result("transportGuide", context),
     items: [
@@ -101,6 +102,19 @@
       { title: "홀 안내", text: `${context.hall || "예식홀"} 위치는 식장 안내 표지 또는 로비 안내 데스크를 확인해 주세요.` },
     ],
     caution: "Mock Mode 결과입니다.",
+  }));
+  const searchBasedPalette = async (context = {}) => request("imageSearch", context, () => result("imageSearch", context, {
+    palette: choose(palettes, context.instruction),
+    imageUrls: [],
+    searchConfigured: false,
+  }));
+  const generateLayoutTemplate = async (context = {}) => request("layout", context, () => result("layout", context, {
+    name: context.instruction ? `${context.instruction.slice(0, 4)} 레이아웃` : "AI 레이아웃",
+    description: context.instruction ? `${context.instruction} 무드의 청첩장 레이아웃` : "AI가 제안하는 새 레이아웃 구성입니다.",
+    previewBg: "#f5f0ea",
+    previewAccent: "#8d3440",
+    baseLayout: "classic",
+    concept: "세로 스크롤 기반 카드형 레이아웃",
   }));
   const regenerateAIResult = async (previous = {}, userInstruction = "") => {
     const context = { ...previous, instruction: userInstruction || previous.instruction };
@@ -125,5 +139,5 @@
     const providerName = settings.provider === "Gemini" ? "Gemini" : "OpenAI";
     return { ok: response.ok && payload.configured, mockMode: false, message: response.ok && payload.configured ? `${providerName} 서버 연결이 정상입니다.` : (payload.error || "서버 환경변수를 확인해 주세요.") };
   };
-  window.AI_DESIGN_SERVICE = { recommendColorPalette, recommendMovieTheme, generateFrameDecoration, generateHeroTextTheme, generateSectionIcon, generateBackgroundDecoration, generateTransportGuide, generateVenueGuide, regenerateAIResult, testAIConnection };
+  window.AI_DESIGN_SERVICE = { recommendColorPalette, recommendMovieTheme, searchBasedPalette, generateFrameDecoration, generateHeroTextTheme, generateSectionIcon, generateBackgroundDecoration, generateAssetImage, generateTransportGuide, generateVenueGuide, generateLayoutTemplate, regenerateAIResult, testAIConnection };
 })();

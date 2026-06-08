@@ -3,6 +3,8 @@ const IMAGE_API_URL = "https://api.openai.com/v1/images/generations";
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://cimyjsqjpenljpywhgso.supabase.co";
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "sb_publishable_jxY5QiiuKHV-5VSBO1F8Ow_wWeYjcDV";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_API_KEY;
+const GOOGLE_SEARCH_API_KEY = process.env.GOOGLE_SEARCH_API_KEY;
+const GOOGLE_SEARCH_CX = process.env.GOOGLE_SEARCH_CX;
 
 const designSchema = {
   type: "object",
@@ -101,10 +103,25 @@ const imageSchema = {
   additionalProperties: false,
 };
 
+const layoutSchema = {
+  type: "object",
+  properties: {
+    name: { type: "string" },
+    description: { type: "string" },
+    previewBg: { type: "string" },
+    previewAccent: { type: "string" },
+    baseLayout: { type: "string", enum: ["classic", "split", "editorial", "arch"] },
+    concept: { type: "string" },
+  },
+  required: ["name", "description", "previewBg", "previewAccent", "baseLayout", "concept"],
+  additionalProperties: false,
+};
+
 function schemaFor(type) {
   if (type === "transportGuide") return transportSchema;
   if (type === "venueGuide") return venueSchema;
   if (type === "imagePrompt") return imageSchema;
+  if (type === "layout") return layoutSchema;
   return designSchema;
 }
 
@@ -189,6 +206,16 @@ ${prompts.venue || ""}
 - 공식홈페이지 URL이 있으면 공식 안내 기준으로 작성하되, 이 서버가 실제 웹페이지 내용을 가져오지 못하면 확인 필요라고 적으세요.
 - 모르는 사실은 지어내지 말고 "확인 후 안내 예정"처럼 안전하게 작성하세요.
 - 문장은 짧고 정중하게 작성하세요.`;
+  }
+  if (type === "layout") {
+    return `${promptHeader}
+모바일 청첩장 레이아웃 템플릿 생성 도구입니다.
+사용자 요청: ${context.instruction || "새 레이아웃 제안"}
+기존 레이아웃 종류: classic(세로 스크롤 카드형), split(상단 다크+하단 라이트), editorial(큰 타이포그래피 잡지형)
+새 레이아웃 개념을 제안해주세요. baseLayout은 기존 3개 중 가장 유사한 것을 선택하세요.
+previewBg는 레이아웃 주조색(hex), previewAccent는 강조색(hex)으로 제안하세요.
+name은 3~6자 한글로, description은 한 줄 설명(50자 이내)으로 작성하세요.
+concept은 이 레이아웃의 디자인 핵심 원칙을 한 문장으로 작성하세요.`;
   }
   return `${promptHeader}
 ${designPromptForType()}
@@ -323,6 +350,49 @@ async function callOpenAIImageWithRetry(prompt) {
   throw new Error(`OpenAI 이미지 생성 서버가 일시적으로 혼잡합니다. 잠시 후 다시 시도해 주세요. ${lastError?.message || ""}`.trim());
 }
 
+// Google Custom Search — 이미지 URL 목록 반환 (GOOGLE_SEARCH_API_KEY + GOOGLE_SEARCH_CX 필요)
+async function searchReferenceImages(query, num = 5) {
+  if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_CX) return [];
+  try {
+    const url = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_SEARCH_API_KEY}&cx=${GOOGLE_SEARCH_CX}&q=${encodeURIComponent(query)}&searchType=image&num=${num}&imgType=photo&safe=active`;
+    const res = await fetch(url);
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.items || []).map((item) => item.link).filter(Boolean).slice(0, num);
+  } catch {
+    return [];
+  }
+}
+
+// Vision API 기반 팔레트 추출 (이미지 URL 배열 → 색상 팔레트)
+async function extractPaletteFromImages(imageUrls, query, settings = {}) {
+  const prompts = settings.prompts || {};
+  const visionInstruction = `${prompts.base || ""}
+아래 이미지들을 분석해서 모바일 청첩장에 쓸 색상 팔레트를 추출해 주세요.
+참고 이미지: ${imageUrls.join(", ")}
+검색어: ${query}
+이미지의 주조색·강조색·배경색을 청첩장 팔레트(side, background, card, ink, muted, accent, label, button, line)로 변환하세요.
+ink는 충분히 어두운 계열, accent는 이미지의 핵심 포인트색으로 지정하세요.
+팔레트는 CSS hex 값으로 제안하세요.`;
+  const inputPayload = [
+    { type: "input_text", text: visionInstruction },
+    ...imageUrls.slice(0, 4).map((url) => ({ type: "input_image", image_url: url, detail: "low" })),
+  ];
+  const res = await fetch(API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    body: JSON.stringify({
+      model: process.env.OPENAI_MODEL,
+      input: [{ role: "user", content: inputPayload }],
+      text: { format: { type: "json_schema", name: "wedding_ai_result", strict: true, schema: designSchema } },
+    }),
+  });
+  const payload = await res.json();
+  if (!res.ok) throw new Error(payload.error?.message || "Vision API 호출에 실패했습니다.");
+  const text = outputText(payload);
+  return JSON.parse(text);
+}
+
 module.exports = async function aiDesign(request, response) {
   response.setHeader("Access-Control-Allow-Origin", request.headers.origin || "*");
   response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -344,22 +414,48 @@ module.exports = async function aiDesign(request, response) {
   const prompt = designPrompt(type, context);
   const responseSchema = schemaFor(type);
   try {
+    // 검색기반 AI: Google 이미지 검색 → GPT Vision 팔레트 추출
+    if (type === "imageSearch") {
+      if (provider !== "OpenAI") return response.status(400).json({ error: "이미지 검색 기반 팔레트는 OpenAI provider에서만 지원합니다." });
+      const query = context.instruction || context.concept || "";
+      if (!query) return response.status(400).json({ error: "검색어를 입력해 주세요." });
+      const searchConfigured = Boolean(GOOGLE_SEARCH_API_KEY && GOOGLE_SEARCH_CX);
+      const imageUrls = searchConfigured ? await searchReferenceImages(`${query} poster scene color palette`, 5) : [];
+      let result;
+      if (imageUrls.length > 0) {
+        result = await extractPaletteFromImages(imageUrls, query, context.settings || {});
+      } else {
+        // Google Search 미설정 시 GPT 학습 지식 기반으로 팔레트 생성 (검색 없이)
+        const fallbackPrompt = `${designPrompt("palette", context)}
+검색어 "${query}"에서 연상되는 영화·컨셉의 대표 색상을 모바일 청첩장 팔레트로 변환하세요.
+포스터·명장면·의상·소품에서 추출한 것처럼 제안하세요.`;
+        result = provider === "Gemini" ? await callGemini(fallbackPrompt, designSchema) : await callOpenAIWithRetry(fallbackPrompt, designSchema);
+      }
+      return response.status(200).json({ ...result, imageUrls, searchConfigured, prompt: query, createdAt: new Date().toISOString() });
+    }
     if (type === "assetImage") {
-      if (provider !== "OpenAI") return response.status(400).json({ error: "이미지 생성은 현재 OpenAI provider에서만 지원합니다." });
+      if (!process.env.OPENAI_API_KEY) return response.status(400).json({ error: "이미지 생성에는 OpenAI API Key가 필요합니다. 슈퍼관리자 > AI 설정에서 OpenAI API Key를 등록해 주세요." });
       const imagePrompt = designPrompt("imagePrompt", context);
+      const isFrame = context.assetType === "frame";
+      const isOverlay = isFrame && context.mode !== "outer";
+      const modeInstruction = isFrame
+        ? isOverlay
+          ? "적용방식=오버레이(사진 위 겹치기): 인물 얼굴과 신체를 가리지 않는 코너 포인트·얇은 선 드로잉·작은 꽃잎·리본 등 가장자리 장식 위주로 생성. 중앙은 완전히 비워 두어야 함. 선의 굵기는 최대 2px로 가늘고 섬세하게."
+          : "적용방식=아웃터(사진 바깥 액자): 사진을 감싸는 사각·원형·불규칙 액자 형태로 생성. 가운데는 완전히 투명하게 비워 사진이 보이도록 하고, 테두리 장식만 남김. 코너 장식·필름 테두리·꽃 화환 액자 등 프레임 구조로 만들 것."
+        : "";
       const fallbackPrompt = `${imagePrompt}
 요청한 디자인 소스를 실제 이미지로 생성하세요.
 이미지 유형: ${context.assetType || ""}
-적용 방식: ${context.mode || ""}
+${modeInstruction}
 투명 배경 PNG. 단일 디자인 소스. 텍스트/글자/로고/워터마크 없음.
 메인 사진은 만들지 말고, 청첩장 위에 얹거나 감쌀 수 있는 장식 요소만 생성하세요.`;
       const promptResult = process.env.OPENAI_MODEL ? await callOpenAIWithRetry(`${imagePrompt}
 요청한 디자인 소스를 실제 이미지 생성 프롬프트로 변환하세요.
 이미지 유형: ${context.assetType || ""}
-적용 방식: ${context.mode || ""}
+${modeInstruction}
 반드시 투명 배경 PNG에 적합하게, 단일 디자인 소스만 생성하도록 작성하세요.
 텍스트/글자/로고/워터마크는 넣지 마세요.`, imageSchema) : {
-        name: context.assetType === "frame" ? "AI 메인 이미지 꾸밈" : context.assetType === "sectionIcon" ? "AI 섹션 아이콘" : "AI 전체 배경 장식",
+        name: context.assetType === "frame" ? (isOverlay ? "AI 오버레이 꾸밈" : "AI 액자 프레임") : context.assetType === "sectionIcon" ? "AI 섹션 아이콘" : "AI 전체 배경 장식",
         direction: context.instruction || "AI 이미지 생성 결과",
         prompt: fallbackPrompt,
       };
