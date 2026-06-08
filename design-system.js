@@ -150,7 +150,9 @@
       { id: "cream_organic", name: "봄날 인연", description: "크림 + 라벤더 아치 패널. 둥글고 부드러운 봄 웨딩 무드.", previewBg: "#faf8f4", previewAccent: "#7c6d9a", baseLayout: "classic", builtIn: true },
       { id: "crimson_silk", name: "진홍 예식", description: "진홍 다크 히어로 + 크림 본문. 연인의 열정을 담은 스플릿 구조.", previewBg: "#f8f2ec", previewAccent: "#8b1a2f", baseLayout: "split", builtIn: true },
     ];
-    system.layoutTemplates = mergeUnique(builtInLayouts, Array.isArray(system.layoutTemplates) ? system.layoutTemplates : []);
+    // built-in 항목은 항상 최신 코드 기준으로 덮어씀. 사용자가 직접 만든 커스텀(AI) 레이아웃만 Supabase에서 유지.
+    const savedCustomLayouts = (Array.isArray(system.layoutTemplates) ? system.layoutTemplates : []).filter((t) => !t.builtIn);
+    system.layoutTemplates = mergeUnique(builtInLayouts, savedCustomLayouts);
     system.activeLayoutId = system.activeLayoutId || "classic";
     const legacyCustom = !data.appearance.design && ((data.appearance.heroDecoration && data.appearance.heroDecoration !== "none") || (data.appearance.heroTextTheme && data.appearance.heroTextTheme !== "auto"));
     const previousDesign = data.appearance.design;
