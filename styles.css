@@ -2392,7 +2392,7 @@ body.super-preview-mobile[data-admin-area="super"] .super-overview {
     gap: 4px !important;
     overflow: visible !important;
   }
-  body[data-admin-area="general"] .admin-menu-group .admin-tabs .btn {
+body[data-admin-area="general"] .admin-menu-group .admin-tabs .btn {
     min-width: 0 !important;
     min-height: 36px !important;
     padding: 5px 2px !important;
@@ -2400,4 +2400,55 @@ body.super-preview-mobile[data-admin-area="super"] .super-overview {
     letter-spacing: -0.08em !important;
     white-space: normal !important;
   }
+}
+
+/* Palette-driven contrast fixes for public invitation controls. */
+body:not([data-admin-area="super"]) .btn:not(.btn-primary),
+body:not([data-admin-area="super"]) .map-actions a,
+body:not([data-admin-area="super"]) .quick-nav a,
+body:not([data-admin-area="super"]) .upload-actions .btn:not(.btn-primary) {
+  background: var(--accent) !important;
+  color: var(--button-text, var(--ink)) !important;
+}
+body:not([data-admin-area="super"]) .btn:not(.btn-primary):hover,
+body:not([data-admin-area="super"]) .map-actions a:hover,
+body:not([data-admin-area="super"]) .quick-nav a:hover,
+body:not([data-admin-area="super"]) .upload-actions .btn:not(.btn-primary):hover {
+  background: var(--button-hover) !important;
+  color: var(--button-text, var(--ink)) !important;
+}
+body:not([data-admin-area="super"]) .btn-primary,
+body:not([data-admin-area="super"]) button[type="submit"],
+body:not([data-admin-area="super"]) .upload-actions .btn-primary {
+  background: var(--accent-dark) !important;
+  color: var(--primary-button-text, var(--card)) !important;
+}
+body:not([data-admin-area="super"]) .quick-nav {
+  background: var(--nav-bg) !important;
+  border-color: var(--nav-border) !important;
+}
+body:not([data-admin-area="super"]) .quick-nav a {
+  color: var(--nav-button-text, var(--button-text, var(--ink))) !important;
+}
+body:not([data-admin-area="super"]) .location-address,
+body:not([data-admin-area="super"]) .venue-address,
+body:not([data-admin-area="super"]) .address-chip,
+body:not([data-admin-area="super"]) [class*="address"] {
+  background: color-mix(in srgb, var(--accent) 32%, var(--card)) !important;
+  color: var(--location-chip-text, var(--label)) !important;
+}
+
+body[data-admin-area="super"] .asset-library-card.is-preview-focused {
+  grid-column: 1 / -1;
+  border-color: color-mix(in srgb, var(--accent-dark) 48%, var(--line)) !important;
+  background: color-mix(in srgb, var(--card) 96%, var(--accent) 4%) !important;
+}
+body[data-admin-area="super"] .asset-library-card.is-preview-focused .asset-source-preview {
+  min-height: 260px;
+}
+body[data-admin-area="super"] .asset-library-card.is-preview-focused .asset-source-image img,
+body[data-admin-area="super"] .asset-library-card.is-preview-focused .asset-source-image.is-background img {
+  width: 100%;
+  max-height: 320px;
+  object-fit: contain;
 }

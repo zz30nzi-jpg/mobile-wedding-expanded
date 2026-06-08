@@ -584,7 +584,13 @@ function bindAssetModal(type) {
   });
   document.querySelector("[data-asset-ai-send]").addEventListener("click", async () => {
     const methods = { frame: "generateFrameDecoration", textTheme: "generateHeroTextTheme", sectionIcon: "generateSectionIcon", background: "generateBackgroundDecoration", font: "generateHeroTextTheme" };
-    const instruction = document.querySelector("[data-asset-ai-instruction]").value;
+    const mode = form.elements.assetMode?.value || window.assetSourceDraft?.mode || "overlay";
+    const modeGuide = type === "frame"
+      ? mode === "outer"
+        ? "적용방식: 사진바깥쪽 꾸미기. 사진을 감싸는 액자/필름 프레임/코너 장식 형태로 만들고 중앙 사진 영역은 비워 둔다."
+        : "적용방식: 사진 위에 겹치기. 인물 얼굴을 가리지 않는 얇은 선, 작은 드로잉, 코너 포인트, 반투명 오버레이 중심으로 만든다."
+      : "";
+    const instruction = [document.querySelector("[data-asset-ai-instruction]").value, modeGuide].filter(Boolean).join("\n");
     document.querySelector("[data-asset-ai-chat]").insertAdjacentHTML("beforeend", `<p>사용자: ${escapeAdminHtml(instruction)}</p><p>AI: 요청에 맞는 미리보기를 만들었습니다.</p>`);
     const progress = document.querySelector("[data-asset-ai-progress]");
     const bar = progress?.querySelector("i");
@@ -597,10 +603,13 @@ function bindAssetModal(type) {
       if (label) label.textContent = `${percent}%`;
     }, 220);
     try {
-      const result = await AI_DESIGN_SERVICE[methods[type]]({ instruction, settings: invitationData.designSystem.aiSettings, fonts: designData().designSystem.assets.fonts || [] });
+      const result = ["frame", "sectionIcon", "background"].includes(type) && typeof requestDesignAI === "function"
+        ? await requestDesignAI("assetImage", { instruction, assetType: type, mode, fonts: designData().designSystem.assets.fonts || [] })
+        : await AI_DESIGN_SERVICE[methods[type]]({ instruction, settings: invitationData.designSystem.aiSettings, fonts: designData().designSystem.assets.fonts || [] });
+      const finalResult = typeof persistAIImageResult === "function" ? await persistAIImageResult(type, result) : result;
       if (bar) bar.style.width = "100%";
       if (label) label.textContent = "100%";
-      renderAssetModalAIResult(type, result);
+      renderAssetModalAIResult(type, finalResult);
     } catch (error) {
       document.querySelector("[data-asset-ai-results]").innerHTML = `<article class="ai-result-card"><strong>AI 결과 생성 실패</strong><p class="admin-message">${escapeAdminHtml(error.message || "AI 설정을 확인해 주세요.")}</p></article>`;
     } finally {

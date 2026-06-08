@@ -1,17 +1,17 @@
 (function () {
-  const palette = (background, card, ink, muted, accent, line) => ({ background, card, ink, muted, accent, line });
+  const palette = (background, card, ink, muted, accent, line, extras = {}) => ({ background, card, ink, muted, accent, line, ...extras });
   const builtInThemes = [
-    { id: "beige", name: "베이지", type: "color", enabled: true, palette: palette("#f8f5f1", "#fffdfb", "#453d38", "#83766e", "#a88270", "rgba(148,117,101,0.2)") },
-    { id: "sky", name: "하늘색", type: "color", enabled: true, palette: palette("#f7fbfd", "#fdfeff", "#46555d", "#7f929b", "#83adbf", "rgba(131,173,191,0.2)") },
-    { id: "pink", name: "핑크", type: "color", enabled: true, palette: palette("#fff8fa", "#fffdfd", "#594a50", "#947d86", "#bd879a", "rgba(189,135,154,0.2)") },
-    { id: "gray", name: "연한 회색", type: "color", enabled: true, palette: palette("#f7f8f9", "#ffffff", "#4d5358", "#858d93", "#929da4", "rgba(130,140,147,0.2)") },
-    { id: "black", name: "블랙", type: "color", enabled: true, palette: palette("#202529", "#2a3035", "#f1f4f5", "#b2bec4", "#a6b9c2", "rgba(203,216,222,0.2)") },
-    { id: "white", name: "화이트", type: "color", enabled: true, palette: palette("#ffffff", "#ffffff", "#454b50", "#848b90", "#92999e", "rgba(120,128,133,0.18)") },
-    { id: "green", name: "그린", type: "color", enabled: true, palette: palette("#f6f9f4", "#fcfdfb", "#424f40", "#778574", "#5b7853", "rgba(91,120,83,0.2)") },
-    { id: "about_time", name: "어바웃타임", type: "movie", concept: "어바웃타임", mood: "따뜻하고 빈티지한 필름 무드", enabled: true, heroDecoration: "doodle_hearts", heroTextTheme: "editorial_left", palette: palette("#f7f0e7", "#fffaf4", "#463a34", "#88776e", "#8d3440", "rgba(125,38,51,0.2)") },
-    { id: "la_la_land", name: "라라랜드", type: "movie", concept: "라라랜드", mood: "밤하늘과 골드 포인트의 시네마 무드", enabled: true, heroDecoration: "poster_card", heroTextTheme: "editorial_left", palette: palette("#faf4e8", "#fffaf0", "#27305a", "#6f7190", "#62478e", "rgba(64,57,116,0.18)") },
-    { id: "spirited_away", name: "센과 치히로 무드", type: "movie", concept: "숲과 바람", mood: "차분한 자연과 동화 같은 무드", enabled: true, heroDecoration: "organic_heart", heroTextTheme: "minimal_center", palette: palette("#f4f0df", "#fbf7ea", "#37463f", "#718076", "#56725d", "rgba(86,114,93,0.18)") },
-    { id: "you_are_the_apple", name: "그 시절, 우리가 좋아했던 소녀 무드", type: "movie", concept: "청춘 영화", mood: "밝고 담백한 필름 무드", enabled: true, heroDecoration: "wedding_rings", heroTextTheme: "editorial_left", palette: palette("#f7f3e8", "#fffaf0", "#3e5267", "#7d8d98", "#537c91", "rgba(83,124,145,0.18)") },
+    { id: "beige", name: "베이지", type: "color", enabled: true, palette: palette("#f8f5f1", "#fffdfb", "#453d38", "#83766e", "#a88270", "rgba(148,117,101,0.2)", { side: "#eee8e1", button: "#f4e9e2", label: "#947565" }) },
+    { id: "sky", name: "하늘색", type: "color", enabled: true, palette: palette("#f7fbfd", "#fdfeff", "#46555d", "#7f929b", "#83adbf", "rgba(131,173,191,0.2)", { side: "#eff7fa", button: "#e4f2f7", label: "#6c8baf" }) },
+    { id: "pink", name: "핑크", type: "color", enabled: true, palette: palette("#fff8fa", "#fffdfd", "#594a50", "#947d86", "#bd879a", "rgba(189,135,154,0.2)", { side: "#fdf0f4", button: "#f9e5eb", label: "#a87587" }) },
+    { id: "gray", name: "연한 회색", type: "color", enabled: true, palette: palette("#f7f8f9", "#ffffff", "#4d5358", "#858d93", "#929da4", "rgba(130,140,147,0.2)", { side: "#edf0f2", button: "#edf0f2", label: "#737d84" }) },
+    { id: "black", name: "블랙", type: "color", enabled: true, palette: palette("#202529", "#2a3035", "#f1f4f5", "#b2bec4", "#a6b9c2", "rgba(203,216,222,0.2)", { side: "#15191c", button: "#354047", label: "#c3d1d7" }) },
+    { id: "white", name: "화이트", type: "color", enabled: true, palette: palette("#ffffff", "#ffffff", "#454b50", "#848b90", "#92999e", "rgba(120,128,133,0.18)", { side: "#f7f7f7", button: "#f6f7f7", label: "#70777c" }) },
+    { id: "green", name: "그린", type: "color", enabled: true, palette: palette("#f6f9f4", "#fcfdfb", "#424f40", "#778574", "#5b7853", "rgba(91,120,83,0.2)", { side: "#edf3ea", button: "#e3ede0", label: "#5b7853" }) },
+    { id: "about_time", name: "어바웃타임", type: "movie", concept: "어바웃타임", mood: "따뜻하고 빈티지한 필름 무드", enabled: true, heroDecoration: "doodle_hearts", heroTextTheme: "editorial_left", palette: palette("#f7f0e7", "#fffaf4", "#463a34", "#88776e", "#8d3440", "rgba(125,38,51,0.2)", { side: "#e9ddd1", button: "#fbf1e8", label: "#8d3440" }) },
+    { id: "la_la_land", name: "라라랜드", type: "movie", concept: "라라랜드", mood: "밤하늘과 골드 포인트의 시네마 무드", enabled: true, heroDecoration: "poster_card", heroTextTheme: "editorial_left", palette: palette("#faf4e8", "#fffaf0", "#27305a", "#6f7190", "#62478e", "rgba(64,57,116,0.18)", { side: "#171839", button: "#fff9e9", label: "#74559e" }) },
+    { id: "spirited_away", name: "센과 치히로 무드", type: "movie", concept: "숲과 바람", mood: "차분한 자연과 동화 같은 무드", enabled: true, heroDecoration: "organic_heart", heroTextTheme: "minimal_center", palette: palette("#f4f0df", "#fbf7ea", "#37463f", "#718076", "#56725d", "rgba(86,114,93,0.18)", { side: "#dce3cf", button: "#f8f4e5", label: "#667c61" }) },
+    { id: "you_are_the_apple", name: "그 시절, 우리가 좋아했던 소녀 무드", type: "movie", concept: "청춘 영화", mood: "밝고 담백한 필름 무드", enabled: true, heroDecoration: "wedding_rings", heroTextTheme: "editorial_left", palette: palette("#f7f3e8", "#fffaf0", "#3e5267", "#7d8d98", "#537c91", "rgba(83,124,145,0.18)", { side: "#e6eee9", button: "#fffaf0", label: "#5f8799" }) },
   ];
   const builtInAssets = {
     frames: [
@@ -44,6 +44,52 @@
   const themePresetId = (appearance = {}) => appearance.movieConcept && appearance.movieConcept !== "none" ? appearance.movieConcept : (appearance.theme || "sky");
   const cssString = (value) => String(value || "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   const mediaUrl = (value = "") => window.RSVP_STORAGE?.mediaPublicUrl?.(value) || value || "";
+  const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+  const hexToRgb = (value = "") => {
+    const hex = String(value || "").trim();
+    const full = hex.match(/^#([0-9a-f]{6})$/i)?.[1];
+    const short = hex.match(/^#([0-9a-f])([0-9a-f])([0-9a-f])$/i);
+    const normalized = full || (short ? short.slice(1).map((item) => item + item).join("") : "");
+    if (!normalized) return null;
+    return [0, 2, 4].map((index) => parseInt(normalized.slice(index, index + 2), 16));
+  };
+  const rgbToHex = (rgb) => `#${rgb.map((value) => clamp(Math.round(value), 0, 255).toString(16).padStart(2, "0")).join("")}`;
+  const mixColor = (from, to, ratio) => {
+    const a = hexToRgb(from);
+    const b = hexToRgb(to);
+    if (!a || !b) return from || to;
+    return rgbToHex(a.map((value, index) => value + (b[index] - value) * ratio));
+  };
+  const luminance = (value) => {
+    const rgb = hexToRgb(value);
+    if (!rgb) return 1;
+    const channel = rgb.map((item) => {
+      const v = item / 255;
+      return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * channel[0] + 0.7152 * channel[1] + 0.0722 * channel[2];
+  };
+  const contrastColor = (background, dark = "#2f2824", light = "#ffffff") => {
+    const bg = luminance(background);
+    const darkContrast = (Math.max(bg, luminance(dark)) + 0.05) / (Math.min(bg, luminance(dark)) + 0.05);
+    const lightContrast = (Math.max(bg, luminance(light)) + 0.05) / (Math.min(bg, luminance(light)) + 0.05);
+    return darkContrast >= lightContrast ? dark : light;
+  };
+  const normalizedPalette = (palette = {}) => {
+    const background = palette.background || "#f7fbfd";
+    const card = palette.card || "#ffffff";
+    const ink = palette.ink || "#46555d";
+    const accent = palette.accent || "#83adbf";
+    const side = palette.side || mixColor(background, "#ffffff", luminance(background) > 0.86 ? 0.34 : 0.16);
+    let button = palette.button || mixColor(card, accent, 0.14);
+    if (hexToRgb(button) && Math.abs(luminance(button) - luminance(background)) < 0.055) {
+      button = luminance(background) > 0.72 ? mixColor(accent, "#ffffff", 0.72) : mixColor(accent, "#000000", 0.22);
+    }
+    if (hexToRgb(button) && luminance(button) > 0.93) button = mixColor(button, accent, 0.16);
+    const buttonText = contrastColor(button, ink, "#ffffff");
+    const primaryText = contrastColor(accent, ink, "#ffffff");
+    return { ...palette, background, card, ink, accent, side, button, buttonText, primaryText };
+  };
 
   function ensureFontFace(font = {}) {
     if (!font.url || !font.family || !document?.head) return;
@@ -207,7 +253,7 @@
     const root = document.body;
     const isSuperAdmin = root.dataset.adminArea === "super";
     const adminPalette = builtInThemes.find((item) => item.id === "white").palette;
-    const appliedPalette = isSuperAdmin ? adminPalette : resolved.palette;
+    const appliedPalette = normalizedPalette(isSuperAdmin ? adminPalette : resolved.palette);
     root.dataset.theme = isSuperAdmin ? "white" : (resolved.theme.type === "color" && builtInThemes.some((item) => item.id === resolved.theme.id) ? resolved.theme.id : "sky");
     root.dataset.movieConcept = isSuperAdmin ? "none" : (resolved.theme.type === "movie" ? resolved.theme.id : "none");
     root.dataset.heroDecoration = resolved.heroDecorationAsset?.heroDecoration || resolved.heroDecoration || "none";
@@ -230,12 +276,18 @@
       ink: ["--ink", "--copy"],
       muted: ["--muted"],
       accent: ["--accent-dark", "--save", "--save-hover"],
-      button: ["--accent", "--nav-button", "--nav-hover", "--media-end"],
-      label: ["--label", "--nav-text"],
+      button: ["--accent", "--nav-button", "--nav-hover", "--media-end", "--button-hover"],
+      buttonText: ["--button-text", "--nav-button-text"],
+      primaryText: ["--primary-button-text"],
+      label: ["--label", "--nav-text", "--location-chip-text"],
       line: ["--line", "--nav-border"],
     };
     Object.entries(vars).forEach(([key, cssVars]) => appliedPalette[key] && cssVars.forEach((cssVar) => root.style.setProperty(cssVar, appliedPalette[key])));
     if (!appliedPalette.side && appliedPalette.background) root.style.setProperty("--body-bg", `color-mix(in srgb, ${appliedPalette.background} 72%, #ffffff)`);
+    root.style.setProperty("--nav-bg", `color-mix(in srgb, ${appliedPalette.card} 94%, transparent)`);
+    root.style.setProperty("--soft-bg", `color-mix(in srgb, ${appliedPalette.background} 86%, transparent)`);
+    root.style.setProperty("--panel-bg", `color-mix(in srgb, ${appliedPalette.card} 72%, transparent)`);
+    root.style.setProperty("--light-panel", `color-mix(in srgb, ${appliedPalette.card} 78%, transparent)`);
     root.style.setProperty("--design-background-decoration", resolved.backgroundDecoration ? `url("${mediaUrl(resolved.backgroundDecoration)}")` : "none");
     root.style.setProperty("--design-section-icon", resolved.sectionIcon ? `url("${mediaUrl(resolved.sectionIcon)}")` : "var(--section-divider)");
     root.style.setProperty("--custom-hero-decoration", resolved.heroDecorationAsset?.url ? `url("${mediaUrl(resolved.heroDecorationAsset.url)}")` : "none");

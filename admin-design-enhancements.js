@@ -1,4 +1,215 @@
 // Static HTML/JS enhancements for the super-admin design asset library.
+async function runAIWithProgress(methodOrName, payload = {}, progressRoot) {
+  const service = window.AI_DESIGN_SERVICE || (typeof AI_DESIGN_SERVICE !== "undefined" ? AI_DESIGN_SERVICE : null);
+  const method = typeof methodOrName === "function" ? methodOrName : service?.[methodOrName];
+  if (typeof method !== "function") throw new Error("AI 실행 메서드를 찾지 못했습니다.");
+  const progress = progressRoot || document.querySelector("[data-ai-progress], [data-asset-ai-progress]");
+  const bar = progress?.querySelector("i");
+  const label = progress?.querySelector("b");
+  let percent = 12;
+  if (progress) progress.hidden = false;
+  const timer = setInterval(() => {
+    percent = Math.min(94, percent + Math.ceil((100 - percent) / 7));
+    if (bar) bar.style.width = `${percent}%`;
+    if (label) label.textContent = `${percent}%`;
+  }, 220);
+  try {
+    const result = await method.call(service || null, payload);
+    if (bar) bar.style.width = "100%";
+    if (label) label.textContent = "100%";
+    return result;
+  } catch (error) {
+    if (/high demand|overloaded|temporarily|혼잡|429|503/i.test(error.message || "")) {
+      throw new Error("AI 서버가 일시적으로 혼잡해서 자동 재시도했지만 완료하지 못했습니다. Mock Mode를 켜거나 잠시 후 다시 시도해 주세요.");
+    }
+    throw error;
+  } finally {
+    clearInterval(timer);
+    setTimeout(() => {
+      if (progress) progress.hidden = true;
+      if (bar) bar.style.width = "0%";
+      if (label) label.textContent = "0%";
+    }, 260);
+  }
+}
+
+async function requestDesignAI(type, context = {}) {
+  const settings = invitationData.designSystem.aiSettings || {};
+  const client = window.RSVP_STORAGE?.getSupabaseClient?.();
+  const session = client ? (await client.auth.getSession()).data.session : null;
+  const response = await fetch(settings.endpoint || "/api/ai-design", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+    },
+    body: JSON.stringify({
+      provider: settings.provider || "OpenAI",
+      type,
+      context: { ...context, settings },
+    }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || "AI 생성에 실패했습니다.");
+  return payload;
+}
+
+function dataUrlToFile(dataUrl, name = "ai-design.png") {
+  const [meta, data] = String(dataUrl || "").split(",");
+  const mime = meta.match(/data:([^;]+)/)?.[1] || "image/png";
+  const binary = atob(data || "");
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return new File([bytes], name, { type: mime });
+}
+
+if (typeof window.rememberAIResult !== "function") {
+  window.rememberAIResult = function rememberAIResultFallback(result = {}) {
+    designData().designSystem.aiLibrary ||= [];
+    designData().designSystem.aiLibrary.unshift({ ...result, id: result.id || `ai-${Date.now()}`, createdAt: result.createdAt || new Date().toISOString() });
+  };
+}
+
+async function persistAIImageResult(type, result = {}) {
+  if (!result.imageDataUrl) return result;
+  const draft = { ...(window.assetSourceDraft || {}) };
+  draft.previewUrl = result.imageDataUrl;
+  draft.direction = result.direction || draft.direction || result.prompt || "";
+  try {
+    const file = dataUrlToFile(result.imageDataUrl, `${type}-${Date.now()}.png`);
+    draft.url = await window.RSVP_STORAGE.uploadDesignAsset(file, type);
+  } catch (error) {
+    draft.url = result.imageDataUrl;
+    draft.uploadError = error.message || "이미지를 업로드하지 못해 data URL로 임시 저장했습니다.";
+  }
+  window.assetSourceDraft = draft;
+  return { ...result, previewUrl: draft.previewUrl, url: draft.url };
+}
+
+function aiSlug(value = "ai") {
+  return String(value || "ai").trim().toLowerCase()
+    .replace(/[^a-z0-9가-힣]+/gi, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 32) || "ai";
+}
+
+function ensureMovieThemeAssets(result = {}) {
+  const system = designData().designSystem;
+  system.assets.frames ||= [];
+  system.assets.textThemes ||= [];
+  system.assets.sectionIcons ||= [];
+  system.assets.backgrounds ||= [];
+  const stamp = Date.now();
+  const frameId = result.heroDecoration && !["none", "doodle_hearts", "organic_heart", "wedding_rings", "poster_card"].includes(result.heroDecoration)
+    ? result.heroDecoration
+    : `movie_frame_${aiSlug(result.name)}_${stamp}`;
+  const textId = result.heroTextTheme && !["auto", "default_center", "editorial_left", "minimal_center"].includes(result.heroTextTheme)
+    ? result.heroTextTheme
+    : `movie_text_${aiSlug(result.name)}_${stamp}`;
+  const iconId = `movie_icon_${aiSlug(result.name)}_${stamp}`;
+  const backgroundId = `movie_bg_${aiSlug(result.name)}_${stamp}`;
+  if (!system.assets.frames.some((item) => item.id === frameId)) {
+    system.assets.frames.push({
+      id: frameId,
+      name: result.frameName || `${result.name || "영화"} 메인 이미지 꾸밈`,
+      mode: result.frameMode === "outer" ? "outer" : "overlay",
+      heroDecoration: frameId,
+      direction: result.frameDirection || result.heroDecoration || "영화 무드에 맞춘 신규 메인 이미지 꾸밈",
+      opacity: result.frameMode === "outer" ? 1 : 0.82,
+      sizePercent: result.frameMode === "outer" ? 112 : 92,
+      xPercent: 50,
+      yPercent: 50,
+      tintColor: result.palette?.accent || "#ffffff",
+      enabled: true,
+    });
+  }
+  if (!system.assets.textThemes.some((item) => item.id === textId)) {
+    system.assets.textThemes.push({
+      id: textId,
+      name: result.textThemeName || `${result.name || "영화"} 메인 문구 테마`,
+      layout: ["default", "poster-left", "center", "credits"].includes(result.textThemeLayout) ? result.textThemeLayout : "poster-left",
+      heroTextTheme: textId,
+      fontId: result.fontId || "noto-serif-kr",
+      align: "center",
+      shadow: true,
+      boxEnabled: false,
+      nameSize: 34,
+      dateSize: 12,
+      direction: result.fontDirection || "영화 무드에 맞춘 신규 메인 문구 테마",
+      enabled: true,
+    });
+  }
+  if (!system.assets.sectionIcons.some((item) => item.id === iconId)) {
+    system.assets.sectionIcons.push({ id: iconId, name: result.iconName || `${result.name || "영화"} 섹션 아이콘`, direction: result.sectionIconDirection || "영화 무드의 신규 섹션 아이콘", enabled: true });
+  }
+  if (!system.assets.backgrounds.some((item) => item.id === backgroundId)) {
+    system.assets.backgrounds.push({ id: backgroundId, name: result.backgroundName || `${result.name || "영화"} 전체 배경 장식`, direction: result.backgroundDirection || "영화 무드의 신규 전체 배경 장식", enabled: true });
+  }
+  return { heroDecoration: frameId, heroTextTheme: textId, sectionIcon: iconId, backgroundDecoration: backgroundId };
+}
+
+function pendingMovieThemeResult() {
+  const result = window.latestThemeAIResult || window.latestAIThemeResult;
+  return result && result.palette ? result : null;
+}
+
+function assetDraftFromAI(type, result) {
+  if (result?.imageDataUrl || result?.url || result?.previewUrl) {
+    const base = {
+      url: result.url || window.assetSourceDraft?.url || result.imageDataUrl || "",
+      previewUrl: result.previewUrl || result.imageDataUrl || result.url || "",
+      direction: result.direction || result.prompt || window.assetSourceDraft?.direction || "AI 이미지 생성 결과",
+    };
+    if (type === "frame") return { ...base, mode: window.assetSourceDraft?.mode || "overlay", heroDecoration: "custom_image" };
+    return base;
+  }
+  if (type === "frame") return { heroDecoration: result.heroDecoration || "custom_image", direction: result.frameDirection || result.heroDecoration || "AI 메인 이미지 꾸밈" };
+  if (type === "textTheme") return { heroTextTheme: result.heroTextTheme, layout: result.layout?.position || result.textThemeLayout || "poster-left", fontId: result.fontId || "noto-serif-kr", direction: result.fontDirection || "" };
+  if (type === "font") return { family: result.fontFamily || "Noto Serif KR", license: result.fontLicense || result.license || "상업적 무료 확인 필요" };
+  return { direction: result.direction || result.sectionIconDirection || result.backgroundDirection || "AI 디자인 방향" };
+}
+
+function applyPendingMovieThemeAssetsBeforeSave() {
+  const result = pendingMovieThemeResult();
+  if (!result) return;
+  const form = document.querySelector("#theme-form");
+  if (!form || form.elements.type?.value !== "movie") return;
+  const system = designData().designSystem;
+  const refs = ensureMovieThemeAssets(result);
+  const formId = form.elements.id?.value;
+  const formName = form.elements.name?.value;
+  const target = [...(system.themes || [])].reverse().find((theme) =>
+    theme.type === "movie" && ((formId && theme.id === formId) || (formName && theme.name === formName) || theme.name === result.name)
+  ) || [...(system.themes || [])].reverse().find((theme) => theme.type === "movie");
+  if (!target) return;
+  Object.assign(target, refs, {
+    heroDecoration: refs.heroDecoration,
+    heroTextTheme: refs.heroTextTheme,
+    fontDirection: result.fontDirection || target.fontDirection || "",
+    galleryFrameDirection: result.galleryFrameDirection || target.galleryFrameDirection || "",
+    buttonShapeDirection: result.buttonShapeDirection || target.buttonShapeDirection || "",
+  });
+}
+
+if (typeof window.rememberAIResult === "function") {
+  const baseRememberAIResult = window.rememberAIResult;
+  window.rememberAIResult = function rememberAIResultWithLatest(result) {
+    if (result?.palette) {
+      window.latestAIThemeResult = result;
+      window.latestThemeAIResult = result;
+    }
+    return baseRememberAIResult(result);
+  };
+}
+
+if (typeof window.saveDesignData === "function") {
+  const baseSaveDesignData = window.saveDesignData;
+  window.saveDesignData = async function saveDesignDataWithMovieAssets(message, rerender) {
+    applyPendingMovieThemeAssetsBeforeSave();
+    return baseSaveDesignData(message, rerender);
+  };
+}
+
 function textThemeSample(item = {}) {
   const linkedTheme = item.heroTextTheme
     ? window.WEDDING_DESIGN.builtInAssets.textThemes.find((theme) => theme.id === item.heroTextTheme)
@@ -368,10 +579,30 @@ function bindAssetModal(type, assetId = "") {
   });
   document.querySelector("[data-asset-ai-send]")?.addEventListener("click", async () => {
     const methods = { frame: "generateFrameDecoration", textTheme: "generateHeroTextTheme", sectionIcon: "generateSectionIcon", background: "generateBackgroundDecoration", font: "generateHeroTextTheme" };
-    const instruction = document.querySelector("[data-asset-ai-instruction]").value;
+    const mode = form.elements.assetMode?.value || window.assetSourceDraft?.mode || "overlay";
+    const modeGuide = type === "frame"
+      ? mode === "outer"
+        ? "적용방식: 사진바깥쪽 꾸미기. 사진을 감싸는 액자/필름 프레임/코너 장식 형태로 만들고 중앙 사진 영역은 비워 둔다."
+        : "적용방식: 사진 위에 겹치기. 인물 얼굴을 가리지 않는 얇은 선, 작은 드로잉, 코너 포인트, 반투명 오버레이 중심으로 만든다."
+      : "";
+    const instruction = [document.querySelector("[data-asset-ai-instruction]").value, modeGuide].filter(Boolean).join("\n");
     document.querySelector("[data-asset-ai-chat]").insertAdjacentHTML("beforeend", `<p>사용자: ${escapeAdminHtml(instruction)}</p><p>AI: 요청에 맞는 미리보기를 만들었습니다.</p>`);
     try {
-      renderAssetModalAIResult(type, await AI_DESIGN_SERVICE[methods[type]]({ instruction, settings: invitationData.designSystem.aiSettings, fonts: designData().designSystem.assets.fonts || [] }));
+      const result = ["frame", "sectionIcon", "background"].includes(type)
+        ? await runAIWithProgress(
+            () => requestDesignAI("assetImage", {
+              instruction,
+              assetType: type,
+              mode,
+              fonts: designData().designSystem.assets.fonts || [],
+            }),
+            {},
+            document.querySelector("[data-asset-ai-progress]")
+          )
+        : await runAIWithProgress(methods[type], { instruction, settings: invitationData.designSystem.aiSettings, fonts: designData().designSystem.assets.fonts || [] }, document.querySelector("[data-asset-ai-progress]"));
+      const finalResult = await persistAIImageResult(type, result);
+      renderAssetModalAIResult(type, finalResult);
+      if (finalResult.uploadError) document.querySelector("[data-asset-ai-chat]")?.insertAdjacentHTML("beforeend", `<p>AI: 이미지는 만들었지만 업로드 저장은 실패했습니다. 저장 시 임시 이미지로 반영됩니다.</p>`);
     } catch (error) {
       document.querySelector("[data-asset-ai-results]").innerHTML = `<article class="ai-result-card"><strong>AI 결과 생성 실패</strong><p class="admin-message">${escapeAdminHtml(error.message || "AI 설정을 확인해 주세요.")}</p></article>`;
     }

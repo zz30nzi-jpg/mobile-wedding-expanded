@@ -1,4 +1,5 @@
 const API_URL = "https://api.openai.com/v1/responses";
+const IMAGE_API_URL = "https://api.openai.com/v1/images/generations";
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://cimyjsqjpenljpywhgso.supabase.co";
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || "sb_publishable_jxY5QiiuKHV-5VSBO1F8Ow_wWeYjcDV";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_API_KEY;
@@ -16,8 +17,15 @@ const designSchema = {
       required: ["side", "background", "card", "ink", "muted", "accent", "label", "button", "line"],
       additionalProperties: false,
     },
-    heroDecoration: { type: "string", enum: ["none", "doodle_hearts", "organic_heart", "wedding_rings", "poster_card"] },
-    heroTextTheme: { type: "string", enum: ["editorial_left", "minimal_center"] },
+    heroDecoration: { type: "string" },
+    heroTextTheme: { type: "string" },
+    frameName: { type: "string" },
+    frameMode: { type: "string", enum: ["overlay", "outer"] },
+    frameDirection: { type: "string" },
+    textThemeName: { type: "string" },
+    textThemeLayout: { type: "string" },
+    iconName: { type: "string" },
+    backgroundName: { type: "string" },
     sectionIconDirection: { type: "string" },
     backgroundDirection: { type: "string" },
     fontDirection: { type: "string" },
@@ -27,7 +35,12 @@ const designSchema = {
     galleryFrameDirection: { type: "string" },
     buttonShapeDirection: { type: "string" },
   },
-  required: ["name", "palette", "heroDecoration", "heroTextTheme", "sectionIconDirection", "backgroundDirection", "fontDirection", "fontId", "fontFamily", "fontLicense", "galleryFrameDirection", "buttonShapeDirection"],
+  required: [
+    "name", "palette", "heroDecoration", "heroTextTheme", "frameName", "frameMode", "frameDirection",
+    "textThemeName", "textThemeLayout", "iconName", "backgroundName", "sectionIconDirection",
+    "backgroundDirection", "fontDirection", "fontId", "fontFamily", "fontLicense",
+    "galleryFrameDirection", "buttonShapeDirection",
+  ],
   additionalProperties: false,
 };
 
@@ -77,9 +90,21 @@ const venueSchema = {
   additionalProperties: false,
 };
 
+const imageSchema = {
+  type: "object",
+  properties: {
+    name: { type: "string" },
+    direction: { type: "string" },
+    prompt: { type: "string" },
+  },
+  required: ["name", "direction", "prompt"],
+  additionalProperties: false,
+};
+
 function schemaFor(type) {
   if (type === "transportGuide") return transportSchema;
   if (type === "venueGuide") return venueSchema;
+  if (type === "imagePrompt") return imageSchema;
   return designSchema;
 }
 
@@ -171,13 +196,15 @@ ${designPromptForType()}
 요청 유형: ${type}
 사용자 요청: ${context.instruction || context.mood || ""}
 영화 또는 컨셉: ${context.concept || ""}
-팔레트는 CSS에서 바로 사용할 수 있는 색상으로 제안하고, 프레임과 문구 테마는 제공된 enum 중 하나를 선택하세요.
-팔레트의 ink는 본문 글자색이므로 반드시 충분히 어두운 계열로 지정하세요. side는 모바일 청첩장 좌우 빈 여백 색상이며 background보다 연하고 밝아 청첩장 영역과 구분되어야 합니다. accent는 버튼/강조색, label은 영문 섹션 라벨색, button은 연한 버튼 배경색입니다.
+팔레트는 CSS에서 바로 사용할 수 있는 색상으로 제안하세요.
+팔레트의 ink는 본문 글자색이므로 반드시 충분히 어두운 계열로 지정하세요. side는 모바일 청첩장 좌우 빈 여백 색상이며 background와 명확히 구분되어야 합니다. accent는 버튼/강조색, label은 영문 섹션 라벨색, button은 일반 버튼 배경색입니다. button은 background/card와 너무 비슷하거나 너무 밝지 않게 하고, 밝은 버튼이면 문구가 어두워야 합니다.
 폰트 파일이나 새 폰트 생성은 하지 마세요. fontId는 사용 가능한 목록 중 하나만 참고값으로 고르세요.
 컬러테마 요청이면 색상 팔레트 추천에 집중하세요.
 영화테마 요청이면 실제 영화 포스터, 명장면, 시대감, 조명, 의상/소품, 대표 색감에서 무드를 추출하세요.
 표절이나 특정 포스터 복제는 피하고, 그 영화가 연상되는 색상·여백·구도·질감·장면 감정만 재해석하세요.
 생성 스타일은 사랑스럽고 키치하며, 드로잉 라인 장식이 많은 모바일 청첩장 디자인을 우선합니다.
+기존 디자인 소스 id를 고르는 대신, heroDecoration에는 새 프레임 id로 쓸 짧은 snake_case 이름을, heroTextTheme에는 새 문구테마 id로 쓸 짧은 snake_case 이름을 작성하세요.
+frameName, frameMode, frameDirection, textThemeName, textThemeLayout, sectionIconDirection, backgroundDirection을 모두 영화 무드에 맞는 신규 소스로 직접 제안하세요.
 메인 이미지 프레임 모양, 갤러리 배치 레이아웃, 갤러리 미리보기 프레임 디자인, 전체 폰트 방향, 메인문구테마가 하나의 영화 무드로 일관되게 보이도록 제안하세요.`;
 }
 
@@ -192,7 +219,11 @@ async function callOpenAI(prompt, responseSchema) {
     }),
   });
   const payload = await openai.json();
-  if (!openai.ok) throw new Error(payload.error?.message || "OpenAI API 호출에 실패했습니다.");
+  if (!openai.ok) {
+    const error = new Error(payload.error?.message || "OpenAI API 호출에 실패했습니다.");
+    error.retryable = openai.status === 429 || openai.status === 503 || /high demand|overloaded|rate|quota/i.test(error.message);
+    throw error;
+  }
   return JSON.parse(outputText(payload));
 }
 
@@ -241,6 +272,57 @@ async function callGemini(prompt, responseSchema) {
   throw new Error(`Gemini가 일시적으로 혼잡합니다. 잠시 후 다시 시도해 주세요. ${lastError?.message || ""}`.trim());
 }
 
+async function callOpenAIWithRetry(prompt, responseSchema) {
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await callOpenAI(prompt, responseSchema);
+    } catch (error) {
+      lastError = error;
+      if (!error.retryable) throw error;
+      await sleep(500 + attempt * 900);
+    }
+  }
+  throw new Error(`OpenAI가 일시적으로 혼잡합니다. 잠시 후 다시 시도해 주세요. ${lastError?.message || ""}`.trim());
+}
+
+async function callOpenAIImage(prompt) {
+  const image = await fetch(IMAGE_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    body: JSON.stringify({
+      model: process.env.OPENAI_IMAGE_MODEL || "gpt-image-1",
+      prompt,
+      size: "1024x1024",
+      background: "transparent",
+      quality: "medium",
+    }),
+  });
+  const payload = await image.json();
+  if (!image.ok) {
+    const error = new Error(payload.error?.message || "OpenAI 이미지 생성에 실패했습니다.");
+    error.retryable = image.status === 429 || image.status === 503 || /high demand|overloaded|rate|quota/i.test(error.message);
+    throw error;
+  }
+  const b64 = payload.data?.[0]?.b64_json;
+  if (!b64) throw new Error("이미지 생성 결과가 비어 있습니다.");
+  return `data:image/png;base64,${b64}`;
+}
+
+async function callOpenAIImageWithRetry(prompt) {
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      return await callOpenAIImage(prompt);
+    } catch (error) {
+      lastError = error;
+      if (!error.retryable) throw error;
+      await sleep(700 + attempt * 1100);
+    }
+  }
+  throw new Error(`OpenAI 이미지 생성 서버가 일시적으로 혼잡합니다. 잠시 후 다시 시도해 주세요. ${lastError?.message || ""}`.trim());
+}
+
 module.exports = async function aiDesign(request, response) {
   response.setHeader("Access-Control-Allow-Origin", request.headers.origin || "*");
   response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
@@ -249,19 +331,42 @@ module.exports = async function aiDesign(request, response) {
   if (request.method === "OPTIONS") return response.status(204).end();
   if (!await registeredAdmin(request)) return response.status(401).json({ error: "등록된 관리자 로그인 후 이용해 주세요." });
   const provider = request.method === "POST" ? request.body?.provider || "OpenAI" : request.query?.provider || "OpenAI";
+  const { type = "palette", context = {} } = request.body || {};
   if (request.method === "GET") {
     const configured = provider === "Gemini" ? Boolean(GEMINI_API_KEY) : Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL);
     return response.status(configured ? 200 : 503).json({ configured, provider, error: configured ? "" : provider === "Gemini" ? "GEMINI_API_KEY 환경변수를 등록해 주세요." : "OPENAI_API_KEY와 OPENAI_MODEL 환경변수를 등록해 주세요." });
   }
   if (request.method !== "POST") return response.status(405).json({ error: "지원하지 않는 요청입니다." });
   if (provider === "Gemini" && !GEMINI_API_KEY) return response.status(503).json({ error: "Gemini 서버 환경변수가 설정되지 않았습니다." });
-  if (provider !== "Gemini" && (!process.env.OPENAI_API_KEY || !process.env.OPENAI_MODEL)) return response.status(503).json({ error: "OpenAI 서버 환경변수가 설정되지 않았습니다." });
+  if (provider !== "Gemini" && !process.env.OPENAI_API_KEY) return response.status(503).json({ error: "OPENAI_API_KEY 환경변수를 등록해 주세요." });
+  if (provider !== "Gemini" && type !== "assetImage" && !process.env.OPENAI_MODEL) return response.status(503).json({ error: "OPENAI_MODEL 환경변수를 등록해 주세요." });
 
-  const { type = "palette", context = {} } = request.body || {};
   const prompt = designPrompt(type, context);
   const responseSchema = schemaFor(type);
   try {
-    const result = provider === "Gemini" ? await callGemini(prompt, responseSchema) : await callOpenAI(prompt, responseSchema);
+    if (type === "assetImage") {
+      if (provider !== "OpenAI") return response.status(400).json({ error: "이미지 생성은 현재 OpenAI provider에서만 지원합니다." });
+      const imagePrompt = designPrompt("imagePrompt", context);
+      const fallbackPrompt = `${imagePrompt}
+요청한 디자인 소스를 실제 이미지로 생성하세요.
+이미지 유형: ${context.assetType || ""}
+적용 방식: ${context.mode || ""}
+투명 배경 PNG. 단일 디자인 소스. 텍스트/글자/로고/워터마크 없음.
+메인 사진은 만들지 말고, 청첩장 위에 얹거나 감쌀 수 있는 장식 요소만 생성하세요.`;
+      const promptResult = process.env.OPENAI_MODEL ? await callOpenAIWithRetry(`${imagePrompt}
+요청한 디자인 소스를 실제 이미지 생성 프롬프트로 변환하세요.
+이미지 유형: ${context.assetType || ""}
+적용 방식: ${context.mode || ""}
+반드시 투명 배경 PNG에 적합하게, 단일 디자인 소스만 생성하도록 작성하세요.
+텍스트/글자/로고/워터마크는 넣지 마세요.`, imageSchema) : {
+        name: context.assetType === "frame" ? "AI 메인 이미지 꾸밈" : context.assetType === "sectionIcon" ? "AI 섹션 아이콘" : "AI 전체 배경 장식",
+        direction: context.instruction || "AI 이미지 생성 결과",
+        prompt: fallbackPrompt,
+      };
+      const imageDataUrl = await callOpenAIImageWithRetry(promptResult.prompt || fallbackPrompt);
+      return response.status(200).json({ ...promptResult, imageDataUrl, createdAt: new Date().toISOString() });
+    }
+    const result = provider === "Gemini" ? await callGemini(prompt, responseSchema) : await callOpenAIWithRetry(prompt, responseSchema);
     if (type === "sectionIcon") result.direction = result.sectionIconDirection;
     if (type === "background") result.direction = result.backgroundDirection;
     return response.status(200).json({ ...result, prompt, createdAt: new Date().toISOString() });
