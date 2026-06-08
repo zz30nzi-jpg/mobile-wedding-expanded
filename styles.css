@@ -1168,22 +1168,22 @@ body[data-layout="navy_arch"] .invitation-intro-copy { text-align: center; }
    ════════════════════════════════════════════════════════════ */
 body[data-layout="cream_organic"] .hero { min-height: 540px; }
 body[data-layout="cream_organic"] .hero-names { letter-spacing: 0.05em; }
-/* 라벤더 바디 전체 — 아치가 히어로 아래로 자연스럽게 연결 */
-body[data-layout="cream_organic"] .invitation { background: #8b7cb5; }
+/* 테마 accent-dark 색상 바디 — 아치가 히어로 아래로 자연스럽게 연결 */
+body[data-layout="cream_organic"] .invitation { background: var(--accent-dark); }
 body[data-layout="cream_organic"] #invitation { position: relative; z-index: 1; background: transparent; border-radius: 54px 54px 0 0; margin: -10px 0 0; padding: 64px 70px 44px; }
-body[data-layout="cream_organic"] #invitation .section-title { color: #fff; }
-body[data-layout="cream_organic"] #invitation .section-label { color: rgba(255,255,255,0.82); }
-body[data-layout="cream_organic"] #invitation p { color: rgba(255,255,255,0.9); }
-body[data-layout="cream_organic"] .invitation-intro-copy { color: #fff; }
-body[data-layout="cream_organic"] .invitation-intro-copy strong { color: #fff; }
-body[data-layout="cream_organic"] .invitation-intro-copy span { color: rgba(255,255,255,0.8); }
-body[data-layout="cream_organic"] .invitation-intro { background: rgba(60,44,88,0.52); backdrop-filter: blur(12px); }
-/* 오가닉 섹션 카드 — 라벤더 바디 위 흰 카드 */
-body[data-layout="cream_organic"] .section { border-radius: 24px; margin: 6px 10px; padding: 40px 70px; background: rgba(255,255,255,0.95); box-shadow: 0 4px 24px rgba(80,55,120,0.12); }
+body[data-layout="cream_organic"] #invitation .section-title { color: var(--primary-button-text); }
+body[data-layout="cream_organic"] #invitation .section-label { color: color-mix(in srgb, var(--primary-button-text) 82%, transparent); }
+body[data-layout="cream_organic"] #invitation p { color: color-mix(in srgb, var(--primary-button-text) 90%, transparent); }
+body[data-layout="cream_organic"] .invitation-intro-copy { color: var(--primary-button-text); }
+body[data-layout="cream_organic"] .invitation-intro-copy strong { color: var(--primary-button-text); }
+body[data-layout="cream_organic"] .invitation-intro-copy span { color: color-mix(in srgb, var(--primary-button-text) 80%, transparent); }
+body[data-layout="cream_organic"] .invitation-intro { background: color-mix(in srgb, var(--accent-dark) 60%, transparent); backdrop-filter: blur(12px); }
+/* 오가닉 섹션 카드 — accent-dark 바디 위 card 카드 */
+body[data-layout="cream_organic"] .section { border-radius: 24px; margin: 6px 10px; padding: 40px 70px; background: var(--card); box-shadow: 0 4px 24px color-mix(in srgb, var(--accent-dark) 12%, transparent); }
 body[data-layout="cream_organic"] .section-title { font-size: clamp(18px, 5vw, 26px); letter-spacing: 0.02em; }
 /* 도트 타임라인 */
 body[data-layout="cream_organic"] .timetable-item { position: relative; padding-left: 22px; }
-body[data-layout="cream_organic"] .timetable-item::before { content: ""; position: absolute; left: 0; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent); }
+body[data-layout="cream_organic"] .timetable-item::before { content: ""; position: absolute; left: 0; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent-dark); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-dark) 25%, transparent); }
 
 /* ═══════════════════════════════════════════════════════════════
    TEMPLATE: crimson_silk  —  다크 히어로 · 임베드 사진 · 웨이브 구분선
@@ -1204,8 +1204,8 @@ body[data-layout="crimson_silk"] .invitation-intro { background: color-mix(in sr
 body[data-layout="crimson_silk"] .invitation-intro-copy { color: var(--card); text-align: center; }
 body[data-layout="crimson_silk"] .invitation-intro-copy p,
 body[data-layout="crimson_silk"] .invitation-intro-copy span { color: color-mix(in srgb, var(--card) 68%, transparent); }
-/* 섹션 사이 웨이브 장식선 */
-body[data-layout="crimson_silk"] .section + .section::before { content: ""; display: block; width: 68%; height: 22px; margin: 0 auto 24px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 22' preserveAspectRatio='none'%3E%3Cpath d='M0 11Q25 3 50 11Q75 19 100 11Q125 3 150 11Q175 19 200 11' fill='none' stroke='%23c41230' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat; opacity: 0.55; }
+/* 섹션 사이 웨이브 장식선 — accent-dark 색상으로 테마 연동 */
+body[data-layout="crimson_silk"] .section + .section::before { content: ""; display: block; width: 68%; height: 22px; margin: 0 auto 24px; background-color: var(--accent-dark); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 22' preserveAspectRatio='none'%3E%3Cpath d='M0 11Q25 3 50 11Q75 19 100 11Q125 3 150 11Q175 19 200 11' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 22' preserveAspectRatio='none'%3E%3Cpath d='M0 11Q25 3 50 11Q75 19 100 11Q125 3 150 11Q175 19 200 11' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E"); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; opacity: 0.55; }
 /* 하트 타임라인 불릿 */
 body[data-layout="crimson_silk"] .timetable-item { position: relative; padding-left: 18px; }
 body[data-layout="crimson_silk"] .timetable-item::before { content: "♥"; position: absolute; left: 0; top: 0; color: var(--accent-dark); font-size: 10px; line-height: 1.6; }
@@ -1228,8 +1228,8 @@ body[data-layout="editorial_red"] .invitation-intro-copy strong { font-size: cla
 body[data-layout="editorial_red"] .profile-grid { grid-template-columns: 1fr; gap: 24px; }
 body[data-layout="editorial_red"] .profile-card { grid-template-columns: 96px minmax(0, 1fr); }
 body[data-layout="editorial_red"] .profile-card .media { border: 5px solid var(--card); border-bottom-width: 20px; box-shadow: 2px 4px 14px rgba(0,0,0,0.18); transform: rotate(-2.5deg); filter: grayscale(100%); }
-/* 레드 물결 섹션 구분 */
-body[data-layout="editorial_red"] .section::after { content: ""; display: block; margin: 28px auto 0; width: 100px; height: 18px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 18'%3E%3Cpath d='M4 9Q14 3 24 9Q34 15 44 9Q54 3 64 9Q74 15 84 9Q94 3 96 9' fill='none' stroke='%23c41230' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat; opacity: 0.55; }
+/* 물결 섹션 구분 — accent-dark 색상으로 테마 연동 */
+body[data-layout="editorial_red"] .section::after { content: ""; display: block; margin: 28px auto 0; width: 100px; height: 18px; background-color: var(--accent-dark); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 18'%3E%3Cpath d='M4 9Q14 3 24 9Q34 15 44 9Q54 3 64 9Q74 15 84 9Q94 3 96 9' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 18'%3E%3Cpath d='M4 9Q14 3 24 9Q34 15 44 9Q54 3 64 9Q74 15 84 9Q94 3 96 9' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; opacity: 0.55; }
 
 /* ═══════════════════════════════════════════════════════════════
    TEMPLATE: garden_doodle  —  하트 사진 마스크 · 굵은 이름 · 낙서 테두리
@@ -1374,18 +1374,18 @@ body[data-layout="navy_arch"] #guestbook .guestbook-form { background: var(--car
 
 /* ── cream_organic : 봄날 감성, 꽃 장식, 둥근 카드 ── */
 body[data-layout="cream_organic"] #invitation { padding: 48px 28px 40px; }
-body[data-layout="cream_organic"] #invitation::before { content: "✿"; display: block; text-align: center; font-size: 22px; margin-bottom: 12px; color: var(--accent); opacity: 0.7; }
+body[data-layout="cream_organic"] #invitation::before { content: "✿"; display: block; text-align: center; font-size: 22px; margin-bottom: 12px; color: var(--primary-button-text); opacity: 0.7; }
 body[data-layout="cream_organic"] #about-us .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 body[data-layout="cream_organic"] #about-us .profile-card { display: grid; grid-template-rows: auto auto; justify-items: center; text-align: center; gap: 8px; }
 body[data-layout="cream_organic"] #about-us .profile-name { font-family: "Gowun Batang", serif; font-size: 16px; font-weight: 700; }
 body[data-layout="cream_organic"] #wedding-day .timetable-item { padding: 12px 14px 12px 28px; }
-body[data-layout="cream_organic"] #location .section-title::after { content: ""; display: block; width: 32px; height: 2px; background: var(--accent); border-radius: 2px; margin: 8px auto 0; }
+body[data-layout="cream_organic"] #location .section-title::after { content: ""; display: block; width: 32px; height: 2px; background: var(--accent-dark); border-radius: 2px; margin: 8px auto 0; }
 body[data-layout="cream_organic"] #guestbook .field input,
-body[data-layout="cream_organic"] #guestbook .field textarea { border-radius: 16px; border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+body[data-layout="cream_organic"] #guestbook .field textarea { border-radius: 16px; border-color: color-mix(in srgb, var(--accent-dark) 35%, transparent); }
 body[data-layout="cream_organic"] #guestbook .btn { border-radius: 999px; }
 /* 섹션 타이틀 꽃 장식 */
-body[data-layout="cream_organic"] .section-label::before { content: "✿ "; color: var(--accent); }
-body[data-layout="cream_organic"] .section-label::after { content: " ✿"; color: var(--accent); }
+body[data-layout="cream_organic"] .section-label::before { content: "✿ "; color: var(--accent-dark); }
+body[data-layout="cream_organic"] .section-label::after { content: " ✿"; color: var(--accent-dark); }
 
 /* ── crimson_silk : 진홍 예식, 크림 on 다크 배경, 모던 미니멀 ── */
 body[data-layout="crimson_silk"] body,
