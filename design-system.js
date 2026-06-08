@@ -142,6 +142,16 @@
     system.aiSettings = { enabled: true, mockMode: true, provider: "OpenAI", model: "server-managed", endpoint: "/api/ai-design", removeWhiteBackground: true, whiteTolerance: 24, convertSvg: false, savePng: true, prompts: defaultPrompts, referenceImages: "", ...(system.aiSettings || {}) };
     system.aiSettings.prompts = { ...defaultPrompts, ...(system.aiSettings.prompts || {}) };
     system.aiLibrary = Array.isArray(system.aiLibrary) ? system.aiLibrary : [];
+    const builtInLayouts = [
+      { id: "classic", name: "클래식", description: "세로 스크롤 카드형. 히어로 사진 전체, 섹션별 깔끔한 구분.", previewBg: "#f7f0e7", previewAccent: "#8d3440", builtIn: true },
+      { id: "editorial_red", name: "붉은 설렘", description: "딥레드 + 흑백 사진. 잡지형 큰 타이포·폴라로이드 프로필 구도.", previewBg: "#f8f3ec", previewAccent: "#c41230", baseLayout: "editorial", builtIn: true },
+      { id: "garden_doodle", name: "꽃길 약속", description: "초록 낙서 프레임 + 하트 사진. 손그림 감성의 사랑스러운 결혼식.", previewBg: "#eef2eb", previewAccent: "#c23b2a", baseLayout: "classic", builtIn: true },
+      { id: "navy_arch", name: "푸른 서약", description: "파란 배경 + 아치 사진. 단정하고 품격 있는 커플의 웨딩.", previewBg: "#f5f7fa", previewAccent: "#1a2456", baseLayout: "arch", builtIn: true },
+      { id: "cream_organic", name: "봄날 인연", description: "크림 + 라벤더 아치 패널. 둥글고 부드러운 봄 웨딩 무드.", previewBg: "#faf8f4", previewAccent: "#7c6d9a", baseLayout: "classic", builtIn: true },
+      { id: "crimson_silk", name: "진홍 예식", description: "진홍 다크 히어로 + 크림 본문. 연인의 열정을 담은 스플릿 구조.", previewBg: "#f8f2ec", previewAccent: "#8b1a2f", baseLayout: "split", builtIn: true },
+    ];
+    system.layoutTemplates = mergeUnique(builtInLayouts, Array.isArray(system.layoutTemplates) ? system.layoutTemplates : []);
+    system.activeLayoutId = system.activeLayoutId || "classic";
     const legacyCustom = !data.appearance.design && ((data.appearance.heroDecoration && data.appearance.heroDecoration !== "none") || (data.appearance.heroTextTheme && data.appearance.heroTextTheme !== "auto"));
     const previousDesign = data.appearance.design;
     data.appearance.design = {
@@ -256,6 +266,7 @@
     const appliedPalette = normalizedPalette(isSuperAdmin ? adminPalette : resolved.palette);
     root.dataset.theme = isSuperAdmin ? "white" : (resolved.theme.type === "color" && builtInThemes.some((item) => item.id === resolved.theme.id) ? resolved.theme.id : "sky");
     root.dataset.movieConcept = isSuperAdmin ? "none" : (resolved.theme.type === "movie" ? resolved.theme.id : "none");
+    if (!isSuperAdmin && data.designSystem?.activeLayoutId) root.dataset.layout = data.designSystem.activeLayoutId;
     root.dataset.heroDecoration = resolved.heroDecorationAsset?.heroDecoration || resolved.heroDecoration || "none";
     root.dataset.heroTextTheme = resolved.heroTextTheme || "auto";
     root.dataset.heroTextLayout = resolved.heroTextThemeAsset?.layout || "default";

@@ -168,33 +168,78 @@ function superOverview() {
 }
 
 function adminHeader(active) {
+  const ico = (d, extra = "") => `<svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${extra}<path d="${d}"/></svg>`;
   const coupleBadge = [invitationData.couple?.groom?.name, invitationData.couple?.bride?.name].filter(Boolean).join(" · ");
   const cardSlug = adminArea === "general" ? window.RSVP_STORAGE?.getActiveInvitationSlug?.() : "";
   const cardUrl = cardSlug && cardSlug !== "main" ? `./index.html?card=${encodeURIComponent(cardSlug)}` : "./index.html";
-  const generalMenu = `<div class="admin-menu-group"><strong>일반 관리자</strong><nav class="admin-tabs">
-      <button class="btn ${active === "editor" ? "btn-primary" : ""}" data-admin-view="editor">기본 설정</button>
-      <button class="btn ${active === "copy" ? "btn-primary" : ""}" data-admin-view="copy-editor">편집 기능</button>
-      <button class="btn ${["content", "responses", "photos", "guestbook"].includes(active) ? "btn-primary" : ""}" data-admin-view="content">콘텐츠</button>
-      <button class="btn ${active === "sections" ? "btn-primary" : ""}" data-admin-view="sections">섹션 설정</button>
-      <button class="btn ${active === "share" ? "btn-primary" : ""}" data-admin-view="share-settings">공유</button>
-    </nav></div>`;
-  const superMenu = `<div class="admin-menu-group admin-menu-super"><strong>슈퍼관리자</strong><nav class="admin-tabs">
-      <button class="btn ${active === "themes" ? "btn-primary" : ""}" data-admin-view="themes">테마 생성 및 수정</button>
-      <button class="btn ${active === "assets" ? "btn-primary" : ""}" data-admin-view="assets">디자인 요소 생성</button>
-      <button class="btn ${active === "defaults" ? "btn-primary" : ""}" data-admin-view="defaults">기본값 설정</button>
-      <button class="btn ${active === "fonts" ? "btn-primary" : ""}" data-admin-view="fonts">폰트 목록</button>
-      <button class="btn ${active === "general-admins" ? "btn-primary" : ""}" data-admin-view="general-admins">일반관리자 관리</button>
-      <button class="btn ${active === "ai-settings" ? "btn-primary" : ""}" data-admin-view="ai-settings">AI 설정</button>
-      <button class="btn ${active === "ai-library" ? "btn-primary" : ""}" data-admin-view="ai-library">AI 생성물 라이브러리</button>
-    </nav></div>`;
+  const generalMenu = `<nav class="admin-bottom-tabs" role="tablist">
+    <button class="admin-tab-item ${active === "editor" ? "is-active" : ""}" data-admin-view="editor" role="tab">
+      ${ico("M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z", '<path d="M9 22V12h6v10"/>')}
+      <span>기본</span>
+    </button>
+    <button class="admin-tab-item ${active === "copy" ? "is-active" : ""}" data-admin-view="copy-editor" role="tab">
+      ${ico("M12 20h9 M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z")}
+      <span>편집</span>
+    </button>
+    <button class="admin-tab-item ${["content", "responses", "photos", "guestbook"].includes(active) ? "is-active" : ""}" data-admin-view="content" role="tab">
+      ${ico("", '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>')}
+      <span>콘텐츠</span>
+    </button>
+    <button class="admin-tab-item ${active === "sections" ? "is-active" : ""}" data-admin-view="sections" role="tab">
+      ${ico("M12 2l8 4-8 4-8-4z M4 10l8 4 8-4 M4 14l8 4 8-4")}
+      <span>섹션</span>
+    </button>
+    <button class="admin-tab-item ${active === "share" ? "is-active" : ""}" data-admin-view="share-settings" role="tab">
+      ${ico("M4 12v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8 M16 6l-4-4-4 4 M12 2v13")}
+      <span>공유</span>
+    </button>
+  </nav>`;
+  const superMenu = `<nav class="admin-tabs">
+    <button class="btn ${active === "themes" ? "btn-primary" : ""}" data-admin-view="themes">
+      ${ico("M12 3a9 9 0 1 0 3.08 17.48", '<circle cx="7" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="10" cy="7.5" r="1" fill="currentColor" stroke="none"/><circle cx="14" cy="7.5" r="1" fill="currentColor" stroke="none"/><circle cx="17" cy="12" r="1" fill="currentColor" stroke="none"/>')}
+      <span>테마</span>
+    </button>
+    <button class="btn ${active === "assets" ? "btn-primary" : ""}" data-admin-view="assets">
+      ${ico("M9.5 14.5A2 2 0 0 0 8 13l-5.5-1.5a.5.5 0 0 1 0-.96L8 9A2 2 0 0 0 9.5 7.5L11 2a.5.5 0 0 1 .96 0L13.5 7.5A2 2 0 0 0 15 9l5.5 1.54a.5.5 0 0 1 0 .96L15 13a2 2 0 0 0-1.5 1.5L12 20a.5.5 0 0 1-.96 0z")}
+      <span>디자인 요소</span>
+    </button>
+    <button class="btn ${active === "defaults" ? "btn-primary" : ""}" data-admin-view="defaults">
+      ${ico("M4 8h3m6 0h7 M7 8a3 3 0 0 0 6 0 M4 16h7m3 0h6 M14 16a3 3 0 0 1-6 0")}
+      <span>기본값 설정</span>
+    </button>
+    <button class="btn ${active === "fonts" ? "btn-primary" : ""}" data-admin-view="fonts">
+      ${ico("M4 7V4h16v3 M9 20h6 M12 4v16")}
+      <span>폰트</span>
+    </button>
+    <button class="btn ${active === "layouts" ? "btn-primary" : ""}" data-admin-view="layouts">
+      ${ico("M3 3h8v8H3z M13 3h8v8h-8z M3 13h8v8H3z M13 13h8v8h-8z")}
+      <span>레이아웃 템플릿</span>
+    </button>
+    <button class="btn ${active === "general-admins" ? "btn-primary" : ""}" data-admin-view="general-admins">
+      ${ico("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2", '<circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>')}
+      <span>일반관리자</span>
+    </button>
+    <div class="sidebar-divider"></div>
+    <button class="btn ${active === "ai-settings" ? "btn-primary" : ""}" data-admin-view="ai-settings">
+      ${ico("M12 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10z M12 14c-4.42 0-8 1.79-8 4v2h16v-2c0-2.21-3.58-4-8-4z", '<rect x="15" y="1" width="4" height="4" rx="1"/><rect x="5" y="19" width="4" height="4" rx="1"/>')}
+      <span>AI 설정</span>
+    </button>
+    <button class="btn ${active === "ai-library" ? "btn-primary" : ""}" data-admin-view="ai-library">
+      ${ico("M4 19.5A2.5 2.5 0 0 1 6.5 17H20 M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z M9 10h7 M9 14h5")}
+      <span>AI 라이브러리</span>
+    </button>
+  </nav>`;
   if (adminArea === "super") return `
     <aside class="super-sidebar">
-      <div><p class="section-label">Super Admin</p><strong>Wedding Studio</strong></div>
+      <div class="super-sidebar-brand">
+        <p class="section-label">Super Admin</p>
+        <strong>Wedding Studio</strong>
+      </div>
       <div class="super-device-switch" aria-label="화면 보기 전환">
         <button class="btn" type="button" data-super-device="mobile">모바일</button>
         <button class="btn" type="button" data-super-device="pc">PC</button>
       </div>
-      ${superMenu}
+      <div class="sidebar-nav-group">${superMenu}</div>
     </aside>
     <div class="admin-header super-topbar">
       <div><p class="section-label">Super Admin</p><h1>청첩장 슈퍼관리자</h1></div>
@@ -205,17 +250,19 @@ function adminHeader(active) {
     </div>
     ${superOverview()}`;
   return `
-    <div class="admin-header">
-      <div><p class="section-label">Wedding Admin</p><h1>청첩장 일반관리자</h1></div>
+    <div class="admin-header general-admin-header">
+      <div class="general-admin-title">
+        ${coupleBadge ? `<strong>${escapeAdminHtml(coupleBadge)}</strong>` : "<strong>내 청첩장</strong>"}
+        <span class="section-label">관리자</span>
+      </div>
       <div class="admin-header-actions">
-        ${coupleBadge ? `<span class="admin-current-couple">${escapeAdminHtml(coupleBadge)}</span>` : ""}
-        <a class="btn btn-secondary" href="${cardUrl}" target="_blank" rel="noopener">내 청첩장</a>
-        <button class="btn" id="admin-logout">로그아웃</button>
+        <a class="btn btn-icon-only" href="${cardUrl}" target="_blank" rel="noopener" title="내 청첩장 보기">${ico("M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6 M15 3h6v6 M10 14L21 3")}</a>
+        <button class="btn btn-icon-only" id="admin-logout" title="로그아웃">${ico("M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4 M16 17l5-5-5-5 M21 12H9")}</button>
       </div>
     </div>
     ${generalMenu}
-    ${active === "editor" ? '<button class="admin-floating-save" type="submit" form="invitation-editor"><span>✓</span> 변경사항 저장</button>' : ""}
-    ${active === "copy" ? '<button class="admin-floating-save" type="submit" form="invitation-editor"><span>✓</span> 편집 저장</button>' : ""}`;
+    ${active === "editor" ? '<button class="admin-floating-save" type="submit" form="invitation-editor"><span>✓</span> 저장</button>' : ""}
+    ${active === "copy" ? '<button class="admin-floating-save" type="submit" form="invitation-editor"><span>✓</span> 저장</button>' : ""}`;
 }
 
 function bindAdminNavigation() {
@@ -260,7 +307,7 @@ function rememberAdminView(view) {
 
 function renderAdminView(view = "") {
   if (adminArea === "super") {
-    const superViews = new Set(["themes", "assets", "defaults", "fonts", "general-admins", "ai-settings", "ai-library"]);
+    const superViews = new Set(["themes", "assets", "defaults", "fonts", "layouts", "general-admins", "ai-settings", "ai-library"]);
     rememberAdminView(superViews.has(view) ? view : "themes");
   } else {
     const generalViews = new Set(["editor", "copy-editor", "sections", "share-settings", "content", "gallery", "responses", "photos", "guestbook"]);
@@ -279,6 +326,7 @@ function renderAdminView(view = "") {
   else if (view === "defaults") renderDefaultSettings();
   else if (view === "fonts") (typeof renderFontManager === "function" ? renderFontManager() : renderDesignAssets("", "font"));
   else if (view === "general-admins") renderGeneralAdmins();
+  else if (view === "layouts") renderLayoutTemplates();
   else if (view === "ai-settings") renderAISettings();
   else if (view === "ai-library") renderAILibrary();
   else if (view === "photos") renderGuestPhotos();
@@ -452,6 +500,33 @@ function renderLogin(message = "") {
 
 function renderBasicInfoOnboarding(message = "") {
   const today = dateInputToday();
+  // 레이아웃 미리보기 카드 생성 (builtInLayouts 기준)
+  const layouts = [
+    { id: "classic",       name: "클래식",    desc: "세로 스크롤 카드형",           bg: "#f7f0e7", accent: "#8d3440", heroShape: "full" },
+    { id: "navy_arch",     name: "푸른 서약",  desc: "아치형 사진 · 파란 배경",       bg: "#f5f7fa", accent: "#1a2456", heroShape: "arch" },
+    { id: "cream_organic", name: "봄날 인연",  desc: "크림 + 라벤더 아치 패널",       bg: "#faf8f4", accent: "#7c6d9a", heroShape: "full" },
+    { id: "crimson_silk",  name: "진홍 예식",  desc: "다크 히어로 + 임베드 사진",     bg: "#f8f2ec", accent: "#8b1a2f", heroShape: "inset" },
+    { id: "editorial_red", name: "붉은 설렘",  desc: "잡지형 대형 타이포",           bg: "#f8f3ec", accent: "#c41230", heroShape: "full" },
+    { id: "garden_doodle", name: "꽃길 약속",  desc: "하트 사진 · 손그림 테두리",     bg: "#eef2eb", accent: "#c23b2a", heroShape: "heart" },
+  ];
+  const heroShapeStyle = (shape, accent) => {
+    if (shape === "arch")  return `position:absolute;left:50%;transform:translateX(-50%);bottom:0;width:58%;height:68%;border-radius:100px 100px 0 0;overflow:hidden;background:${accent};opacity:0.72;`;
+    if (shape === "inset") return `position:absolute;inset:28% 10% 8%;border-radius:10px;background:${accent};opacity:0.55;`;
+    if (shape === "heart") return `position:absolute;left:50%;transform:translateX(-50%);top:28%;width:56%;height:52%;clip-path:path('M50 80Q10 58 10 34C10 17 22 10 35 10Q43 10 50 18Q57 10 65 10C78 10 90 17 90 34Q90 58 50 80Z');background:${accent};opacity:0.62;`;
+    return `position:absolute;inset:0;background:${accent};opacity:0.35;`;
+  };
+  const layoutCards = layouts.map((l) => `
+    <button class="onboarding-layout-card ${l.id === "classic" ? "is-selected" : ""}" type="button" data-layout-pick="${escapeAdminHtml(l.id)}"
+      style="--olc-bg:${escapeAdminHtml(l.bg)};--olc-accent:${escapeAdminHtml(l.accent)}">
+      <div class="onboarding-layout-thumb" style="background:${escapeAdminHtml(l.bg)};position:relative;overflow:hidden;border-radius:8px 8px 0 0;">
+        <div style="${heroShapeStyle(l.heroShape, l.accent)}"></div>
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.08)0%,rgba(0,0,0,0.24)100%);border-radius:8px 8px 0 0;pointer-events:none;"></div>
+      </div>
+      <div class="onboarding-layout-label">
+        <strong>${escapeAdminHtml(l.name)}</strong>
+        <small>${escapeAdminHtml(l.desc)}</small>
+      </div>
+    </button>`).join("");
   adminApp.innerHTML = `
     <section class="admin-card admin-login onboarding-card">
       <p class="section-label">Create Wedding Card</p>
@@ -470,10 +545,24 @@ function renderBasicInfoOnboarding(message = "") {
           <label class="field"><span>청첩장 공개 종료일</span><input name="publicCloseDate" type="date" data-public-close></label>
         </div>
         <p class="admin-message micro-help">공개 종료일은 예식일 기준 이후 3일까지만 설정할 수 있습니다.</p>
+        <div class="onboarding-layout-section">
+          <p class="section-label" style="margin:0 0 8px">청첩장 레이아웃 선택</p>
+          <p class="admin-message micro-help" style="margin:0 0 10px">나중에 슈퍼관리자에서 언제든지 변경할 수 있습니다.</p>
+          <div class="onboarding-layout-grid">${layoutCards}</div>
+          <input type="hidden" name="layoutId" value="classic">
+        </div>
         <button class="btn btn-primary">내 일반관리자 페이지 만들기</button>
       </form>
     </section>`;
   const form = document.querySelector("#basic-info-form");
+  // 레이아웃 선택 인터랙션
+  form.querySelectorAll("[data-layout-pick]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      form.querySelectorAll("[data-layout-pick]").forEach((b) => b.classList.remove("is-selected"));
+      btn.classList.add("is-selected");
+      form.elements.layoutId.value = btn.dataset.layoutPick;
+    });
+  });
   const syncPublicPeriod = (forceCloseToWedding = false) => {
     syncPublicPeriodFields({ weddingField: form.elements.weddingDate, openField: form.elements.publicOpenDate, closeField: form.elements.publicCloseDate, forceCloseToWedding });
   };
@@ -486,6 +575,7 @@ function renderBasicInfoOnboarding(message = "") {
     button.disabled = true;
     button.textContent = "생성 중...";
     const fields = new FormData(form);
+    const selectedLayout = fields.get("layoutId") || "classic";
     try {
       currentInvitationSite = await window.RSVP_STORAGE.ensureInvitationForCurrentUser(window.INVITATION_DATA, {
         groomName: fields.get("groomName")?.trim(),
@@ -500,6 +590,12 @@ function renderBasicInfoOnboarding(message = "") {
       });
       if (!currentInvitationSite?.slug) throw new Error("기본정보가 부족합니다.");
       await loadInvitationData();
+      // 선택한 레이아웃 저장
+      if (selectedLayout !== "classic") {
+        invitationData.designSystem.activeLayoutId = selectedLayout;
+        try { await window.RSVP_STORAGE.saveInvitationData(invitationData); } catch {}
+        if (typeof applyLayoutTemplate === "function") applyLayoutTemplate(selectedLayout);
+      }
       renderAdminView("editor");
       showAdminWelcomeOverlay(true);
     } catch (error) {
@@ -1114,7 +1210,15 @@ function editorDesignPanel() {
   const hasPreset = Boolean(invitationData.appearance?.design?.presetId || invitationData.appearance?.theme || invitationData.appearance?.movieConcept);
   const onboarding = editorOnboardingPicker(system, selectedPreset, selectedTextTheme)
     .replace('<section class="editor-start-backdrop"', `<section class="editor-start-backdrop"${hasPreset ? " hidden" : ""}`);
+  const activeLayoutId = system.activeLayoutId || "classic";
+  const layoutBtns = (system.layoutTemplates || []).map((tpl) =>
+    `<button class="editor-layout-btn ${tpl.id === activeLayoutId ? "is-active" : ""}" type="button" data-editor-layout="${escapeAdminHtml(tpl.id)}" style="--elb-bg:${escapeAdminHtml(tpl.previewBg || "#f5f0ea")};--elb-accent:${escapeAdminHtml(tpl.previewAccent || "#8d3440")}" title="${escapeAdminHtml(tpl.description || tpl.name)}">${escapeAdminHtml(tpl.name)}</button>`
+  ).join("");
   return `
+    <section class="editor-layout-strip">
+      <span>레이아웃</span>
+      <div class="editor-layout-options">${layoutBtns}</div>
+    </section>
     <section class="editor-theme-strip">
       <span>테마</span>
       ${editorPresetSelect("editorPresetId", "컬러테마 · 영화테마", system.themes, selectedPreset)}
@@ -1870,7 +1974,7 @@ function renderEditor(message = "", focus = "") {
             <div class="copy-editor-toolbar"><div><strong>편집 기능</strong><small>점선 영역을 누르면 아래 도구가 해당 영역에 맞게 바뀝니다.</small></div></div>
             ${editorDesignPanel()}
             <p class="admin-message copy-editor-guide">공개 청첩장에서 수정 가능한 영역만 점선으로 표시됩니다.</p>
-            <iframe class="copy-editor-public-frame" src="./index.html?copyEditorPreview=1&v=20260605-ux30" title="공개 청첩장 문구 수정 미리보기" data-copy-editor-frame></iframe>
+            <iframe class="copy-editor-public-frame" src="./index.html?copyEditorPreview=1&v=20260609-v12" title="공개 청첩장 문구 수정 미리보기" data-copy-editor-frame></iframe>
             <aside class="copy-editor-drawer" data-copy-editor-drawer>
             <section class="copy-editor-section copy-editor-intro-settings">
               <p class="section-label">Intro Overlay</p><h2>진입 화면</h2>
@@ -2451,6 +2555,18 @@ function bindEditor() {
       copyEditor.querySelectorAll("[data-onboarding-text-theme]").forEach((item) => item.classList.toggle("is-selected", item === button));
       copyEditor.querySelectorAll("[data-design-text-theme]").forEach((item) => item.classList.toggle("is-selected", item.dataset.designTextTheme === button.dataset.onboardingTextTheme));
       refreshFrameAppearance();
+    });
+  });
+  // 레이아웃 변경 핸들러
+  copyEditor.querySelectorAll("[data-editor-layout]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const layoutId = button.dataset.editorLayout;
+      copyEditor.querySelectorAll("[data-editor-layout]").forEach((b) => b.classList.toggle("is-active", b === button));
+      invitationData.designSystem.activeLayoutId = layoutId;
+      refreshFrameAppearance();
+      try {
+        await window.RSVP_STORAGE.saveInvitationData(invitationData);
+      } catch {}
     });
   });
   copyEditor.querySelector("[data-copy-editor-frame]")?.addEventListener("load", (event) => {
