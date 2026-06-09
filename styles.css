@@ -1171,19 +1171,25 @@ body[data-layout="navy_arch"] .invitation-intro-copy { text-align: center; color
    ════════════════════════════════════════════════════════════ */
 body[data-layout="cream_organic"] .hero { min-height: 540px; }
 body[data-layout="cream_organic"] .hero-names { letter-spacing: 0.05em; }
-/* 테마 accent-dark 색상 바디 — 아치가 히어로 아래로 자연스럽게 연결 */
-body[data-layout="cream_organic"] .invitation { background: var(--accent-dark); }
-body[data-layout="cream_organic"] #invitation { position: relative; z-index: 1; background: transparent; border-radius: 54px 54px 0 0; margin: -10px 0 0; padding: 64px 70px 44px; }
-body[data-layout="cream_organic"] #invitation .section-title { color: var(--primary-button-text); }
-body[data-layout="cream_organic"] #invitation .section-label { color: color-mix(in srgb, var(--primary-button-text) 82%, transparent); }
-body[data-layout="cream_organic"] #invitation p { color: color-mix(in srgb, var(--primary-button-text) 90%, transparent); }
-body[data-layout="cream_organic"] .invitation-intro-copy { color: var(--primary-button-text); }
-body[data-layout="cream_organic"] .invitation-intro-copy strong { color: var(--primary-button-text); }
-body[data-layout="cream_organic"] .invitation-intro-copy span { color: color-mix(in srgb, var(--primary-button-text) 80%, transparent); }
+/* 크림 바디 — 라벤더(accent) 포인트 패널이 그 위에 떠 있는 구조 */
+body[data-layout="cream_organic"] .invitation { background: var(--paper); }
+/* 숲 사진 히어로 하단 찢긴 종이(크림) 가장자리 — 웨이브 마스크 */
+body[data-layout="cream_organic"] .hero::before { content: ""; position: absolute; z-index: 3; left: 0; right: 0; bottom: -1px; height: 38px; background: var(--paper); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'%3E%3Cpath d='M0 60 L1200 60 L1200 30 C1090 8 1010 50 900 32 C800 16 720 50 600 30 C490 12 410 50 300 30 C200 14 110 44 0 26 Z' fill='black'/%3E%3C/svg%3E") bottom/100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'%3E%3Cpath d='M0 60 L1200 60 L1200 30 C1090 8 1010 50 900 32 C800 16 720 50 600 30 C490 12 410 50 300 30 C200 14 110 44 0 26 Z' fill='black'/%3E%3C/svg%3E") bottom/100% 100% no-repeat; }
+/* 인사 = 라벤더(accent) 둥근 아치 패널 (크림 위에 떠 있음) */
+body[data-layout="cream_organic"] #invitation { position: relative; z-index: 1; background: var(--accent-dark); border-radius: 50% 50% 32px 32px / 92px 92px 32px 32px; margin: 18px 12px 8px; padding: 80px 34px 48px; }
+body[data-layout="cream_organic"] #invitation .section-title { color: var(--card); }
+body[data-layout="cream_organic"] #invitation .section-label { color: color-mix(in srgb, var(--card) 82%, transparent); }
+body[data-layout="cream_organic"] #invitation p { color: color-mix(in srgb, var(--card) 90%, transparent); }
+body[data-layout="cream_organic"] #invitation .calendar caption,
+body[data-layout="cream_organic"] #invitation .calendar th,
+body[data-layout="cream_organic"] #invitation .calendar td { color: var(--card); }
+body[data-layout="cream_organic"] .invitation-intro-copy { color: var(--card); }
+body[data-layout="cream_organic"] .invitation-intro-copy strong { color: var(--card); }
+body[data-layout="cream_organic"] .invitation-intro-copy span { color: color-mix(in srgb, var(--card) 80%, transparent); }
 body[data-layout="cream_organic"] .invitation-intro { background: color-mix(in srgb, var(--accent-dark) 60%, transparent); backdrop-filter: blur(12px); }
-/* 오가닉 섹션 카드 — accent-dark 바디 위 card 카드 */
-body[data-layout="cream_organic"] .section { border-radius: 24px; margin: 6px 10px; padding: 40px 70px; background: var(--card); box-shadow: 0 4px 24px color-mix(in srgb, var(--accent-dark) 12%, transparent); }
-body[data-layout="cream_organic"] .section-title { font-size: clamp(18px, 5vw, 26px); letter-spacing: 0.02em; }
+/* 오가닉 섹션 — 크림 위 투명, 다크 텍스트 (카드 없음) */
+body[data-layout="cream_organic"] .section { border-radius: 0; margin: 0; padding: 40px 70px; background: transparent; box-shadow: none; }
+body[data-layout="cream_organic"] .section-title { font-size: clamp(18px, 5vw, 26px); letter-spacing: 0.06em; }
 /* 도트 타임라인 */
 body[data-layout="cream_organic"] .timetable-item { position: relative; padding-left: 22px; }
 body[data-layout="cream_organic"] .timetable-item::before { content: ""; position: absolute; left: 0; top: 6px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent-dark); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-dark) 25%, transparent); }
@@ -1274,9 +1280,15 @@ body[data-layout="navy_arch"] .section-label { text-align: center; }
 body[data-layout="navy_arch"] .section-title::after { content: ""; display: block; width: 40px; height: 2px; background: currentColor; margin: 10px auto 0; opacity: 0.3; }
 
 /* ═══ cream_organic: 부드러운 둥근 프로필 · 소프트 갤러리 ═══ */
-body[data-layout="cream_organic"] .profile-photo { border-radius: 16px; border-width: 4px; border-bottom-width: 4px; max-width: 150px; box-shadow: 0 4px 18px rgba(0,0,0,0.08); }
+body[data-layout="cream_organic"] .profile-photo { width: 140px; height: 168px; max-width: 140px; aspect-ratio: 5/6; border-radius: 16px; border: 4px solid var(--card); box-shadow: 0 4px 18px rgba(0,0,0,0.08); background-size: cover; background-position: center; }
 body[data-layout="cream_organic"] .gallery-item { border-radius: 16px; transform: none !important; border-width: 3px; border-bottom-width: 3px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
-body[data-layout="cream_organic"] .gallery-grid { gap: 10px; }
+body[data-layout="cream_organic"] .gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+/* 솔리드 accent 버튼 — 크림 위 대비 확보 */
+body[data-layout="cream_organic"]:not([data-admin-area="super"]) .btn-primary { background: var(--accent-dark) !important; color: var(--card) !important; border-color: var(--accent-dark) !important; }
+/* 캘린더 — 크림 위, 결혼일만 accent 원 강조 */
+body[data-layout="cream_organic"] #wedding-day .calendar .wedding-day span { background: var(--accent-dark); color: var(--card); }
+/* 신랑신부 사진 중앙정렬 */
+body[data-layout="cream_organic"] #about-us .profile-card { justify-content: center; width: 100%; }
 body[data-layout="cream_organic"] .btn { border-radius: 20px; }
 body[data-layout="cream_organic"] .quick-nav a { border-radius: 16px; }
 body[data-layout="cream_organic"] .notice { border-radius: 20px; }
@@ -1381,8 +1393,7 @@ body[data-layout="navy_arch"] #location .location-venue { font-family: "Nanum My
 body[data-layout="navy_arch"] #guestbook .guestbook-form { background: color-mix(in srgb, var(--accent-dark) 5%, var(--card)); border-radius: 12px; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
 
 /* ── cream_organic : 봄날 감성, 꽃 장식, 둥근 카드 ── */
-body[data-layout="cream_organic"] #invitation { padding: 48px 28px 40px; }
-body[data-layout="cream_organic"] #invitation::before { content: "✿"; display: block; text-align: center; font-size: 22px; margin-bottom: 12px; color: var(--primary-button-text); opacity: 0.7; }
+body[data-layout="cream_organic"] #invitation::before { content: "✿"; display: block; text-align: center; font-size: 22px; margin-bottom: 12px; color: var(--card); opacity: 0.75; }
 body[data-layout="cream_organic"] #about-us .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 body[data-layout="cream_organic"] #about-us .profile-card { display: grid; grid-template-rows: auto auto; justify-items: center; text-align: center; gap: 8px; }
 body[data-layout="cream_organic"] #about-us .profile-name { font-family: "Gowun Batang", serif; font-size: 16px; font-weight: 700; }
@@ -1486,21 +1497,21 @@ body[data-layout="editorial_red"] #account details + details { margin-top: 6px; 
 body[data-layout="editorial_red"] .notice { border-left: 2px solid var(--accent-dark); border-radius: 0; padding-left: 14px; background: transparent; }
 body[data-layout="editorial_red"] .notice h3 { font-family: "Playfair Display", serif; }
 
-/* ── cream_organic : 라벤더 바디 위 흰 카드 ── */
-body[data-layout="cream_organic"] .section-title { color: #6b5c8a; }
-body[data-layout="cream_organic"] .section-label { color: #9b8cba; }
-body[data-layout="cream_organic"] #location .location-venue { color: #6b5c8a; font-weight: 700; }
-body[data-layout="cream_organic"] #location .location-hall { color: #8b7cb5; }
-body[data-layout="cream_organic"] .transport div { background: rgba(139,124,181,0.09); border-color: rgba(139,124,181,0.28); border-radius: 14px; }
-body[data-layout="cream_organic"] .transport strong { color: #6b5c8a; }
-body[data-layout="cream_organic"] #account details { background: rgba(139,124,181,0.07); border: 1.5px solid rgba(139,124,181,0.28); border-radius: 18px; overflow: hidden; }
-body[data-layout="cream_organic"] #account summary { padding: 14px 18px; color: #6b5c8a; font-weight: 800; }
+/* ── cream_organic : 크림 배경 위 라벤더(accent) 포인트 — 전부 CSS 변수 ── */
+body[data-layout="cream_organic"] .section-title { color: var(--accent-dark); }
+body[data-layout="cream_organic"] .section-label { color: color-mix(in srgb, var(--accent-dark) 72%, var(--muted)); }
+body[data-layout="cream_organic"] #location .location-venue { color: var(--accent-dark); font-weight: 700; }
+body[data-layout="cream_organic"] #location .location-hall { color: color-mix(in srgb, var(--accent-dark) 78%, var(--ink)); }
+body[data-layout="cream_organic"] .transport div { background: color-mix(in srgb, var(--accent-dark) 9%, var(--card)); border-color: color-mix(in srgb, var(--accent-dark) 28%, transparent); border-radius: 14px; }
+body[data-layout="cream_organic"] .transport strong { color: var(--accent-dark); }
+body[data-layout="cream_organic"] #account details { background: color-mix(in srgb, var(--accent-dark) 8%, var(--card)); border: none; border-radius: 18px; overflow: hidden; }
+body[data-layout="cream_organic"] #account summary { padding: 14px 18px; background: color-mix(in srgb, var(--accent-dark) 16%, var(--card)); color: var(--accent-dark); font-weight: 800; }
 body[data-layout="cream_organic"] #account .account-row { padding: 11px 18px; }
 body[data-layout="cream_organic"] #account details + details { margin-top: 10px; }
-body[data-layout="cream_organic"] .notice { border-radius: 16px; background: rgba(139,124,181,0.08); border: 1.5px solid rgba(139,124,181,0.22); }
-body[data-layout="cream_organic"] .notice h3 { color: #6b5c8a; }
+body[data-layout="cream_organic"] .notice { border-radius: 16px; background: color-mix(in srgb, var(--accent-dark) 8%, var(--card)); border: 1.5px solid color-mix(in srgb, var(--accent-dark) 22%, transparent); }
+body[data-layout="cream_organic"] .notice h3 { color: var(--accent-dark); }
 body[data-layout="cream_organic"] #guestbook .field input,
-body[data-layout="cream_organic"] #guestbook .field textarea { border-radius: 16px; border-color: rgba(139,124,181,0.35); background: rgba(255,255,255,0.9); }
+body[data-layout="cream_organic"] #guestbook .field textarea { border-radius: 16px; border-color: color-mix(in srgb, var(--accent-dark) 35%, transparent); background: var(--card); }
 body[data-layout="cream_organic"] .btn { border-radius: 999px; }
 
 /* ── crimson_silk : 초대 강조 · 다크 섹션 구분 ── */
