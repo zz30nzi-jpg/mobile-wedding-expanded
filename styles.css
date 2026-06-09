@@ -1233,6 +1233,13 @@ body[data-layout="crimson_silk"] .timetable-item::before { content: "♥"; posit
 body[data-layout="editorial_red"] .hero { min-height: 540px; }
 /* 흑백 사진 */
 body[data-layout="editorial_red"] .hero-media { filter: saturate(0.62) contrast(1.04); }
+/* 메인이미지 영화 필름 프레임 (좌우 검은 띠 + 스프로킷 홀) */
+body[data-layout="editorial_red"] .hero { overflow: hidden; }
+body[data-layout="editorial_red"] .hero::before { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none; background:
+  repeating-linear-gradient(180deg, #f2f2f2 0 7px, transparent 7px 18px) left 6px top / 11px 100% no-repeat,
+  repeating-linear-gradient(180deg, #f2f2f2 0 7px, transparent 7px 18px) right 6px top / 11px 100% no-repeat,
+  linear-gradient(#141414, #141414) left top / 24px 100% no-repeat,
+  linear-gradient(#141414, #141414) right top / 24px 100% no-repeat; }
 /* 잡지형 대형 이름 */
 body[data-layout="editorial_red"] .hero-names { font-size: clamp(28px, 7.5vw, 40px); letter-spacing: -0.02em; line-height: 1; text-transform: uppercase; }
 body[data-layout="editorial_red"] .hero-eyebrow { font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase; opacity: 0.85; }
@@ -1242,6 +1249,20 @@ body[data-layout="editorial_red"] .ending { border: 2px solid var(--ink); margin
 /* 달력 제거 — 매거진 컨셉: 카운트다운 중심 (달력 형태 차등) */
 body[data-layout="editorial_red"] #wedding-day .calendar { display: none; }
 body[data-layout="editorial_red"] #wedding-day .countdown { margin-top: 8px; }
+/* 5일 스트립 (예식일 ±2일) — editorial에서만 표시 */
+.day-strip { display: none; }
+body[data-layout="editorial_red"] .day-strip { display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; margin: 18px 0 4px; }
+body[data-layout="editorial_red"] .day-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; border-right: 1px solid var(--line); }
+body[data-layout="editorial_red"] .day-cell:last-child { border-right: none; }
+body[data-layout="editorial_red"] .day-week { font-size: 8px; letter-spacing: 0.12em; color: var(--muted); }
+body[data-layout="editorial_red"] .day-month { font-size: 7px; letter-spacing: 0.14em; color: var(--accent-dark); }
+body[data-layout="editorial_red"] .day-num { font-family: "Playfair Display", serif; font-size: clamp(20px, 6vw, 30px); font-weight: 700; color: var(--ink); line-height: 1; }
+/* 예식일 — 하트 안에 강조 */
+body[data-layout="editorial_red"] .day-wedding { position: relative; }
+body[data-layout="editorial_red"] .day-wedding .day-num { color: var(--card); position: relative; z-index: 1; }
+body[data-layout="editorial_red"] .day-wedding .day-week,
+body[data-layout="editorial_red"] .day-wedding .day-month { color: var(--accent-dark); font-weight: 700; }
+body[data-layout="editorial_red"] .day-wedding .day-num::before { content: ""; position: absolute; z-index: -1; left: 50%; top: 50%; transform: translate(-50%, -48%); width: 1.55em; height: 1.42em; background-color: var(--accent-dark); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 22'%3E%3Cpath d='M12 21C5 16 1 12 1 7C1 3 4 1 7 1C9 1 11 2 12 4C13 2 15 1 17 1C20 1 23 3 23 7C23 12 19 16 12 21Z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 22'%3E%3Cpath d='M12 21C5 16 1 12 1 7C1 3 4 1 7 1C9 1 11 2 12 4C13 2 15 1 17 1C20 1 23 3 23 7C23 12 19 16 12 21Z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat; }
 /* 전체 섹션 좌측정렬 (영문 라벨 + 국문 타이틀, location 스타일 통일) */
 body[data-layout="editorial_red"] .section { padding: 44px 80px; border-top: none; text-align: left; }
 body[data-layout="editorial_red"] .section-title,
@@ -1276,16 +1297,16 @@ body[data-layout="garden_doodle"] .section + .section::before { width: 64px; }
 body[data-layout="garden_doodle"] .hero::after { background: linear-gradient(180deg, transparent 60%, var(--paper) 100%); }
 /* 하트 마스크 사진 */
 /* 손그림 하트 마스크 사진 + accent 외곽선(drop-shadow)으로 손그림 하트 프레임 */
-body[data-layout="garden_doodle"] .hero-media { inset: 150px 16px auto; height: 352px; -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 94'%3E%3Cpath d='M49 86C42 79 31 72 22 63C8 50 7 31 23 26C34 22.5 45 30 50 42C54 29 67 22 78 27C92 33 90 51 76 64C68 72 57 79 49 86Z' fill='black'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 94'%3E%3Cpath d='M49 86C42 79 31 72 22 63C8 50 7 31 23 26C34 22.5 45 30 50 42C54 29 67 22 78 27C92 33 90 51 76 64C68 72 57 79 49 86Z' fill='black'/%3E%3C/svg%3E"); -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; filter: drop-shadow(3.5px 1px 0 var(--accent-dark)) drop-shadow(-3.5px -1px 0 var(--accent-dark)) drop-shadow(1px -3.5px 0 var(--accent-dark)) drop-shadow(-1px 3.5px 0 var(--accent-dark)) drop-shadow(3px 3px 0 color-mix(in srgb, var(--accent-dark) 55%, transparent)); }
+body[data-layout="garden_doodle"] .hero-media { inset: 168px 38px auto; height: 430px; -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 94'%3E%3Cpath d='M49 86C42 79 31 72 22 63C8 50 7 31 23 26C34 22.5 45 30 50 42C54 29 67 22 78 27C92 33 90 51 76 64C68 72 57 79 49 86Z' fill='black'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 94'%3E%3Cpath d='M49 86C42 79 31 72 22 63C8 50 7 31 23 26C34 22.5 45 30 50 42C54 29 67 22 78 27C92 33 90 51 76 64C68 72 57 79 49 86Z' fill='black'/%3E%3C/svg%3E"); -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; filter: drop-shadow(3.5px 1px 0 var(--accent-dark)) drop-shadow(-3.5px -1px 0 var(--accent-dark)) drop-shadow(1px -3.5px 0 var(--accent-dark)) drop-shadow(-1px 3.5px 0 var(--accent-dark)) drop-shadow(3px 3px 0 color-mix(in srgb, var(--accent-dark) 55%, transparent)); }
 /* 낙서 테두리 장식 */
 body[data-layout="garden_doodle"] .hero::before { display: block; content: ""; position: absolute; z-index: 3; inset: 0; pointer-events: none; opacity: 0.55; background-color: var(--accent-dark); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 640'%3E%3Crect x='9' y='9' width='342' height='622' rx='14' fill='none' stroke='black' stroke-width='3.5' stroke-dasharray='7 5'/%3E%3Ccircle cx='20' cy='20' r='6' fill='black'/%3E%3Ccircle cx='340' cy='20' r='6' fill='black'/%3E%3Ccircle cx='20' cy='620' r='6' fill='black'/%3E%3Ccircle cx='340' cy='620' r='6' fill='black'/%3E%3Cpath d='M55 18Q80 12 105 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M255 18Q280 12 305 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 640'%3E%3Crect x='9' y='9' width='342' height='622' rx='14' fill='none' stroke='black' stroke-width='3.5' stroke-dasharray='7 5'/%3E%3Ccircle cx='20' cy='20' r='6' fill='black'/%3E%3Ccircle cx='340' cy='20' r='6' fill='black'/%3E%3Ccircle cx='20' cy='620' r='6' fill='black'/%3E%3Ccircle cx='340' cy='620' r='6' fill='black'/%3E%3Cpath d='M55 18Q80 12 105 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M255 18Q280 12 305 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/100% 100% no-repeat; }
 /* 텍스트 상단 고정 */
 body[data-layout="garden_doodle"] .hero-content,
 body[data-layout="garden_doodle"] .hero-content-top,
 body[data-layout="garden_doodle"] .hero-content-middle,
-body[data-layout="garden_doodle"] .hero-content-bottom { top: 36px !important; bottom: auto !important; transform: none !important; text-align: center; }
+body[data-layout="garden_doodle"] .hero-content-bottom { top: 58px !important; bottom: auto !important; transform: none !important; text-align: center; }
 /* 굵은 올캡스 이름 — 흰 히어로 배경 위 진한 색 */
-body[data-layout="garden_doodle"] .hero-names { font-size: clamp(34px, 9.5vw, 50px); font-weight: 900; letter-spacing: 0.03em; line-height: 1.05; text-transform: uppercase; color: var(--accent-dark) !important; text-shadow: none; }
+body[data-layout="garden_doodle"] .hero-names { font-size: clamp(28px, 8vw, 42px); font-weight: 900; letter-spacing: 0.03em; line-height: 1.05; text-transform: uppercase; color: var(--accent-dark) !important; text-shadow: none; }
 body[data-layout="garden_doodle"] .hero-eyebrow { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink) !important; text-shadow: none; }
 body[data-layout="garden_doodle"] .hero-date { color: var(--muted) !important; text-shadow: none; }
 /* 낙서 대시 섹션 카드 */
@@ -1330,9 +1351,15 @@ body[data-layout="garden_doodle"] #about-us { padding-left: 42px; padding-right:
 #guestbook textarea::placeholder { font-size: 11px; opacity: 0.38; }
 /* 공통: 오시는 길 식장이름 줄바꿈 방지 (fitSingleLineText가 폭에 맞게 축소) */
 .location-venue { white-space: nowrap; }
-/* 공통: 지도/주소복사 버튼에 앱 아이콘 */
-.map-links .btn { display: inline-flex; align-items: center; gap: 6px; }
-.map-links .btn[data-map-app]::before { content: ""; width: 15px; height: 15px; flex: 0 0 15px; background-size: contain; background-repeat: no-repeat; background-position: center; }
+/* 공통: 지도/주소복사 버튼 = 아이콘만 (글씨 제거) */
+.map-links { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.map-links .btn[data-map-app] { display: inline-flex; align-items: center; justify-content: center; font-size: 0; line-height: 0; padding: 9px; width: 40px; height: 40px; }
+.map-links .btn[data-map-app]::before { content: ""; width: 20px; height: 20px; flex: 0 0 20px; background-size: contain; background-repeat: no-repeat; background-position: center; }
+/* 공통: 사진 더보기 버튼 작게 */
+.gallery-more { font-size: 12px !important; padding: 6px 16px !important; width: auto !important; }
+/* 공통: 사진·영상 업로드 + 내가 보낸 파일 버튼 한 줄 */
+.guest-photo-actions { display: flex; flex-wrap: nowrap; gap: 8px; justify-content: center; }
+.guest-photo-actions .btn { flex: 1 1 0; min-width: 0; margin: 0; }
 .map-links .btn[data-map-app="copy"]::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='8' y='3' width='12' height='15' rx='2' fill='none' stroke='%23777' stroke-width='2'/%3E%3Crect x='4' y='7' width='12' height='15' rx='2' fill='white' stroke='%23777' stroke-width='2'/%3E%3C/svg%3E"); }
 .map-links .btn[data-map-app="naver"]::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%2303C75A'/%3E%3Cpath d='M8 17V7l8 10V7' fill='none' stroke='white' stroke-width='2.6' stroke-linejoin='round'/%3E%3C/svg%3E"); }
 .map-links .btn[data-map-app="kakao"]::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23FEE500'/%3E%3Cellipse cx='12' cy='11' rx='7' ry='5.4' fill='%233A1D1D'/%3E%3Cpath d='M7.5 15l-1 3.2 4-2.6Z' fill='%233A1D1D'/%3E%3C/svg%3E"); }
@@ -1569,7 +1596,7 @@ body[data-layout="crimson_silk"] .profile-card:nth-child(even) { padding-left: 1
 body[data-layout="editorial_red"] .invitation-intro-copy p { font-size: 13px; line-height: 1.9; }
 body[data-layout="editorial_red"] #invitation p,
 body[data-layout="editorial_red"] #invitation .invitation-quote { font-size: 14px; line-height: 2; }
-body[data-layout="editorial_red"] #location { text-align: left; border-top: 3px solid var(--ink); }
+body[data-layout="editorial_red"] #location { text-align: left; border-top: none; }
 body[data-layout="editorial_red"] #location .location-address { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 body[data-layout="editorial_red"] .transport div { border: none; border-left: 2px solid var(--accent-dark); border-radius: 0; background: transparent; padding: 8px 12px; }
 body[data-layout="editorial_red"] .transport strong { color: var(--accent-dark); }
@@ -3079,7 +3106,8 @@ body:not([data-admin-area="super"]) .btn-primary,
 body:not([data-admin-area="super"]) button[type="submit"],
 body:not([data-admin-area="super"]) .upload-actions .btn-primary {
   background: var(--accent-dark) !important;
-  color: var(--primary-button-text, var(--card)) !important;
+  /* 어두운(accent-dark) 배경 버튼은 항상 밝은 글자 */
+  color: var(--card) !important;
 }
 body:not([data-admin-area="super"]) .quick-nav {
   background: var(--nav-bg) !important;

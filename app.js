@@ -107,11 +107,29 @@ function fitSingleLineText() {
   document.querySelectorAll(".single-line-fit").forEach((element) => {
     element.style.fontSize = "";
     let size = parseFloat(getComputedStyle(element).fontSize);
-    while (element.scrollWidth > element.clientWidth && size > 10) {
+    while (element.scrollWidth > element.clientWidth && size > 7) {
       size -= 0.5;
       element.style.fontSize = `${size}px`;
     }
   });
+}
+
+function renderDayStrip() {
+  if (!weddingDate) return "";
+  const weekdays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  let cells = "";
+  for (let off = -2; off <= 2; off++) {
+    const d = new Date(weddingDate);
+    d.setDate(weddingDate.getDate() + off);
+    const isWed = off === 0;
+    cells += `<div class="day-cell${isWed ? " day-wedding" : ""}">
+      <span class="day-week">${weekdays[d.getDay()]}</span>
+      <span class="day-month">${months[d.getMonth()]}</span>
+      <span class="day-num">${d.getDate()}</span>
+    </div>`;
+  }
+  return `<div class="day-strip">${cells}</div>`;
 }
 
 function renderCalendar() {
@@ -350,6 +368,7 @@ function render() {
       <section class="section" id="wedding-day">
         ${sectionCopy("weddingDay", "Wedding Day", data.wedding.displayDate)}
         ${renderCalendar()}
+        ${renderDayStrip()}
         <div class="countdown" id="countdown"></div>
         <p class="subtle" id="countdown-message"></p>
       </section>
