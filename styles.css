@@ -1213,10 +1213,10 @@ body[data-layout="crimson_silk"] .hero-media { inset: 180px 26px 42px; border-ra
 body[data-layout="crimson_silk"] .hero-content,
 body[data-layout="crimson_silk"] .hero-content-top,
 body[data-layout="crimson_silk"] .hero-content-middle,
-body[data-layout="crimson_silk"] .hero-content-bottom { top: 14px !important; bottom: auto !important; transform: none !important; }
-body[data-layout="crimson_silk"] .hero-names { color: var(--card); font-size: clamp(12px, 3vw, 16px); letter-spacing: 0.1em; text-shadow: 0 1px 4px rgba(0,0,0,0.22); line-height: 1.2; }
-body[data-layout="crimson_silk"] .hero-eyebrow { color: color-mix(in srgb, var(--card) 72%, transparent); text-shadow: none; font-size: 7px; letter-spacing: 0.28em; }
-body[data-layout="crimson_silk"] .hero-date { color: color-mix(in srgb, var(--card) 72%, transparent); text-shadow: none; font-size: 9px; letter-spacing: 0.14em; }
+body[data-layout="crimson_silk"] .hero-content-bottom { top: 44px !important; bottom: auto !important; transform: none !important; left: 28px; right: 28px; text-align: center; }
+body[data-layout="crimson_silk"] .hero-names { color: var(--card); font-size: clamp(22px, 6vw, 32px); letter-spacing: 0.06em; text-shadow: 0 1px 6px rgba(0,0,0,0.25); line-height: 1.2; }
+body[data-layout="crimson_silk"] .hero-eyebrow { color: color-mix(in srgb, var(--card) 80%, transparent); text-shadow: none; font-size: 10px; letter-spacing: 0.26em; }
+body[data-layout="crimson_silk"] .hero-date { color: color-mix(in srgb, var(--card) 80%, transparent); text-shadow: none; font-size: 11px; letter-spacing: 0.16em; }
 body[data-layout="crimson_silk"] .invitation-intro { background: color-mix(in srgb, var(--accent-dark) 92%, transparent); backdrop-filter: blur(14px); }
 body[data-layout="crimson_silk"] .invitation-intro-copy { color: var(--card); text-align: center; }
 body[data-layout="crimson_silk"] .invitation-intro-copy p,
@@ -1245,6 +1245,8 @@ body[data-layout="editorial_red"] .invitation-intro-copy strong { font-size: cla
 body[data-layout="editorial_red"] .profile-grid { grid-template-columns: 1fr; gap: 24px; }
 body[data-layout="editorial_red"] .profile-card { grid-template-columns: 96px minmax(0, 1fr); }
 body[data-layout="editorial_red"] .profile-card .media { border: 5px solid var(--card); border-bottom-width: 20px; box-shadow: 2px 4px 14px rgba(0,0,0,0.18); transform: rotate(-2.5deg); filter: grayscale(100%); }
+/* 전역 하트 구분 아이콘 숨김 (editorial은 자체 물결선 ::after 사용) */
+body[data-layout="editorial_red"] .section + .section::before { display: none; }
 /* 물결 섹션 구분 — accent-dark 색상으로 테마 연동 */
 body[data-layout="editorial_red"] .section::after { content: ""; display: block; margin: 28px auto 0; width: 100px; height: 18px; background-color: var(--accent-dark); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 18'%3E%3Cpath d='M4 9Q14 3 24 9Q34 15 44 9Q54 3 64 9Q74 15 84 9Q94 3 96 9' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 18'%3E%3Cpath d='M4 9Q14 3 24 9Q34 15 44 9Q54 3 64 9Q74 15 84 9Q94 3 96 9' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; opacity: 0.55; }
 
@@ -1252,11 +1254,14 @@ body[data-layout="editorial_red"] .section::after { content: ""; display: block;
    TEMPLATE: garden_doodle  —  하트 사진 마스크 · 굵은 이름 · 낙서 테두리
    ════════════════════════════════════════════════════════════ */
 body[data-layout="garden_doodle"] .hero { min-height: 640px; overflow: hidden; }
+/* 섹션 구분 아이콘 — 손그림 낙서 하트 + 양옆 물결 */
+body[data-layout="garden_doodle"] { --section-divider: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 24'%3E%3Cpath d='M5 14c8 3 11-4 17-2m37 2c-8 3-11-4-17-2' fill='none' stroke='%23000' stroke-width='1.4' stroke-linecap='round'/%3E%3Cpath d='M32 7.5c-2.6-3-7 0-3.6 3.4L32 14.5l3.6-3.6c3.4-3.4-1-6.4-3.6-3.4Z' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+body[data-layout="garden_doodle"] .section + .section::before { width: 64px; }
 body[data-layout="garden_doodle"] .hero::after { background: linear-gradient(180deg, rgba(0,0,0,0.22) 0%, transparent 30%, rgba(0,0,0,0.12) 100%); }
 /* 하트 마스크 사진 */
 body[data-layout="garden_doodle"] .hero-media { inset: 148px 10px auto; height: 370px; -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 110'%3E%3Cpath d='M50 98Q8 72 8 38C8 20 21 11 35 11Q44 11 50 20Q56 11 65 11C79 11 92 20 92 38Q92 72 50 98Z' fill='black'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 110'%3E%3Cpath d='M50 98Q8 72 8 38C8 20 21 11 35 11Q44 11 50 20Q56 11 65 11C79 11 92 20 92 38Q92 72 50 98Z' fill='black'/%3E%3C/svg%3E"); -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
 /* 낙서 테두리 장식 */
-body[data-layout="garden_doodle"] .hero::before { display: block; content: ""; position: absolute; z-index: 3; inset: 0; pointer-events: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 640'%3E%3Crect x='9' y='9' width='342' height='622' rx='14' fill='none' stroke='%232d5a27' stroke-width='3.5' stroke-dasharray='7 5' opacity='0.45'/%3E%3Ccircle cx='20' cy='20' r='6' fill='%23e85d3e' opacity='0.65'/%3E%3Ccircle cx='340' cy='20' r='6' fill='%23e85d3e' opacity='0.65'/%3E%3Ccircle cx='20' cy='620' r='6' fill='%23e85d3e' opacity='0.65'/%3E%3Ccircle cx='340' cy='620' r='6' fill='%23e85d3e' opacity='0.65'/%3E%3Cpath d='M55 18Q80 12 105 18' fill='none' stroke='%232d5a27' stroke-width='2' stroke-linecap='round' opacity='0.38'/%3E%3Cpath d='M255 18Q280 12 305 18' fill='none' stroke='%232d5a27' stroke-width='2' stroke-linecap='round' opacity='0.38'/%3E%3C/svg%3E") center/100% 100% no-repeat; }
+body[data-layout="garden_doodle"] .hero::before { display: block; content: ""; position: absolute; z-index: 3; inset: 0; pointer-events: none; opacity: 0.55; background-color: var(--accent-dark); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 640'%3E%3Crect x='9' y='9' width='342' height='622' rx='14' fill='none' stroke='black' stroke-width='3.5' stroke-dasharray='7 5'/%3E%3Ccircle cx='20' cy='20' r='6' fill='black'/%3E%3Ccircle cx='340' cy='20' r='6' fill='black'/%3E%3Ccircle cx='20' cy='620' r='6' fill='black'/%3E%3Ccircle cx='340' cy='620' r='6' fill='black'/%3E%3Cpath d='M55 18Q80 12 105 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M255 18Q280 12 305 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 640'%3E%3Crect x='9' y='9' width='342' height='622' rx='14' fill='none' stroke='black' stroke-width='3.5' stroke-dasharray='7 5'/%3E%3Ccircle cx='20' cy='20' r='6' fill='black'/%3E%3Ccircle cx='340' cy='20' r='6' fill='black'/%3E%3Ccircle cx='20' cy='620' r='6' fill='black'/%3E%3Ccircle cx='340' cy='620' r='6' fill='black'/%3E%3Cpath d='M55 18Q80 12 105 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M255 18Q280 12 305 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/100% 100% no-repeat; }
 /* 텍스트 상단 고정 */
 body[data-layout="garden_doodle"] .hero-content,
 body[data-layout="garden_doodle"] .hero-content-top,
@@ -1304,7 +1309,7 @@ body[data-layout="cream_organic"] details { border-radius: 16px; }
 body[data-layout="cream_organic"] .section-title { font-size: clamp(18px, 5vw, 24px); }
 
 /* ═══ crimson_silk: 소프트 타원 프로필 · 깔끔한 갤러리 ═══ */
-body[data-layout="crimson_silk"] .profile-photo { border-radius: 16px 16px 10px 10px; border-width: 4px; border-bottom-width: 4px; max-width: 150px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+body[data-layout="crimson_silk"] .profile-photo { width: 100%; max-width: 150px; height: auto; aspect-ratio: 4/5; border-radius: 16px 16px 10px 10px; border: 4px solid var(--card); box-shadow: 0 4px 16px rgba(0,0,0,0.1); background-size: cover; background-position: center; }
 body[data-layout="crimson_silk"] .gallery-item { border-radius: 12px; border-width: 2px; border-bottom-width: 2px; transform: none !important; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
 body[data-layout="crimson_silk"] .gallery-grid { gap: 8px; }
 body[data-layout="crimson_silk"] .btn { border-radius: 10px; }
@@ -1332,7 +1337,7 @@ body[data-layout="editorial_red"] .btn { border-radius: 4px; font-weight: 700; l
 body[data-layout="editorial_red"] .quick-nav a { border-radius: 4px; }
 
 /* ═══ garden_doodle: 둥근 다이아 프로필 · 낙서 갤러리 ═══ */
-body[data-layout="garden_doodle"] .profile-photo { border-radius: 12px; transform: rotate(-2deg); max-width: 130px; border-width: 3px; border-bottom-width: 3px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+body[data-layout="garden_doodle"] .profile-photo { width: 100%; max-width: 140px; height: auto; aspect-ratio: 1; border-radius: 12px; transform: rotate(-2deg); border: 3px solid var(--card); box-shadow: 0 4px 16px rgba(0,0,0,0.12); background-size: cover; background-position: center; }
 body[data-layout="garden_doodle"] .profile-card:nth-child(even) .profile-photo { transform: rotate(2deg); }
 body[data-layout="garden_doodle"] .gallery-item { border-radius: 12px; border: 3px dashed color-mix(in srgb, var(--accent) 40%, transparent); box-shadow: none; background: var(--card); }
 body[data-layout="garden_doodle"] .gallery-grid { gap: 10px; }
