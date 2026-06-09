@@ -1244,31 +1244,12 @@ function renderAILibrary(message = "") {
 }
 
 function layoutThumbnail(tpl) {
-  const base = tpl.baseLayout || tpl.id;
+  // 실제 레이아웃을 축소한 라이브 미리보기 썸네일
+  const slug = window.RSVP_STORAGE?.getActiveInvitationSlug?.() || "main";
+  const url = `./index.html?card=${encodeURIComponent(slug)}&__layout=${encodeURIComponent(tpl.id)}&__thumb=1`;
   const bg = escapeAdminHtml(tpl.previewBg || "#f5f0ea");
-  const accent = escapeAdminHtml(tpl.previewAccent || "#8d3440");
-  if (base === "split") {
-    return `<div class="ltp-thumb ltp-split" style="background:${bg}">
-      <div class="ltp-top-block" style="background:${accent}"><div class="ltp-hero-inner"></div></div>
-      <div class="ltp-sections"><div class="ltp-section-row"></div><div class="ltp-section-row"></div></div>
-    </div>`;
-  }
-  if (base === "editorial") {
-    return `<div class="ltp-thumb ltp-editorial" style="background:${bg}">
-      <div class="ltp-hero-half" style="background:${accent}"></div>
-      <div class="ltp-text-xl" style="color:${accent}">Aa</div>
-      <div class="ltp-sections"><div class="ltp-section-row"></div><div class="ltp-section-row"></div></div>
-    </div>`;
-  }
-  if (base === "arch") {
-    return `<div class="ltp-thumb ltp-arch" style="background:${bg}">
-      <div class="ltp-arch-hero" style="background:${accent}"></div>
-      <div class="ltp-sections"><div class="ltp-section-row"></div><div class="ltp-section-row"></div><div class="ltp-section-row"></div></div>
-    </div>`;
-  }
-  return `<div class="ltp-thumb ltp-classic" style="background:${bg}">
-    <div class="ltp-hero" style="background:${accent}"></div>
-    <div class="ltp-sections"><div class="ltp-section-row"></div><div class="ltp-section-row"></div><div class="ltp-section-row"></div></div>
+  return `<div class="ltp-thumb ltp-live" style="background:${bg}">
+    <iframe class="ltp-frame" src="${escapeAdminHtml(url)}" loading="lazy" scrolling="no" tabindex="-1" aria-hidden="true" title="${escapeAdminHtml(tpl.name)} 미리보기"></iframe>
   </div>`;
 }
 

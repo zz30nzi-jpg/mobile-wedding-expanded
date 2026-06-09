@@ -1039,7 +1039,9 @@ function bindEvents() {
 }
 
 function applyLayoutTemplate(layoutId) {
-  const urlOverride = new URLSearchParams(location.search).get("__layout");
+  const params = new URLSearchParams(location.search);
+  const urlOverride = params.get("__layout");
+  if (params.get("__thumb") === "1") document.body.classList.add("is-thumb");
   const id = urlOverride || layoutId || "classic";
   document.body.dataset.layout = id;
   // 레이아웃 템플릿 커스텀 속성 적용 (heroBgImage, textScale)

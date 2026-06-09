@@ -1104,6 +1104,12 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border: 3px s
 .layout-template-card.is-active { border-color: var(--accent-dark); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-dark) 20%, transparent); }
 /* Thumbnails */
 .ltp-thumb { position: relative; height: 148px; overflow: hidden; border-radius: 0; display: flex; flex-direction: column; }
+/* 썸네일 모드: 로딩 인트로·하단 탭 숨김 */
+body.is-thumb .invitation-intro,
+body.is-thumb .bottom-tabbar { display: none !important; }
+/* 라이브 미리보기 썸네일 — 실제 레이아웃을 카드 폭에 맞춰 렌더, 상단(히어로) 노출 */
+.ltp-thumb.ltp-live { height: 188px; display: block; }
+.ltp-thumb.ltp-live .ltp-frame { display: block; width: 100%; height: 560px; border: 0; pointer-events: none; background: var(--card); }
 .ltp-classic .ltp-hero { height: 60px; width: 100%; opacity: 0.9; flex-shrink: 0; }
 .ltp-split .ltp-top-block { height: 80px; width: 100%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .ltp-split .ltp-hero-inner { width: 44%; height: 56px; border-radius: 8px; background: rgba(255,255,255,0.22); }
@@ -1233,13 +1239,6 @@ body[data-layout="crimson_silk"] .timetable-item::before { content: "♥"; posit
 body[data-layout="editorial_red"] .hero { min-height: 540px; }
 /* 흑백 사진 */
 body[data-layout="editorial_red"] .hero-media { filter: saturate(0.62) contrast(1.04); }
-/* 메인이미지 영화 필름 프레임 (좌우 검은 띠 + 스프로킷 홀) */
-body[data-layout="editorial_red"] .hero { overflow: hidden; }
-body[data-layout="editorial_red"] .hero::before { content: ""; position: absolute; inset: 0; z-index: 4; pointer-events: none; background:
-  repeating-linear-gradient(180deg, #f2f2f2 0 7px, transparent 7px 18px) left 6px top / 11px 100% no-repeat,
-  repeating-linear-gradient(180deg, #f2f2f2 0 7px, transparent 7px 18px) right 6px top / 11px 100% no-repeat,
-  linear-gradient(#141414, #141414) left top / 24px 100% no-repeat,
-  linear-gradient(#141414, #141414) right top / 24px 100% no-repeat; }
 /* 잡지형 대형 이름 */
 body[data-layout="editorial_red"] .hero-names { font-size: clamp(28px, 7.5vw, 40px); letter-spacing: -0.02em; line-height: 1; text-transform: uppercase; }
 body[data-layout="editorial_red"] .hero-eyebrow { font-size: 10px; letter-spacing: 0.28em; text-transform: uppercase; opacity: 0.85; }
@@ -1249,20 +1248,43 @@ body[data-layout="editorial_red"] .ending { border: 2px solid var(--ink); margin
 /* 달력 제거 — 매거진 컨셉: 카운트다운 중심 (달력 형태 차등) */
 body[data-layout="editorial_red"] #wedding-day .calendar { display: none; }
 body[data-layout="editorial_red"] #wedding-day .countdown { margin-top: 8px; }
-/* 5일 스트립 (예식일 ±2일) — editorial에서만 표시 */
+/* 5일 스트립 (예식일 ±2일) — 공통 베이스, editorial·cream에서 표시 */
 .day-strip { display: none; }
-body[data-layout="editorial_red"] .day-strip { display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; margin: 18px 0 4px; }
-body[data-layout="editorial_red"] .day-cell { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 2px; border-right: 1px solid var(--line); }
-body[data-layout="editorial_red"] .day-cell:last-child { border-right: none; }
-body[data-layout="editorial_red"] .day-week { font-size: 8px; letter-spacing: 0.12em; color: var(--muted); }
-body[data-layout="editorial_red"] .day-month { font-size: 7px; letter-spacing: 0.14em; color: var(--accent-dark); }
-body[data-layout="editorial_red"] .day-num { font-family: "Playfair Display", serif; font-size: clamp(20px, 6vw, 30px); font-weight: 700; color: var(--ink); line-height: 1; }
+body[data-layout="editorial_red"] #wedding-day .calendar,
+body[data-layout="cream_organic"] #wedding-day .calendar { display: none; }
+/* 레드무드: 카운트다운(시간 계산) 제거, 남은 멘트 중앙정렬 */
+body[data-layout="editorial_red"] #wedding-day .countdown { display: none; }
+body[data-layout="editorial_red"] #wedding-day #countdown-message { text-align: center; }
+body[data-layout="editorial_red"] .day-strip,
+body[data-layout="cream_organic"] .day-strip { display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; margin: 18px auto 4px; }
+body[data-layout="editorial_red"] .day-cell,
+body[data-layout="cream_organic"] .day-cell { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 12px 2px; border-right: 1px solid color-mix(in srgb, var(--accent-dark) 16%, transparent); }
+body[data-layout="editorial_red"] .day-cell:last-child,
+body[data-layout="cream_organic"] .day-cell:last-child { border-right: none; }
+body[data-layout="editorial_red"] .day-week,
+body[data-layout="cream_organic"] .day-week { font-size: 9px; letter-spacing: 0.12em; color: var(--muted); }
+body[data-layout="editorial_red"] .day-month,
+body[data-layout="cream_organic"] .day-month { font-size: 8px; letter-spacing: 0.14em; color: var(--accent-dark); }
+body[data-layout="editorial_red"] .day-num,
+body[data-layout="cream_organic"] .day-num { font-size: clamp(24px, 7vw, 36px); font-weight: 700; color: var(--ink); line-height: 1; }
+body[data-layout="editorial_red"] .day-num { font-family: "Playfair Display", serif; }
+body[data-layout="cream_organic"] .day-num { font-family: "Gowun Batang", serif; }
+/* 레드무드: 스트립 더 크게 + 배경색 */
+body[data-layout="editorial_red"] .day-strip { background: color-mix(in srgb, var(--accent-dark) 9%, var(--card)); border-radius: 4px; padding: 12px 4px; margin: 22px 0 12px; }
+body[data-layout="editorial_red"] .day-cell { padding: 14px 2px; gap: 4px; }
+body[data-layout="editorial_red"] .day-num { font-size: clamp(30px, 9vw, 46px); }
+body[data-layout="editorial_red"] .day-week { font-size: 10px; }
+body[data-layout="editorial_red"] .day-month { font-size: 9px; }
 /* 예식일 — 하트 안에 강조 */
-body[data-layout="editorial_red"] .day-wedding { position: relative; }
-body[data-layout="editorial_red"] .day-wedding .day-num { color: var(--card); position: relative; z-index: 1; }
+.day-wedding .day-num { position: relative; z-index: 1; }
+body[data-layout="editorial_red"] .day-wedding .day-num,
+body[data-layout="cream_organic"] .day-wedding .day-num { color: var(--card); }
 body[data-layout="editorial_red"] .day-wedding .day-week,
-body[data-layout="editorial_red"] .day-wedding .day-month { color: var(--accent-dark); font-weight: 700; }
-body[data-layout="editorial_red"] .day-wedding .day-num::before { content: ""; position: absolute; z-index: -1; left: 50%; top: 50%; transform: translate(-50%, -48%); width: 1.55em; height: 1.42em; background-color: var(--accent-dark); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 22'%3E%3Cpath d='M12 21C5 16 1 12 1 7C1 3 4 1 7 1C9 1 11 2 12 4C13 2 15 1 17 1C20 1 23 3 23 7C23 12 19 16 12 21Z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 22'%3E%3Cpath d='M12 21C5 16 1 12 1 7C1 3 4 1 7 1C9 1 11 2 12 4C13 2 15 1 17 1C20 1 23 3 23 7C23 12 19 16 12 21Z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat; }
+body[data-layout="editorial_red"] .day-wedding .day-month,
+body[data-layout="cream_organic"] .day-wedding .day-week,
+body[data-layout="cream_organic"] .day-wedding .day-month { color: var(--accent-dark); font-weight: 700; }
+body[data-layout="editorial_red"] .day-wedding .day-num::before,
+body[data-layout="cream_organic"] .day-wedding .day-num::before { content: ""; position: absolute; z-index: -1; left: 50%; top: 50%; transform: translate(-50%, -46%); width: 1.6em; height: 1.46em; background-color: var(--accent-dark); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 22'%3E%3Cpath d='M12 21C5 16 1 12 1 7C1 3 4 1 7 1C9 1 11 2 12 4C13 2 15 1 17 1C20 1 23 3 23 7C23 12 19 16 12 21Z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 22'%3E%3Cpath d='M12 21C5 16 1 12 1 7C1 3 4 1 7 1C9 1 11 2 12 4C13 2 15 1 17 1C20 1 23 3 23 7C23 12 19 16 12 21Z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat; }
 /* 전체 섹션 좌측정렬 (영문 라벨 + 국문 타이틀, location 스타일 통일) */
 body[data-layout="editorial_red"] .section { padding: 44px 80px; border-top: none; text-align: left; }
 body[data-layout="editorial_red"] .section-title,
@@ -1297,9 +1319,9 @@ body[data-layout="garden_doodle"] .section + .section::before { width: 64px; }
 body[data-layout="garden_doodle"] .hero::after { background: linear-gradient(180deg, transparent 60%, var(--paper) 100%); }
 /* 하트 마스크 사진 */
 /* 손그림 하트 마스크 사진 + accent 외곽선(drop-shadow)으로 손그림 하트 프레임 */
-body[data-layout="garden_doodle"] .hero-media { inset: 168px 38px auto; height: 430px; -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 94'%3E%3Cpath d='M49 86C42 79 31 72 22 63C8 50 7 31 23 26C34 22.5 45 30 50 42C54 29 67 22 78 27C92 33 90 51 76 64C68 72 57 79 49 86Z' fill='black'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 94'%3E%3Cpath d='M49 86C42 79 31 72 22 63C8 50 7 31 23 26C34 22.5 45 30 50 42C54 29 67 22 78 27C92 33 90 51 76 64C68 72 57 79 49 86Z' fill='black'/%3E%3C/svg%3E"); -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; filter: drop-shadow(3.5px 1px 0 var(--accent-dark)) drop-shadow(-3.5px -1px 0 var(--accent-dark)) drop-shadow(1px -3.5px 0 var(--accent-dark)) drop-shadow(-1px 3.5px 0 var(--accent-dark)) drop-shadow(3px 3px 0 color-mix(in srgb, var(--accent-dark) 55%, transparent)); }
-/* 낙서 테두리 장식 */
-body[data-layout="garden_doodle"] .hero::before { display: block; content: ""; position: absolute; z-index: 3; inset: 0; pointer-events: none; opacity: 0.55; background-color: var(--accent-dark); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 640'%3E%3Crect x='9' y='9' width='342' height='622' rx='14' fill='none' stroke='black' stroke-width='3.5' stroke-dasharray='7 5'/%3E%3Ccircle cx='20' cy='20' r='6' fill='black'/%3E%3Ccircle cx='340' cy='20' r='6' fill='black'/%3E%3Ccircle cx='20' cy='620' r='6' fill='black'/%3E%3Ccircle cx='340' cy='620' r='6' fill='black'/%3E%3Cpath d='M55 18Q80 12 105 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M255 18Q280 12 305 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 640'%3E%3Crect x='9' y='9' width='342' height='622' rx='14' fill='none' stroke='black' stroke-width='3.5' stroke-dasharray='7 5'/%3E%3Ccircle cx='20' cy='20' r='6' fill='black'/%3E%3Ccircle cx='340' cy='20' r='6' fill='black'/%3E%3Ccircle cx='20' cy='620' r='6' fill='black'/%3E%3Ccircle cx='340' cy='620' r='6' fill='black'/%3E%3Cpath d='M55 18Q80 12 105 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M255 18Q280 12 305 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/100% 100% no-repeat; }
+body[data-layout="garden_doodle"] .hero-media { inset: 150px 8px auto; height: 470px; -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 94'%3E%3Cpath d='M49 86C42 79 31 72 22 63C8 50 7 31 23 26C34 22.5 45 30 50 42C54 29 67 22 78 27C92 33 90 51 76 64C68 72 57 79 49 86Z' fill='black'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 94'%3E%3Cpath d='M49 86C42 79 31 72 22 63C8 50 7 31 23 26C34 22.5 45 30 50 42C54 29 67 22 78 27C92 33 90 51 76 64C68 72 57 79 49 86Z' fill='black'/%3E%3C/svg%3E"); -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; filter: drop-shadow(3.5px 1px 0 var(--accent-dark)) drop-shadow(-3.5px -1px 0 var(--accent-dark)) drop-shadow(1px -3.5px 0 var(--accent-dark)) drop-shadow(-1px 3.5px 0 var(--accent-dark)) drop-shadow(3px 3px 0 color-mix(in srgb, var(--accent-dark) 55%, transparent)); }
+/* 낙서 테두리 장식 — 제거 (배경 점선 그림 없앰) */
+body[data-layout="garden_doodle"] .hero::before { display: none; content: ""; position: absolute; z-index: 3; inset: 0; pointer-events: none; opacity: 0.55; background-color: var(--accent-dark); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 640'%3E%3Crect x='9' y='9' width='342' height='622' rx='14' fill='none' stroke='black' stroke-width='3.5' stroke-dasharray='7 5'/%3E%3Ccircle cx='20' cy='20' r='6' fill='black'/%3E%3Ccircle cx='340' cy='20' r='6' fill='black'/%3E%3Ccircle cx='20' cy='620' r='6' fill='black'/%3E%3Ccircle cx='340' cy='620' r='6' fill='black'/%3E%3Cpath d='M55 18Q80 12 105 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M255 18Q280 12 305 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 640'%3E%3Crect x='9' y='9' width='342' height='622' rx='14' fill='none' stroke='black' stroke-width='3.5' stroke-dasharray='7 5'/%3E%3Ccircle cx='20' cy='20' r='6' fill='black'/%3E%3Ccircle cx='340' cy='20' r='6' fill='black'/%3E%3Ccircle cx='20' cy='620' r='6' fill='black'/%3E%3Ccircle cx='340' cy='620' r='6' fill='black'/%3E%3Cpath d='M55 18Q80 12 105 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M255 18Q280 12 305 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/100% 100% no-repeat; }
 /* 텍스트 상단 고정 */
 body[data-layout="garden_doodle"] .hero-content,
 body[data-layout="garden_doodle"] .hero-content-top,
@@ -1337,8 +1359,11 @@ body[data-layout="garden_doodle"] .section-label::before { content: "♥ "; colo
 /* ═══ 공통: 프로필 사진 최대 크기 제한 ═══ */
 .profile-photo { max-width: 160px; }
 /* 공통: 부모 줄·이름 한 줄 유지 ('의 아들/딸' 줄바꿈 방지 — fitSingleLineText가 폭에 맞게 축소) */
-.profile-parents { white-space: nowrap; }
-.profile-card .profile-name { white-space: nowrap; }
+.profile-parents { white-space: nowrap; overflow: hidden; }
+.profile-card .profile-name { white-space: nowrap; overflow: hidden; }
+/* 공통: nowrap 텍스트가 그리드 열 폭을 늘려 신랑/신부 사진 크기가 달라지는 것 방지 */
+.profile-grid { align-items: start; }
+.profile-grid .profile-card { min-width: 0; }
 /* 공통: about-us 좌우 패딩을 줄여 신랑신부 대표사진을 더 크게 (여백은 유지) */
 body[data-layout="navy_arch"] #about-us,
 body[data-layout="cream_organic"] #about-us,

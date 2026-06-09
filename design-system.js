@@ -144,11 +144,11 @@
     system.aiLibrary = Array.isArray(system.aiLibrary) ? system.aiLibrary : [];
     const builtInLayouts = [
       { id: "classic", name: "클래식", description: "세로 스크롤 카드형. 히어로 사진 전체, 섹션별 깔끔한 구분.", previewBg: "#f7f0e7", previewAccent: "#8d3440", builtIn: true },
-      { id: "editorial_red", name: "레드 무드", description: "딥레드 + 흑백 사진. 잡지형 큰 타이포·폴라로이드 프로필 구도.", previewBg: "#f8f3ec", previewAccent: "#c41230", baseLayout: "editorial", builtIn: true },
+      { id: "editorial_red", name: "스칼렛 데이", description: "딥레드 + 흑백 사진. 잡지형 큰 타이포·폴라로이드 프로필 구도.", previewBg: "#f8f3ec", previewAccent: "#c41230", baseLayout: "editorial", builtIn: true },
       { id: "garden_doodle", name: "러브 두들", description: "초록 낙서 프레임 + 하트 사진. 손그림 감성의 사랑스러운 결혼식.", previewBg: "#eef2eb", previewAccent: "#c23b2a", baseLayout: "classic", builtIn: true },
       { id: "navy_arch", name: "달빛 서약", description: "파란 배경 + 아치 사진. 단정하고 품격 있는 커플의 웨딩.", previewBg: "#f5f7fa", previewAccent: "#1a2456", baseLayout: "arch", builtIn: true },
       { id: "cream_organic", name: "봄날 연가", description: "크림 + 라벤더 아치 패널. 둥글고 부드러운 봄 웨딩 무드.", previewBg: "#faf8f4", previewAccent: "#7c6d9a", baseLayout: "classic", builtIn: true },
-      { id: "crimson_silk", name: "와인빛 로망", description: "진홍 다크 히어로 + 크림 본문. 연인의 열정을 담은 스플릿 구조.", previewBg: "#f8f2ec", previewAccent: "#8b1a2f", baseLayout: "split", builtIn: true },
+      { id: "crimson_silk", name: "벨벳 나이트", description: "진홍 다크 히어로 + 크림 본문. 연인의 열정을 담은 스플릿 구조.", previewBg: "#f8f2ec", previewAccent: "#8b1a2f", baseLayout: "split", builtIn: true },
     ];
     // built-in 항목은 항상 최신 코드 기준으로 덮어씀. 사용자가 직접 만든 커스텀(AI) 레이아웃만 Supabase에서 유지.
     const savedCustomLayouts = (Array.isArray(system.layoutTemplates) ? system.layoutTemplates : []).filter((t) => !t.builtIn);
