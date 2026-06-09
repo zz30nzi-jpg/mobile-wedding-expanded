@@ -1143,6 +1143,9 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border: 3px s
    ════════════════════════════════════════════════════════════ */
 /* 흰 바디 — 컬러 히어로 밴드가 상단, 콘텐츠 섹션은 흰 배경 */
 body[data-layout="navy_arch"] .invitation { background: var(--card); }
+/* 섹션 구분 아이콘 — 진주 3알 + 양옆 라인 (포멀) */
+body[data-layout="navy_arch"] { --section-divider: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 22'%3E%3Cpath d='M4 11h16m24 0h16' fill='none' stroke='%23000' stroke-width='1' stroke-linecap='round'/%3E%3Ccircle cx='26' cy='11' r='2.4' fill='%23000'/%3E%3Ccircle cx='32' cy='8' r='3.1' fill='%23000'/%3E%3Ccircle cx='38' cy='11' r='2.4' fill='%23000'/%3E%3C/svg%3E"); }
+body[data-layout="navy_arch"] .section + .section::before { width: 64px; }
 /* 컬러 히어로 밴드 (풀블리드) */
 body[data-layout="navy_arch"] .hero { background: var(--accent-dark); min-height: 580px; overflow: hidden; margin: 0; border-radius: 0; }
 body[data-layout="navy_arch"] .hero::after { background: none; }
@@ -1173,6 +1176,9 @@ body[data-layout="cream_organic"] .hero { min-height: 540px; }
 body[data-layout="cream_organic"] .hero-names { letter-spacing: 0.05em; }
 /* 크림 바디 — 라벤더(accent) 포인트 패널이 그 위에 떠 있는 구조 */
 body[data-layout="cream_organic"] .invitation { background: var(--paper); }
+/* 섹션 구분 아이콘 — 꽃잎 새싹 + 양옆 곡선 줄기 (보태니컬) */
+body[data-layout="cream_organic"] { --section-divider: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 70 24'%3E%3Cpath d='M6 13c11-6 17 1 23-1m35 1c-11-6-17 1-23-1' fill='none' stroke='%23000' stroke-width='1' stroke-linecap='round'/%3E%3Cpath d='M35 5c-2.6 0-4.5 2.4-4.5 5.4S35 18 35 18s4.5-4.6 4.5-7.6S37.6 5 35 5Z' fill='%23000'/%3E%3C/svg%3E"); }
+body[data-layout="cream_organic"] .section + .section::before { width: 70px; }
 /* 숲 사진 히어로 하단 찢긴 종이(크림) 가장자리 — 웨이브 마스크 */
 body[data-layout="cream_organic"] .hero::before { content: ""; position: absolute; z-index: 3; left: 0; right: 0; bottom: -1px; height: 38px; background: var(--paper); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'%3E%3Cpath d='M0 60 L1200 60 L1200 30 C1090 8 1010 50 900 32 C800 16 720 50 600 30 C490 12 410 50 300 30 C200 14 110 44 0 26 Z' fill='black'/%3E%3C/svg%3E") bottom/100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'%3E%3Cpath d='M0 60 L1200 60 L1200 30 C1090 8 1010 50 900 32 C800 16 720 50 600 30 C490 12 410 50 300 30 C200 14 110 44 0 26 Z' fill='black'/%3E%3C/svg%3E") bottom/100% 100% no-repeat; }
 /* 인사 = 라벤더(accent) 둥근 아치 패널 (크림 위에 떠 있음) */
