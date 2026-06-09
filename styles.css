@@ -1182,7 +1182,7 @@ body[data-layout="cream_organic"] .section + .section::before { width: 70px; }
 /* 숲 사진 히어로 하단 찢긴 종이(크림) 가장자리 — 웨이브 마스크 */
 body[data-layout="cream_organic"] .hero::before { content: ""; position: absolute; z-index: 3; left: 0; right: 0; bottom: -1px; height: 38px; background: var(--paper); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'%3E%3Cpath d='M0 60 L1200 60 L1200 30 C1090 8 1010 50 900 32 C800 16 720 50 600 30 C490 12 410 50 300 30 C200 14 110 44 0 26 Z' fill='black'/%3E%3C/svg%3E") bottom/100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'%3E%3Cpath d='M0 60 L1200 60 L1200 30 C1090 8 1010 50 900 32 C800 16 720 50 600 30 C490 12 410 50 300 30 C200 14 110 44 0 26 Z' fill='black'/%3E%3C/svg%3E") bottom/100% 100% no-repeat; }
 /* 인사 = 라벤더(accent) 둥근 아치 패널 (크림 위에 떠 있음) */
-body[data-layout="cream_organic"] #invitation { position: relative; z-index: 1; background: linear-gradient(180deg, var(--accent-dark) 0%, var(--accent-dark) 80%, color-mix(in srgb, var(--accent-dark) 45%, var(--paper)) 92%, var(--paper) 100%); border-radius: 50% 50% 0 0 / 96px 96px 0 0; margin: 18px 12px 40px; padding: 84px 34px 64px; }
+body[data-layout="cream_organic"] #invitation { position: relative; z-index: 1; background: linear-gradient(180deg, var(--accent-dark) 0%, var(--accent-dark) 48%, color-mix(in srgb, var(--accent-dark) 55%, var(--paper)) 78%, var(--paper) 100%); border-radius: 50% 50% 0 0 / 96px 96px 0 0; margin: 18px 12px 12px; padding: 84px 34px 88px; }
 /* invitation 다음 섹션과 여백 확대 (구분 아이콘이 맞물리지 않게) */
 body[data-layout="cream_organic"] #invitation + .section { padding-top: 30px; }
 body[data-layout="cream_organic"] #invitation .section-title { color: var(--card); }
@@ -1243,7 +1243,7 @@ body[data-layout="editorial_red"] .ending { border: 2px solid var(--ink); margin
 body[data-layout="editorial_red"] #wedding-day .calendar { display: none; }
 body[data-layout="editorial_red"] #wedding-day .countdown { margin-top: 8px; }
 /* 전체 섹션 좌측정렬 (영문 라벨 + 국문 타이틀, location 스타일 통일) */
-body[data-layout="editorial_red"] .section { padding: 44px 80px; border-top: 1px solid var(--line); text-align: left; }
+body[data-layout="editorial_red"] .section { padding: 44px 80px; border-top: none; text-align: left; }
 body[data-layout="editorial_red"] .section-title,
 body[data-layout="editorial_red"] .section-label { text-align: left; }
 body[data-layout="editorial_red"] .section-label { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; }
@@ -1263,7 +1263,7 @@ body[data-layout="editorial_red"] .profile-card .media { border: 5px solid var(-
 /* 전역 하트 구분 아이콘 숨김 (editorial은 자체 물결선 ::after 사용) */
 body[data-layout="editorial_red"] .section + .section::before { display: none; }
 /* 물결 섹션 구분 — accent-dark 색상으로 테마 연동 */
-body[data-layout="editorial_red"] .section::after { content: ""; display: block; margin: 28px auto 0; width: 100px; height: 18px; background-color: var(--accent-dark); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 18'%3E%3Cpath d='M4 9Q14 3 24 9Q34 15 44 9Q54 3 64 9Q74 15 84 9Q94 3 96 9' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 18'%3E%3Cpath d='M4 9Q14 3 24 9Q34 15 44 9Q54 3 64 9Q74 15 84 9Q94 3 96 9' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; opacity: 0.55; }
+body[data-layout="editorial_red"] .section::after { content: ""; display: block; margin: 24px 0 0; width: 56px; height: 12px; background-color: var(--accent-dark); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 18'%3E%3Cpath d='M4 9Q14 3 24 9Q34 15 44 9Q54 3 64 9Q74 15 84 9Q94 3 96 9' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 18'%3E%3Cpath d='M4 9Q14 3 24 9Q34 15 44 9Q54 3 64 9Q74 15 84 9Q94 3 96 9' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E"); -webkit-mask-size: contain; mask-size: contain; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; opacity: 0.55; }
 
 /* ═══════════════════════════════════════════════════════════════
    TEMPLATE: garden_doodle  —  하트 사진 마스크 · 굵은 이름 · 낙서 테두리
@@ -1276,7 +1276,7 @@ body[data-layout="garden_doodle"] .section + .section::before { width: 64px; }
 body[data-layout="garden_doodle"] .hero::after { background: linear-gradient(180deg, transparent 60%, var(--paper) 100%); }
 /* 하트 마스크 사진 */
 /* 손그림 하트 마스크 사진 + accent 외곽선(drop-shadow)으로 손그림 하트 프레임 */
-body[data-layout="garden_doodle"] .hero-media { inset: 150px 16px auto; height: 352px; -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 94'%3E%3Cpath d='M50 87C33 74 20 62 13 48C6 34 11 17 26 15C37 13.5 45 21 50 31C55 21 64 12 76 15C90 18 94 34 87 48C80 62 67 74 50 87Z' fill='black'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 94'%3E%3Cpath d='M50 87C33 74 20 62 13 48C6 34 11 17 26 15C37 13.5 45 21 50 31C55 21 64 12 76 15C90 18 94 34 87 48C80 62 67 74 50 87Z' fill='black'/%3E%3C/svg%3E"); -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; filter: drop-shadow(2.5px 0 0 var(--accent-dark)) drop-shadow(-2.5px 0 0 var(--accent-dark)) drop-shadow(0 2.5px 0 var(--accent-dark)) drop-shadow(0 -2.5px 0 var(--accent-dark)); }
+body[data-layout="garden_doodle"] .hero-media { inset: 150px 16px auto; height: 352px; -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 94'%3E%3Cpath d='M49 86C42 79 31 72 22 63C8 50 7 31 23 26C34 22.5 45 30 50 42C54 29 67 22 78 27C92 33 90 51 76 64C68 72 57 79 49 86Z' fill='black'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 94'%3E%3Cpath d='M49 86C42 79 31 72 22 63C8 50 7 31 23 26C34 22.5 45 30 50 42C54 29 67 22 78 27C92 33 90 51 76 64C68 72 57 79 49 86Z' fill='black'/%3E%3C/svg%3E"); -webkit-mask-size: 100% 100%; mask-size: 100% 100%; -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; filter: drop-shadow(3.5px 1px 0 var(--accent-dark)) drop-shadow(-3.5px -1px 0 var(--accent-dark)) drop-shadow(1px -3.5px 0 var(--accent-dark)) drop-shadow(-1px 3.5px 0 var(--accent-dark)) drop-shadow(3px 3px 0 color-mix(in srgb, var(--accent-dark) 55%, transparent)); }
 /* 낙서 테두리 장식 */
 body[data-layout="garden_doodle"] .hero::before { display: block; content: ""; position: absolute; z-index: 3; inset: 0; pointer-events: none; opacity: 0.55; background-color: var(--accent-dark); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 640'%3E%3Crect x='9' y='9' width='342' height='622' rx='14' fill='none' stroke='black' stroke-width='3.5' stroke-dasharray='7 5'/%3E%3Ccircle cx='20' cy='20' r='6' fill='black'/%3E%3Ccircle cx='340' cy='20' r='6' fill='black'/%3E%3Ccircle cx='20' cy='620' r='6' fill='black'/%3E%3Ccircle cx='340' cy='620' r='6' fill='black'/%3E%3Cpath d='M55 18Q80 12 105 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M255 18Q280 12 305 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 360 640'%3E%3Crect x='9' y='9' width='342' height='622' rx='14' fill='none' stroke='black' stroke-width='3.5' stroke-dasharray='7 5'/%3E%3Ccircle cx='20' cy='20' r='6' fill='black'/%3E%3Ccircle cx='340' cy='20' r='6' fill='black'/%3E%3Ccircle cx='20' cy='620' r='6' fill='black'/%3E%3Ccircle cx='340' cy='620' r='6' fill='black'/%3E%3Cpath d='M55 18Q80 12 105 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M255 18Q280 12 305 18' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center/100% 100% no-repeat; }
 /* 텍스트 상단 고정 */
@@ -1307,6 +1307,8 @@ body[data-layout="garden_doodle"] #wedding-day { background: color-mix(in srgb, 
 body[data-layout="garden_doodle"] #location { background: color-mix(in srgb, var(--accent) 11%, var(--card)); }
 body[data-layout="garden_doodle"] #account { background: color-mix(in srgb, var(--accent-dark) 7%, var(--card)); }
 body[data-layout="garden_doodle"] #guestbook { background: color-mix(in srgb, var(--accent) 13%, var(--card)); }
+/* 귀여운 달력 — 둥근 폰트 (garden) */
+body[data-layout="garden_doodle"] .calendar { font-family: "Gowun Dodum", sans-serif; }
 body[data-layout="garden_doodle"] .invitation-intro { background: color-mix(in srgb, var(--body-bg) 84%, transparent); }
 body[data-layout="garden_doodle"] .invitation-intro-copy { text-align: center; }
 /* 하트 섹션 레이블 */
@@ -1321,6 +1323,26 @@ body[data-layout="navy_arch"] #about-us,
 body[data-layout="cream_organic"] #about-us,
 body[data-layout="crimson_silk"] #about-us,
 body[data-layout="garden_doodle"] #about-us { padding-left: 42px; padding-right: 42px; }
+/* 공통: 방명록 빈 메시지 가운데정렬 + 작게 */
+#guestbook .subtle { text-align: center; font-size: 12px; }
+/* 공통: 방명록 입력 placeholder 훨씬 작고 흐리게 */
+#guestbook input::placeholder,
+#guestbook textarea::placeholder { font-size: 11px; opacity: 0.38; }
+/* 공통: 오시는 길 식장이름 줄바꿈 방지 (fitSingleLineText가 폭에 맞게 축소) */
+.location-venue { white-space: nowrap; }
+/* 공통: 지도/주소복사 버튼에 앱 아이콘 */
+.map-links .btn { display: inline-flex; align-items: center; gap: 6px; }
+.map-links .btn[data-map-app]::before { content: ""; width: 15px; height: 15px; flex: 0 0 15px; background-size: contain; background-repeat: no-repeat; background-position: center; }
+.map-links .btn[data-map-app="copy"]::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='8' y='3' width='12' height='15' rx='2' fill='none' stroke='%23777' stroke-width='2'/%3E%3Crect x='4' y='7' width='12' height='15' rx='2' fill='white' stroke='%23777' stroke-width='2'/%3E%3C/svg%3E"); }
+.map-links .btn[data-map-app="naver"]::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%2303C75A'/%3E%3Cpath d='M8 17V7l8 10V7' fill='none' stroke='white' stroke-width='2.6' stroke-linejoin='round'/%3E%3C/svg%3E"); }
+.map-links .btn[data-map-app="kakao"]::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23FEE500'/%3E%3Cellipse cx='12' cy='11' rx='7' ry='5.4' fill='%233A1D1D'/%3E%3Cpath d='M7.5 15l-1 3.2 4-2.6Z' fill='%233A1D1D'/%3E%3C/svg%3E"); }
+.map-links .btn[data-map-app="tmap"]::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%2300AEEF'/%3E%3Cpath d='M7 8h10M12 8v9' fill='none' stroke='white' stroke-width='2.6' stroke-linecap='round'/%3E%3C/svg%3E"); }
+/* 공통: 어두운(accent-dark) 버튼은 항상 밝은 글자 */
+body[data-layout="crimson_silk"]:not([data-admin-area="super"]) .btn-primary,
+body[data-layout="garden_doodle"]:not([data-admin-area="super"]) .btn-primary { background: var(--accent-dark) !important; color: var(--card) !important; border-color: var(--accent-dark) !important; }
+/* 공통: 결혼일 숫자를 하트 안에 (모든 레이아웃) */
+.calendar .wedding-day span { position: relative; z-index: 1; color: var(--card) !important; background: transparent !important; box-shadow: none !important; font-weight: 700; }
+.calendar .wedding-day span::before { content: ""; position: absolute; inset: -7px -6px -3px -6px; z-index: -1; background-color: var(--accent-dark); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 22'%3E%3Cpath d='M12 21C5 16 1 12 1 7C1 3 4 1 7 1C9 1 11 2 12 4C13 2 15 1 17 1C20 1 23 3 23 7C23 12 19 16 12 21Z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 22'%3E%3Cpath d='M12 21C5 16 1 12 1 7C1 3 4 1 7 1C9 1 11 2 12 4C13 2 15 1 17 1C20 1 23 3 23 7C23 12 19 16 12 21Z' fill='black'/%3E%3C/svg%3E") center/contain no-repeat; }
 
 /* ═══ navy_arch: 원형 프로필 · 3열 갤러리 · 버튼 정사각 ═══ */
 body[data-layout="navy_arch"] .profile-photo { width: 100%; max-width: 156px; height: auto; aspect-ratio: 1; border-radius: 50%; border: 4px solid var(--card); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-dark) 30%, transparent), 0 6px 20px color-mix(in srgb, var(--accent-dark) 18%, transparent); background-size: cover; background-position: center; }
@@ -1353,11 +1375,12 @@ body[data-layout="cream_organic"] .section-title { font-size: clamp(18px, 5vw, 2
 /* ═══ crimson_silk: 소프트 타원 프로필 · 깔끔한 갤러리 ═══ */
 body[data-layout="crimson_silk"] .profile-photo { width: 100%; max-width: 160px; height: auto; aspect-ratio: 4/5; border-radius: 16px 16px 10px 10px; border: 4px solid var(--card); box-shadow: 0 4px 16px rgba(0,0,0,0.1); background-size: cover; background-position: center; }
 body[data-layout="crimson_silk"] .gallery-item { border-radius: 12px; border-width: 2px; border-bottom-width: 2px; transform: none !important; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-/* 갤러리 = 옆으로 넘기는 스와이프(scroll-snap), 모달 없이 페이지 자체에서 */
-body[data-layout="crimson_silk"] .gallery-grid { display: flex; flex-wrap: nowrap; grid-template-columns: none; overflow-x: auto; scroll-snap-type: x mandatory; gap: 10px; padding-bottom: 10px; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
-body[data-layout="crimson_silk"] .gallery-item { flex: 0 0 76%; scroll-snap-align: center; aspect-ratio: 4/5; }
-body[data-layout="crimson_silk"] .gallery-item:first-child,
-body[data-layout="crimson_silk"] .gallery-item:nth-child(6) { grid-column: auto; }
+/* 갤러리 = 대표 1장 크게 + 썸네일 그리드, 사진 클릭 시 버튼 네비 확대 모달 */
+body[data-layout="crimson_silk"] .gallery-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+body[data-layout="crimson_silk"] .gallery-item { aspect-ratio: 1; }
+body[data-layout="crimson_silk"] .gallery-item:first-child { grid-column: 1 / -1; aspect-ratio: 4/3; }
+/* '사진 더보기' 버튼 제거 (사진 자체 클릭으로 모달 열림) */
+body[data-layout="crimson_silk"] #gallery-more { display: none; }
 body[data-layout="crimson_silk"] .btn { border-radius: 10px; }
 body[data-layout="crimson_silk"] .section { background: var(--card); border-radius: 0; margin: 0; border-bottom: 1px solid var(--line); padding: 40px 80px; }
 body[data-layout="crimson_silk"] .section:last-child { border-bottom: none; }
@@ -1377,7 +1400,7 @@ body[data-layout="editorial_red"] .gallery-grid { grid-template-columns: repeat(
 body[data-layout="editorial_red"] .gallery-item { border-radius: 2px; transform: none !important; border-color: var(--card); }
 body[data-layout="editorial_red"] .gallery-item:first-child,
 body[data-layout="editorial_red"] .gallery-item:nth-child(6) { grid-column: 1 / -1; aspect-ratio: 16/9; }
-body[data-layout="editorial_red"] .section { border-top: 2px solid var(--ink); padding: 40px 80px; }
+body[data-layout="editorial_red"] .section { border-top: none; padding: 36px 80px; }
 body[data-layout="editorial_red"] .section-label { font-weight: 900; font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--accent-dark); }
 body[data-layout="editorial_red"] .btn { border-radius: 4px; font-weight: 700; letter-spacing: 0.04em; }
 body[data-layout="editorial_red"] .quick-nav a { border-radius: 4px; }
@@ -1481,7 +1504,10 @@ body[data-layout="crimson_silk"] #guestbook .field textarea { border-radius: 8px
 
 /* ── editorial_red : 매거진 레이아웃, 강한 타이포, 레드 포인트 ── */
 body[data-layout="editorial_red"] #invitation { padding: 44px 80px; }
-body[data-layout="editorial_red"] #invitation .section-title { font-size: clamp(22px, 6vw, 30px); letter-spacing: -0.02em; }
+body[data-layout="editorial_red"] #invitation .section-title { font-size: clamp(18px, 5vw, 24px); letter-spacing: -0.02em; }
+/* 연락 버튼 한 줄 나란히 + 작게 */
+body[data-layout="editorial_red"] .contact-row { display: flex; gap: 8px; flex-wrap: nowrap; }
+body[data-layout="editorial_red"] .contact-row .btn { flex: 1 1 0; min-width: 0; font-size: 11px; padding: 8px 10px; letter-spacing: 0.02em; }
 body[data-layout="editorial_red"] #about-us .profile-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
 body[data-layout="editorial_red"] #about-us .profile-body { padding: 0 4px; }
 body[data-layout="editorial_red"] #about-us .profile-role { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent-dark); font-weight: 900; margin-bottom: 4px; }
@@ -1490,7 +1516,7 @@ body[data-layout="editorial_red"] #wedding-day .section-title::before { content:
 body[data-layout="editorial_red"] #wedding-day .timetable-item { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; gap: 14px; }
 body[data-layout="editorial_red"] #wedding-day .timetable-time { font-weight: 700; font-size: 12px; letter-spacing: 0.06em; color: var(--accent-dark); min-width: 48px; }
 body[data-layout="editorial_red"] #location .section-label { font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase; }
-body[data-layout="editorial_red"] #location .location-venue { font-family: "Playfair Display", serif; font-size: clamp(15px, 4.6vw, 18px); font-weight: 700; white-space: normal; overflow: visible; line-height: 1.25; }
+body[data-layout="editorial_red"] #location .location-venue { font-family: "Playfair Display", serif; font-size: clamp(15px, 4.6vw, 18px); font-weight: 700; white-space: nowrap; overflow: visible; line-height: 1.25; }
 body[data-layout="editorial_red"] #guestbook .guestbook-item { border-left: 2px solid var(--accent-dark); padding-left: 14px; }
 
 /* ── garden_doodle : 손그림 낙서 감성, 귀엽고 생동감 ── */
@@ -1572,8 +1598,8 @@ body[data-layout="cream_organic"] .notice h3 { color: var(--accent-dark); }
 body[data-layout="cream_organic"] #guestbook .field input,
 body[data-layout="cream_organic"] #guestbook .field textarea { border-radius: 16px; border-color: color-mix(in srgb, var(--accent-dark) 35%, transparent); background: var(--card); }
 body[data-layout="cream_organic"] .btn { border-radius: 999px; }
-/* 방명록 = invitation 상하반전 아치 라벤더 패널 (아래가 아치) */
-body[data-layout="cream_organic"] #guestbook { background: var(--accent-dark); border-radius: 0 0 50% 50% / 0 0 96px 96px; margin: 34px 12px 0; padding: 48px 34px 96px; }
+/* 방명록 = invitation 상하반전 아치 라벤더 패널 (위에서 그라데이션으로 페이드 인, 아래가 아치) */
+body[data-layout="cream_organic"] #guestbook { background: linear-gradient(180deg, var(--paper) 0px, color-mix(in srgb, var(--accent-dark) 50%, var(--paper)) 44px, var(--accent-dark) 92px, var(--accent-dark) 100%); border-radius: 0 0 50% 50% / 0 0 96px 96px; margin: 12px 12px 0; padding: 108px 34px 96px; }
 body[data-layout="cream_organic"] #guestbook .section-title { color: var(--card); }
 body[data-layout="cream_organic"] #guestbook .section-label { color: color-mix(in srgb, var(--card) 82%, transparent); }
 body[data-layout="cream_organic"] #guestbook .section-label::before,
