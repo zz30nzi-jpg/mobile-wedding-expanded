@@ -117,7 +117,7 @@ function fitSingleLineText() {
 function renderDayStrip() {
   if (!weddingDate) return "";
   const weekdays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-  const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  const months = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
   let cells = "";
   for (let off = -2; off <= 2; off++) {
     const d = new Date(weddingDate);
@@ -125,11 +125,13 @@ function renderDayStrip() {
     const isWed = off === 0;
     cells += `<div class="day-cell${isWed ? " day-wedding" : ""}">
       <span class="day-week">${weekdays[d.getDay()]}</span>
-      <span class="day-month">${months[d.getMonth()]}</span>
       <span class="day-num">${d.getDate()}</span>
     </div>`;
   }
-  return `<div class="day-strip">${cells}</div>`;
+  return `<div class="day-strip-wrap">
+    <div class="day-strip-month">${months[weddingDate.getMonth()]}</div>
+    <div class="day-strip">${cells}</div>
+  </div>`;
 }
 
 function renderCalendar() {
