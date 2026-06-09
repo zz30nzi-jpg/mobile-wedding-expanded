@@ -17,9 +17,9 @@ const isVideoMedia = (value = "") => /\.(mp4|webm|mov)(?:$|[?#])/i.test(value);
 const mapLinksForAddress = (address = "") => {
   const query = encodeURIComponent(address.trim());
   return [
-    { label: "네이버 지도", url: `https://map.naver.com/p/search/${query}` },
-    { label: "카카오맵", url: `https://map.kakao.com/link/search/${query}` },
-    { label: "티맵", url: `https://www.tmap.co.kr/tmap2/mobile/route.jsp?name=${query}` },
+    { label: "네이버 지도", app: "naver", url: `https://map.naver.com/p/search/${query}` },
+    { label: "카카오맵", app: "kakao", url: `https://map.kakao.com/link/search/${query}` },
+    { label: "티맵", app: "tmap", url: `https://www.tmap.co.kr/tmap2/mobile/route.jsp?name=${query}` },
   ];
 };
 let weddingDate;
@@ -360,8 +360,8 @@ function render() {
         ${location.hall ? `<p class="location-hall">${escapeHtml(location.hall)}</p>` : ""}
         <p class="location-address">${escapeHtml(data.wedding.address)}</p>
         <div class="map-links">
-          <button class="btn copy-btn" data-copy="${escapeHtml(data.wedding.address)}">주소 복사</button>
-          ${mapLinksForAddress(data.wedding.address).map((link) => `<a class="btn" href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a>`).join("")}
+          <button class="btn copy-btn" data-map-app="copy" data-copy="${escapeHtml(data.wedding.address)}">주소 복사</button>
+          ${mapLinksForAddress(data.wedding.address).map((link) => `<a class="btn" data-map-app="${link.app}" href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a>`).join("")}
         </div>
         <div class="transport">
           ${sortedTransport().filter((item) => !item.hidden).map((item) => `<div><strong>${escapeHtml(item.title)}</strong>${escapeHtml(item.text)}</div>`).join("")}
