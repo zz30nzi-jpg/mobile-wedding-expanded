@@ -1182,7 +1182,9 @@ body[data-layout="cream_organic"] .section + .section::before { width: 70px; }
 /* 숲 사진 히어로 하단 찢긴 종이(크림) 가장자리 — 웨이브 마스크 */
 body[data-layout="cream_organic"] .hero::before { content: ""; position: absolute; z-index: 3; left: 0; right: 0; bottom: -1px; height: 38px; background: var(--paper); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'%3E%3Cpath d='M0 60 L1200 60 L1200 30 C1090 8 1010 50 900 32 C800 16 720 50 600 30 C490 12 410 50 300 30 C200 14 110 44 0 26 Z' fill='black'/%3E%3C/svg%3E") bottom/100% 100% no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 60' preserveAspectRatio='none'%3E%3Cpath d='M0 60 L1200 60 L1200 30 C1090 8 1010 50 900 32 C800 16 720 50 600 30 C490 12 410 50 300 30 C200 14 110 44 0 26 Z' fill='black'/%3E%3C/svg%3E") bottom/100% 100% no-repeat; }
 /* 인사 = 라벤더(accent) 둥근 아치 패널 (크림 위에 떠 있음) */
-body[data-layout="cream_organic"] #invitation { position: relative; z-index: 1; background: var(--accent-dark); border-radius: 50% 50% 32px 32px / 92px 92px 32px 32px; margin: 18px 12px 8px; padding: 80px 34px 48px; }
+body[data-layout="cream_organic"] #invitation { position: relative; z-index: 1; background: var(--accent-dark); border-radius: 50% 50% 0 0 / 96px 96px 0 0; margin: 18px 12px 40px; padding: 84px 34px 48px; }
+/* invitation 다음 섹션과 여백 확대 (구분 아이콘이 맞물리지 않게) */
+body[data-layout="cream_organic"] #invitation + .section { padding-top: 30px; }
 body[data-layout="cream_organic"] #invitation .section-title { color: var(--card); }
 body[data-layout="cream_organic"] #invitation .section-label { color: color-mix(in srgb, var(--card) 82%, transparent); }
 body[data-layout="cream_organic"] #invitation p { color: color-mix(in srgb, var(--card) 90%, transparent); }
@@ -1274,7 +1276,7 @@ body[data-layout="garden_doodle"] .section-label::before { content: "♥ "; colo
 .profile-photo { max-width: 160px; }
 
 /* ═══ navy_arch: 원형 프로필 · 3열 갤러리 · 버튼 정사각 ═══ */
-body[data-layout="navy_arch"] .profile-photo { width: 132px; height: 132px; max-width: 132px; aspect-ratio: 1; border-radius: 50%; border: 4px solid var(--card); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-dark) 30%, transparent), 0 6px 20px color-mix(in srgb, var(--accent-dark) 18%, transparent); background-size: cover; background-position: center; }
+body[data-layout="navy_arch"] .profile-photo { width: 100%; max-width: 140px; height: auto; aspect-ratio: 1; border-radius: 50%; border: 4px solid var(--card); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-dark) 30%, transparent), 0 6px 20px color-mix(in srgb, var(--accent-dark) 18%, transparent); background-size: cover; background-position: center; }
 body[data-layout="navy_arch"] .profile-name { text-align: center; }
 body[data-layout="navy_arch"] .profile-body { text-align: center; }
 body[data-layout="navy_arch"] .gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
@@ -1286,7 +1288,7 @@ body[data-layout="navy_arch"] .section-label { text-align: center; }
 body[data-layout="navy_arch"] .section-title::after { content: ""; display: block; width: 40px; height: 2px; background: currentColor; margin: 10px auto 0; opacity: 0.3; }
 
 /* ═══ cream_organic: 부드러운 둥근 프로필 · 소프트 갤러리 ═══ */
-body[data-layout="cream_organic"] .profile-photo { width: 140px; height: 168px; max-width: 140px; aspect-ratio: 5/6; border-radius: 16px; border: 4px solid var(--card); box-shadow: 0 4px 18px rgba(0,0,0,0.08); background-size: cover; background-position: center; }
+body[data-layout="cream_organic"] .profile-photo { width: 100%; max-width: 150px; height: auto; aspect-ratio: 5/6; border-radius: 16px; border: 4px solid var(--card); box-shadow: 0 4px 18px rgba(0,0,0,0.08); background-size: cover; background-position: center; }
 body[data-layout="cream_organic"] .gallery-item { border-radius: 16px; transform: none !important; border-width: 3px; border-bottom-width: 3px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
 body[data-layout="cream_organic"] .gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 /* 솔리드 accent 버튼 — 크림 위 대비 확보 */
@@ -1519,6 +1521,15 @@ body[data-layout="cream_organic"] .notice h3 { color: var(--accent-dark); }
 body[data-layout="cream_organic"] #guestbook .field input,
 body[data-layout="cream_organic"] #guestbook .field textarea { border-radius: 16px; border-color: color-mix(in srgb, var(--accent-dark) 35%, transparent); background: var(--card); }
 body[data-layout="cream_organic"] .btn { border-radius: 999px; }
+/* 방명록 = invitation 상하반전 아치 라벤더 패널 (아래가 아치) */
+body[data-layout="cream_organic"] #guestbook { background: var(--accent-dark); border-radius: 0 0 50% 50% / 0 0 96px 96px; margin: 34px 12px 0; padding: 48px 34px 96px; }
+body[data-layout="cream_organic"] #guestbook .section-title { color: var(--card); }
+body[data-layout="cream_organic"] #guestbook .section-label { color: color-mix(in srgb, var(--card) 82%, transparent); }
+body[data-layout="cream_organic"] #guestbook .section-label::before,
+body[data-layout="cream_organic"] #guestbook .section-label::after { color: var(--card); }
+body[data-layout="cream_organic"] #guestbook p,
+body[data-layout="cream_organic"] #guestbook .section-description { color: color-mix(in srgb, var(--card) 90%, transparent); }
+body[data-layout="cream_organic"] #guestbook .guestbook-item { background: var(--card); color: var(--ink); border-radius: 14px; }
 
 /* ── crimson_silk : 초대 강조 · 다크 섹션 구분 ── */
 body[data-layout="crimson_silk"] #invitation .section-title { font-family: "Libre Baskerville", serif; font-size: 20px; font-style: italic; }
