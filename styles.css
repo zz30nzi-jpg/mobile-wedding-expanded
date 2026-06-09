@@ -1141,27 +1141,36 @@ input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border: 3px s
 /* ═══════════════════════════════════════════════════════════════
    TEMPLATE: navy_arch  —  흰 카드 히어로 · 아치형 사진 · 파란 섹션
    ════════════════════════════════════════════════════════════ */
-body[data-layout="navy_arch"] .hero { background: var(--card); min-height: 560px; overflow: hidden; }
+/* 블루 바디 — 흰 인트로 카드가 그 위에 떠 있는 구조 */
+body[data-layout="navy_arch"] .invitation { background: var(--accent-dark); }
+/* 흰 인트로 카드 (둥근 모서리, 떠 있는 느낌) */
+body[data-layout="navy_arch"] .hero { background: var(--card); min-height: 560px; overflow: hidden; margin: 16px 14px 0; border-radius: 28px; box-shadow: 0 10px 36px color-mix(in srgb, var(--accent-dark) 26%, transparent); }
 body[data-layout="navy_arch"] .hero::after { background: none; }
-/* 아치 사진 프레임 */
-body[data-layout="navy_arch"] .hero-media { inset: 168px 62px auto; height: 272px; border-radius: 200px 200px 0 0; overflow: hidden; opacity: 1; }
-/* 텍스트 상단 고정 (배경이 흰색이므로 사진 위 오버레이 아님) */
+/* 아치 사진 프레임 — 중앙 정렬 */
+body[data-layout="navy_arch"] .hero-media { inset: 188px 48px auto; height: 280px; border-radius: 200px 200px 0 0; overflow: hidden; opacity: 1; }
+/* 텍스트 상단 중앙 고정 (흰 카드 위) */
 body[data-layout="navy_arch"] .hero-content,
 body[data-layout="navy_arch"] .hero-content-top,
 body[data-layout="navy_arch"] .hero-content-middle,
-body[data-layout="navy_arch"] .hero-content-bottom { top: 42px !important; bottom: auto !important; transform: none !important; left: 28px; right: 28px; text-align: left; color: var(--ink); text-shadow: none; }
+body[data-layout="navy_arch"] .hero-content-bottom { top: 44px !important; bottom: auto !important; transform: none !important; left: 28px; right: 28px; text-align: center; color: var(--ink); text-shadow: none; }
 body[data-layout="navy_arch"] .hero-eyebrow { font-style: italic; text-transform: none; letter-spacing: 0.06em; color: var(--muted); font-size: 12px; }
-body[data-layout="navy_arch"] .hero-names { font-size: clamp(24px, 7vw, 36px); font-style: italic; letter-spacing: 0.02em; color: var(--ink); text-shadow: none; line-height: 1.2; }
+body[data-layout="navy_arch"] .hero-names { font-size: clamp(24px, 7vw, 36px); font-style: italic; letter-spacing: 0.02em; color: var(--ink); text-shadow: none; line-height: 1.3; }
 body[data-layout="navy_arch"] .hero-date { color: var(--muted); text-shadow: none; font-size: 11px; letter-spacing: 0.14em; }
 /* 진주 웨이브 장식 */
 body[data-layout="navy_arch"] .hero::before { display: block; content: ""; position: absolute; z-index: 3; bottom: 14px; left: 50%; transform: translateX(-50%); width: 160px; height: 22px; pointer-events: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 22'%3E%3Cpath d='M4 11Q24 5 44 11Q64 17 84 11Q104 5 124 11Q144 17 156 11' fill='none' stroke='%23b8a898' stroke-width='1.2' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='7' r='4.5' fill='%23d8cab8'/%3E%3Ccircle cx='44' cy='7' r='2.5' fill='%23ede0d2'/%3E%3Ccircle cx='84' cy='15' r='4.5' fill='%23d8cab8'/%3E%3Ccircle cx='84' cy='15' r='2.5' fill='%23ede0d2'/%3E%3Ccircle cx='124' cy='7' r='4.5' fill='%23d8cab8'/%3E%3Ccircle cx='124' cy='7' r='2.5' fill='%23ede0d2'/%3E%3C/svg%3E") center/contain no-repeat; }
-/* 섹션 전체 컬러 패널 (테마 배경색 사용) */
-body[data-layout="navy_arch"] .section { border-radius: 0; margin: 0; padding: 40px 80px; }
-/* 원형 장소 사진 */
+/* 섹션 — 블루 바디 위 투명 패널, 흰 글씨 */
+body[data-layout="navy_arch"] .section { border-radius: 0; margin: 0; padding: 40px 80px; background: transparent; }
+body[data-layout="navy_arch"] .section-title,
+body[data-layout="navy_arch"] .section-subtitle { color: var(--card); }
+body[data-layout="navy_arch"] .section-label { color: color-mix(in srgb, var(--card) 82%, transparent); }
+body[data-layout="navy_arch"] .section p,
+body[data-layout="navy_arch"] .section li,
+body[data-layout="navy_arch"] .ending { color: color-mix(in srgb, var(--card) 90%, transparent); }
+/* 원형 장소 사진 + 진주 링 테두리 */
 body[data-layout="navy_arch"] #location .media,
-body[data-layout="navy_arch"] .location-map-static { display: block; width: 180px; height: 180px; margin: 16px auto; border-radius: 50%; overflow: hidden; border: 3px solid rgba(255,255,255,0.25); }
-body[data-layout="navy_arch"] .invitation-intro { background: var(--body-bg); backdrop-filter: none; }
-body[data-layout="navy_arch"] .invitation-intro-copy { text-align: center; }
+body[data-layout="navy_arch"] .location-map-static { display: block; width: 200px; height: 200px; margin: 18px auto; border-radius: 50%; overflow: hidden; border: 5px solid var(--card); box-shadow: 0 0 0 2px color-mix(in srgb, var(--card) 45%, transparent), 0 8px 24px color-mix(in srgb, var(--accent-dark) 40%, transparent); }
+body[data-layout="navy_arch"] .invitation-intro { background: var(--accent-dark); backdrop-filter: none; }
+body[data-layout="navy_arch"] .invitation-intro-copy { text-align: center; color: var(--card); }
 
 /* ═══════════════════════════════════════════════════════════════
    TEMPLATE: cream_organic  —  라벤더 아치 인사 섹션 · 오가닉 카드 · 도트 타임라인
@@ -1259,7 +1268,7 @@ body[data-layout="garden_doodle"] .section-label::before { content: "♥ "; colo
 .profile-photo { max-width: 160px; }
 
 /* ═══ navy_arch: 원형 프로필 · 3열 갤러리 · 버튼 정사각 ═══ */
-body[data-layout="navy_arch"] .profile-photo { border-radius: 50%; border-width: 3px; border-bottom-width: 3px; max-width: 140px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+body[data-layout="navy_arch"] .profile-photo { border-radius: 50%; border-width: 4px; border-bottom-width: 4px; border-color: var(--card); max-width: 140px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--card) 40%, transparent), 0 6px 20px color-mix(in srgb, var(--accent-dark) 35%, transparent); }
 body[data-layout="navy_arch"] .profile-name { text-align: center; }
 body[data-layout="navy_arch"] .profile-body { text-align: center; }
 body[data-layout="navy_arch"] .gallery-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
@@ -1366,11 +1375,22 @@ body[data-layout="navy_arch"] #invitation { padding: 52px 28px 44px; }
 body[data-layout="navy_arch"] #invitation .section-title { text-align: center; font-size: clamp(20px, 5.5vw, 28px); }
 body[data-layout="navy_arch"] #about-us .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 body[data-layout="navy_arch"] #about-us .profile-card { display: grid; grid-template-rows: auto auto; justify-items: center; text-align: center; gap: 8px; }
-body[data-layout="navy_arch"] #about-us .profile-name { font-family: "Nanum Myeongjo", serif; font-size: 16px; font-weight: 700; }
-body[data-layout="navy_arch"] #wedding-day .timetable { display: grid; gap: 14px; }
-body[data-layout="navy_arch"] #wedding-day .timetable-item { padding: 14px 18px; background: color-mix(in srgb, var(--accent) 6%, transparent); border-left: 3px solid var(--accent); border-radius: 0 10px 10px 0; }
+body[data-layout="navy_arch"] #about-us .profile-name { font-family: "Nanum Myeongjo", serif; font-size: 16px; font-weight: 700; color: var(--card); }
+body[data-layout="navy_arch"] #about-us .profile-body,
+body[data-layout="navy_arch"] #about-us .profile-role { color: color-mix(in srgb, var(--card) 85%, transparent); }
+/* 프로그램 — 블루 위 흰 글씨 중앙 정렬, 카드 없음 */
+body[data-layout="navy_arch"] #wedding-day .timetable { display: grid; gap: 18px; }
+body[data-layout="navy_arch"] #wedding-day .timetable-item { padding: 0; background: transparent; border: none; text-align: center; color: var(--card); }
+body[data-layout="navy_arch"] #wedding-day .timetable-time { color: var(--card); font-family: "Nanum Myeongjo", serif; font-size: 17px; }
+/* 캘린더 — 블루 위 흰 글씨 */
+body[data-layout="navy_arch"] .calendar { color: var(--card); }
+body[data-layout="navy_arch"] .calendar caption,
+body[data-layout="navy_arch"] .calendar th,
+body[data-layout="navy_arch"] .calendar td { color: var(--card); }
+body[data-layout="navy_arch"] .calendar .wedding-day span { background: var(--card); color: var(--accent-dark); }
 body[data-layout="navy_arch"] #location .location-venue { font-family: "Nanum Myeongjo", serif; font-size: 18px; }
 body[data-layout="navy_arch"] #guestbook .guestbook-form { background: var(--card); border-radius: 12px; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+body[data-layout="navy_arch"] #guestbook .guestbook-item { background: var(--card); color: var(--ink); border-radius: 12px; }
 
 /* ── cream_organic : 봄날 감성, 꽃 장식, 둥근 카드 ── */
 body[data-layout="cream_organic"] #invitation { padding: 48px 28px 40px; }
@@ -1510,16 +1530,25 @@ body[data-layout="crimson_silk"] #account .account-row { padding: 11px 18px; }
 body[data-layout="crimson_silk"] #account details + details { margin-top: 10px; }
 body[data-layout="crimson_silk"] #guestbook { background: color-mix(in srgb, var(--accent-dark) 4%, var(--card)); }
 
-/* ── navy_arch : 네이비 원형·라운드 ── */
-body[data-layout="navy_arch"] #location { background: color-mix(in srgb, var(--accent) 8%, var(--card)); border-radius: 18px; padding: 40px 80px; }
-body[data-layout="navy_arch"] .transport div { background: color-mix(in srgb, var(--accent) 9%, transparent); border-color: color-mix(in srgb, var(--accent) 22%, transparent); border-radius: 10px; }
-body[data-layout="navy_arch"] .transport strong { color: color-mix(in srgb, var(--accent) 90%, var(--ink)); }
-body[data-layout="navy_arch"] #account details { border: 1.5px solid color-mix(in srgb, var(--accent) 22%, transparent); border-radius: 14px; overflow: hidden; }
-body[data-layout="navy_arch"] #account summary { background: color-mix(in srgb, var(--accent) 12%, transparent); color: color-mix(in srgb, var(--accent) 90%, var(--ink)); padding: 13px 18px; font-weight: 800; }
-body[data-layout="navy_arch"] #account .account-row { padding: 11px 18px; }
+/* ── navy_arch : 블루 바디 위 흰 글씨 · 흰 카드 플로팅 ── */
+body[data-layout="navy_arch"] #location { background: transparent; padding: 40px 80px; }
+body[data-layout="navy_arch"] #location .location-venue,
+body[data-layout="navy_arch"] #location .location-hall,
+body[data-layout="navy_arch"] #location .location-address { color: var(--card); }
+/* 흰 카드로 떠 있는 교통·계좌·공지 (블루 바디 위) */
+body[data-layout="navy_arch"] .transport div { background: var(--card); border-color: color-mix(in srgb, var(--accent-dark) 18%, transparent); border-radius: 10px; }
+body[data-layout="navy_arch"] .transport strong { color: var(--accent-dark); }
+body[data-layout="navy_arch"] #account details { background: var(--card); border: 1.5px solid color-mix(in srgb, var(--accent-dark) 18%, transparent); border-radius: 14px; overflow: hidden; }
+body[data-layout="navy_arch"] #account summary { background: color-mix(in srgb, var(--accent-dark) 10%, var(--card)); color: var(--accent-dark); padding: 13px 18px; font-weight: 800; }
+body[data-layout="navy_arch"] #account .account-row { padding: 11px 18px; color: var(--ink); }
 body[data-layout="navy_arch"] #account details + details { margin-top: 10px; }
-body[data-layout="navy_arch"] .notice { border-radius: 12px; background: color-mix(in srgb, var(--accent) 6%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent); }
-body[data-layout="navy_arch"] .notice h3 { color: color-mix(in srgb, var(--accent) 90%, var(--ink)); }
+body[data-layout="navy_arch"] .notice { border-radius: 12px; background: var(--card); border: 1px solid color-mix(in srgb, var(--accent-dark) 16%, transparent); }
+body[data-layout="navy_arch"] .notice h3 { color: var(--accent-dark); }
+body[data-layout="navy_arch"] .notice p { color: var(--ink); }
+/* pill 모양 지도·네비 버튼 (테두리형) */
+body[data-layout="navy_arch"] .btn,
+body[data-layout="navy_arch"] .quick-nav a { border-radius: 999px; }
+body[data-layout="navy_arch"] #location .btn { background: transparent; border: 1.5px solid color-mix(in srgb, var(--card) 60%, transparent); color: var(--card); }
 
 /* ── garden_doodle : 낙서 점선 카드 ── */
 body[data-layout="garden_doodle"] #location .location-venue { font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; }
