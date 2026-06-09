@@ -410,6 +410,13 @@ img { max-width: 100%; }
 .invitation-intro-copy p { margin-bottom: var(--intro-eyebrow-name-gap, 10px); font-size: var(--intro-eyebrow-size, 11px); }
 .invitation-intro-copy span { margin-top: var(--intro-name-date-gap, 10px); font-size: var(--intro-date-size, 11px); }
 .invitation-intro-copy strong { min-height: 38px; font-family: "Cormorant Garamond", "Noto Serif KR", serif; font-size: var(--intro-name-size, 30px); font-weight: 600; letter-spacing: 0.1em; color: color-mix(in srgb, var(--accent-dark) 75%, var(--ink)); }
+/* 진입화면 날짜는 항상 한 줄 */
+.invitation-intro-copy span { white-space: nowrap; }
+/* 어두운 인트로 배경 레이아웃 — 이름·날짜를 밝게 (배경과 같은 색으로 묻히지 않게) */
+body[data-layout="navy_arch"] .invitation-intro-copy strong,
+body[data-layout="crimson_silk"] .invitation-intro-copy strong { color: var(--card); }
+body[data-layout="navy_arch"] .invitation-intro-copy p,
+body[data-layout="navy_arch"] .invitation-intro-copy span { color: color-mix(in srgb, var(--card) 80%, transparent); }
 body.intro-open { position: fixed; right: 0; left: 0; width: 100%; overflow: hidden; touch-action: none; }
 .section { position: relative; padding: 82px 80px; text-align: center; }
 .section + .section { border-top: 0; }
@@ -1156,7 +1163,7 @@ body[data-layout="navy_arch"] .section + .section::before { width: 64px; }
 body[data-layout="navy_arch"] .hero { background: var(--accent-dark); min-height: 660px; overflow: hidden; margin: 0; border-radius: 0; }
 body[data-layout="navy_arch"] .hero::after { background: none; }
 /* 아치 사진 프레임 — 흰 테두리, 중앙 정렬 */
-body[data-layout="navy_arch"] .hero-media { inset: 188px 48px auto; height: 280px; border-radius: 200px 200px 0 0; overflow: hidden; opacity: 1; box-shadow: 0 0 0 5px color-mix(in srgb, var(--card) 88%, transparent); }
+body[data-layout="navy_arch"] .hero-media { inset: 188px 58px auto; height: 300px; border-radius: 200px 200px 0 0; overflow: hidden; opacity: 1; }
 /* 텍스트 상단 중앙 고정 (컬러 위 흰 글씨) */
 body[data-layout="navy_arch"] .hero-content,
 body[data-layout="navy_arch"] .hero-content-top,
@@ -1568,7 +1575,7 @@ body[data-layout="editorial_red"] #about-us .profile-grid { display: grid; grid-
 body[data-layout="editorial_red"] #about-us .profile-body { padding: 0 4px; }
 body[data-layout="editorial_red"] #about-us .profile-role { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent-dark); font-weight: 900; margin-bottom: 4px; }
 body[data-layout="editorial_red"] #about-us .profile-name { font-family: "Playfair Display", serif; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
-body[data-layout="editorial_red"] #wedding-day .section-title::before { content: counter(editorial-section, decimal-leading-zero) ". "; counter-increment: editorial-section; font-size: 11px; letter-spacing: 0.1em; opacity: 0.45; display: block; }
+body[data-layout="editorial_red"] #wedding-day .section-title::before { content: none; }
 body[data-layout="editorial_red"] #wedding-day .timetable-item { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; gap: 14px; }
 body[data-layout="editorial_red"] #wedding-day .timetable-time { font-weight: 700; font-size: 12px; letter-spacing: 0.06em; color: var(--accent-dark); min-width: 48px; }
 body[data-layout="editorial_red"] #location .section-label { font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase; }
@@ -1627,8 +1634,11 @@ body[data-layout="editorial_red"] #invitation p,
 body[data-layout="editorial_red"] #invitation .invitation-quote { font-size: 14px; line-height: 2; }
 body[data-layout="editorial_red"] #location { text-align: left; border-top: none; }
 body[data-layout="editorial_red"] #location .location-address { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-body[data-layout="editorial_red"] .transport div { border: none; border-left: 2px solid var(--accent-dark); border-radius: 0; background: transparent; padding: 8px 12px; }
-body[data-layout="editorial_red"] .transport strong { color: var(--accent-dark); }
+/* location 교통편 — 세로선 대신 가로 구분 + 라벨 강조 (매거진) */
+body[data-layout="editorial_red"] .transport { display: grid; gap: 0; }
+body[data-layout="editorial_red"] .transport div { border: none; border-top: 1px solid var(--line); border-radius: 0; background: transparent; padding: 12px 0 12px; }
+body[data-layout="editorial_red"] .transport div:last-child { border-bottom: 1px solid var(--line); }
+body[data-layout="editorial_red"] .transport strong { color: var(--accent-dark); font-weight: 900; font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase; display: block; margin-bottom: 3px; }
 body[data-layout="editorial_red"] #account { text-align: left; }
 body[data-layout="editorial_red"] #account details { border: 2px solid var(--ink); border-radius: 0; }
 body[data-layout="editorial_red"] #account details[open] { border-color: var(--accent-dark); }
