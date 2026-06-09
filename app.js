@@ -337,8 +337,8 @@ function render() {
             <article class="profile-card">
               <div class="media profile-photo" ${mediaStyle(person.photo)}></div>
               <div class="profile-body">
-                <h3 class="profile-name">${role} ${escapeHtml(person.name)}</h3>
-                ${displaySettings.showProfileParents !== false && parentDisplay(person) ? `<div>${escapeHtml(parentDisplay(person))}</div>` : ""}
+                <h3 class="profile-name single-line-fit">${role} ${escapeHtml(person.name)}</h3>
+                ${displaySettings.showProfileParents !== false && parentDisplay(person) ? `<div class="profile-parents single-line-fit">${escapeHtml(parentDisplay(person))}</div>` : ""}
                 ${displaySettings.showProfileBirthdays !== false && person.birthday ? `<div>${escapeHtml(person.birthday)}</div>` : ""}
                 <div>${escapeHtml(person.mbti)}</div>
                 <div class="profile-tags">${(person.tags || []).slice(0, 3).map((tag) => `<span class="tag">#${escapeHtml(String(tag).replace(/^#+/, ""))}</span>`).join(" ")}</div>
