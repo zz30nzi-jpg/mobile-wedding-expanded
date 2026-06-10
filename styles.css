@@ -923,6 +923,11 @@ body[data-admin-area="general"]:has(.editor-tooldock:not([hidden])) .admin-float
 .hero-decoration-preview[data-decoration-preview="poster_card"] { background: var(--paper); }
 .hero-decoration-preview[data-decoration-preview="poster_card"] i { inset: 15px 8px 11px; border: 2px solid var(--accent-dark); border-radius: 18px 18px 12px 12px; background: linear-gradient(145deg, var(--media-start), var(--media-end)); }
 .hero-decoration-preview[data-decoration-preview="poster_card"]::before { top: 5px; left: 15px; color: var(--accent-dark); content: "♡ wedding"; font-family: Georgia, serif; font-size: 7px; }
+/* 새 프레임 꾸밈 썸네일 */
+.hero-decoration-preview[data-decoration-preview="text_marriage"]::after { left: 0; right: 0; bottom: 14px; text-align: center; color: white; content: "저희, 결혼합니다"; font-family: "Noto Serif KR", serif; font-size: 9px; letter-spacing: 0.05em; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+.hero-decoration-preview[data-decoration-preview="frame_heart"]::before { top: 14px; right: 10px; bottom: 14px; left: 10px; content: ""; border: 2.5px solid rgba(255,255,255,0.95); border-radius: 50% 50% 8% 8% / 60% 60% 40% 40%; transform: rotate(-2deg); }
+.hero-decoration-preview[data-decoration-preview="frame_arch"] i { top: 16px; left: 11px; right: 11px; bottom: 0; border-radius: 40px 40px 0 0; border: 2px solid rgba(255,255,255,0.95); background: rgba(255,255,255,0.16); }
+.hero-decoration-preview[data-decoration-preview="frame_inset"] i { inset: 12px 9px 14px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.95); background: rgba(255,255,255,0.16); }
 .auto-filled-fields { display: grid; gap: 8px; border-radius: 8px; padding: 9px; background: rgba(130,140,147,0.08); }
 .auto-filled-fields .field input { background: rgba(130,140,147,0.09); color: var(--muted); }
 .auto-filled-fields strong { color: var(--ink); font-size: 14px; }
@@ -1339,6 +1344,32 @@ body[data-layout="garden_doodle"] .hero-content-bottom { top: 32px !important; b
 body[data-layout="garden_doodle"] .hero-names { font-size: clamp(24px, 6.6vw, 36px); font-weight: 900; letter-spacing: 0.03em; line-height: 1.05; text-transform: uppercase; color: var(--card) !important; text-shadow: 0 1px 10px rgba(0,0,0,0.45); }
 body[data-layout="garden_doodle"] .hero-eyebrow { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--card) !important; text-shadow: 0 1px 6px rgba(0,0,0,0.4); }
 body[data-layout="garden_doodle"] .hero-date { color: color-mix(in srgb, var(--card) 88%, transparent) !important; text-shadow: 0 1px 6px rgba(0,0,0,0.4); }
+
+/* ═══════════════════════════════════════════════════════════════
+   메인이미지 꾸밈 (프레임) — 레이아웃과 독립적으로 히어로만 변경
+   레이아웃 히어로 규칙 뒤에 두어 소스 순서로 덮어씀
+   ════════════════════════════════════════════════════════════ */
+/* 공통: 프레임 선택 시 히어로 미디어 초기화(레이아웃 모양 제거) */
+body[data-hero-decoration="text_marriage"] .hero-media,
+body[data-hero-decoration="frame_heart"] .hero-media,
+body[data-hero-decoration="frame_arch"] .hero-media,
+body[data-hero-decoration="frame_inset"] .hero-media { height: auto; -webkit-mask: none; mask: none; filter: none; }
+/* 저희 결혼합니다 문구 — 풀블리드 사진 + 문구 오버레이 */
+body[data-hero-decoration="text_marriage"] .hero { min-height: 560px; overflow: hidden; }
+body[data-hero-decoration="text_marriage"] .hero-media { inset: 0; border-radius: 0; transform: none; box-shadow: none; }
+body[data-hero-decoration="text_marriage"] .hero-media::after { content: "저희, 결혼합니다"; position: absolute; left: 0; right: 0; bottom: 15%; text-align: center; color: #fff; font-family: "Noto Serif KR", serif; font-size: clamp(20px, 6vw, 28px); font-weight: 500; letter-spacing: 0.12em; text-shadow: 0 2px 12px rgba(0,0,0,0.55); pointer-events: none; }
+/* 손그림 하트 — 풀블리드 사진 + 흰 하트 선 스티커 + 하단 페이드 */
+body[data-hero-decoration="frame_heart"] .hero { min-height: 600px; overflow: hidden; }
+body[data-hero-decoration="frame_heart"] .hero-media { inset: 0; border-radius: 0; transform: none; box-shadow: none; }
+body[data-hero-decoration="frame_heart"] .hero::after { background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.06) 20%, transparent 42%, transparent 70%, var(--paper) 100%); }
+body[data-hero-decoration="frame_heart"] .hero::before { display: block !important; content: ""; position: absolute; z-index: 4; inset: 96px 52px auto; height: 430px; pointer-events: none; transform: scale(var(--hero-decoration-size, 1)); transform-origin: 50% 42%; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.28)); background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='180 95 845 1010'%3E%3Cpath d='M1003.093 184.675c-25.849-65.573-79.989-95.277-149.221-81.281-30.358 6.146-57.611 19.656-83.676 35.888-42.185 26.28-77.034 60.568-107.87 99.15-33.202 41.511-61.886 86.052-87.769 132.456-10.155 18.215-20.489 36.318-30.738 54.477-2.521-.571-5.052-1.15-7.573-1.703.94-15.605 1.862-31.21 2.844-46.806 2.615-41.791-4.982-81.795-20.372-120.603-21.148-53.298-87.082-100.768-164.718-67.462-14.473 6.203-28.287 14.669-41.108 23.894-56.438 40.696-87.694 98.57-106.953 163.385-22.626 76.042-27.636 153.609-15.329 232.232 8.659 55.314 23.31 108.895 42.741 161.285 40.304 108.655 94.304 210.574 152.58 310.398 2.002 3.424 4 6.914 6.343 10.094 8.069 10.993 16.816 13.191 26.864 4.875 12.19-10.076 23.932-20.91 34.629-32.566 55.6-60.54 111.135-121.154 166.084-182.303 70.896-78.877 141.699-157.837 211.642-237.564 56.282-64.119 101.18-136.072 139.79-211.955 26.831-52.737 41.987-108.73 44.467-167.941 1.114-26.822-2.74-52.812-12.657-77.95z' fill='none' stroke='%23ffffff' stroke-width='6' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") center/contain no-repeat; }
+/* 아치 프레임 — 사진을 아치형으로 */
+body[data-hero-decoration="frame_arch"] .hero { min-height: 560px; overflow: hidden; }
+body[data-hero-decoration="frame_arch"] .hero-media { inset: 150px 50px auto; height: 320px; border-radius: 200px 200px 0 0; transform: scale(var(--hero-decoration-size, 1)); transform-origin: center top; box-shadow: 0 0 0 5px color-mix(in srgb, var(--card) 82%, transparent); }
+/* 임베드 사진 — 둥근 사각형으로 박아넣기 */
+body[data-hero-decoration="frame_inset"] .hero { min-height: 560px; overflow: hidden; }
+body[data-hero-decoration="frame_inset"] .hero-media { inset: 120px 26px 42px; border-radius: 18px; transform: scale(var(--hero-decoration-size, 1)); box-shadow: 0 8px 36px rgba(0,0,0,0.35); }
+
 /* 낙서 대시 섹션 카드 */
 body[data-layout="garden_doodle"] .section { border-radius: 20px; margin: 4px 10px; padding: 40px 70px; border: 2px dashed color-mix(in srgb, var(--accent) 45%, transparent); }
 body[data-layout="garden_doodle"] .section-title { font-size: clamp(18px, 5vw, 24px); font-weight: 900; text-transform: uppercase; letter-spacing: 0.06em; }

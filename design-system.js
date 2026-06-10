@@ -16,10 +16,10 @@
   const builtInAssets = {
     frames: [
       { id: "none", name: "꾸밈 없음", mode: "overlay" },
-      { id: "doodle_hearts", name: "손그림 하트 낙서", mode: "overlay" },
-      { id: "organic_heart", name: "유기적 하트 프레임", mode: "overlay" },
-      { id: "wedding_rings", name: "웨딩 링 리본", mode: "overlay" },
-      { id: "poster_card", name: "포스터 카드", mode: "outer" },
+      { id: "text_marriage", name: "저희 결혼합니다 문구", mode: "overlay" },
+      { id: "frame_heart", name: "손그림 하트 (러브 두들)", mode: "overlay" },
+      { id: "frame_arch", name: "아치 프레임 (달빛 서약)", mode: "outer" },
+      { id: "frame_inset", name: "임베드 사진 (벨벳 나이트)", mode: "outer" },
     ],
     textThemes: [
       { id: "default_center", name: "기본형 (가운데 정렬)", layout: "default", align: "center", shadow: true, boxEnabled: false, nameSize: 34, dateSize: 12 },
