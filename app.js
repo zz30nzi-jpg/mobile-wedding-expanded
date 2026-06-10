@@ -1043,7 +1043,10 @@ function bindEvents() {
 function applyLayoutTemplate(layoutId) {
   const params = new URLSearchParams(location.search);
   const urlOverride = params.get("__layout");
-  if (params.get("__thumb") === "1") document.body.classList.add("is-thumb");
+  const isThumb = params.get("__thumb") === "1";
+  if (isThumb) document.body.classList.add("is-thumb");
+  // 미리보기(썸네일/레이아웃 미리보기)는 영상 대신 이미지로 표시
+  if ((isThumb || params.get("__heroimg") === "1") && data?.hero?.image) data.hero.activeMedia = "image";
   const id = urlOverride || layoutId || "classic";
   document.body.dataset.layout = id;
   // 레이아웃 템플릿 커스텀 속성 적용 (heroBgImage, textScale)

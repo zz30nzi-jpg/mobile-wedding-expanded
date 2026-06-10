@@ -303,6 +303,7 @@
     root.style.setProperty("--light-panel", `color-mix(in srgb, ${appliedPalette.card} 78%, transparent)`);
     root.style.setProperty("--design-background-decoration", resolved.backgroundDecoration ? `url("${mediaUrl(resolved.backgroundDecoration)}")` : "none");
     root.style.setProperty("--design-section-icon", resolved.sectionIcon ? `url("${mediaUrl(resolved.sectionIcon)}")` : "var(--section-divider)");
+    root.style.setProperty("--hero-decoration-size", String((Number(data.appearance.design?.heroDecorationSize) || 100) / 100));
     root.style.setProperty("--custom-hero-decoration", resolved.heroDecorationAsset?.url ? `url("${mediaUrl(resolved.heroDecorationAsset.url)}")` : "none");
     root.style.setProperty("--custom-decoration-opacity", String(resolved.heroDecorationAsset?.opacity ?? 1));
     root.style.setProperty("--custom-decoration-blend-mode", resolved.heroDecorationAsset?.blendMode || "normal");

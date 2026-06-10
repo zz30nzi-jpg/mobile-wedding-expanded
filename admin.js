@@ -518,9 +518,8 @@ function renderBasicInfoOnboarding(message = "") {
   const layoutCards = layouts.map((l) => `
     <button class="onboarding-layout-card ${l.id === "classic" ? "is-selected" : ""}" type="button" data-layout-pick="${escapeAdminHtml(l.id)}"
       style="--olc-bg:${escapeAdminHtml(l.bg)};--olc-accent:${escapeAdminHtml(l.accent)}">
-      <div class="onboarding-layout-thumb" style="background:${escapeAdminHtml(l.bg)};position:relative;overflow:hidden;border-radius:8px 8px 0 0;">
-        <div style="${heroShapeStyle(l.heroShape, l.accent)}"></div>
-        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0.08)0%,rgba(0,0,0,0.24)100%);border-radius:8px 8px 0 0;pointer-events:none;"></div>
+      <div class="onboarding-layout-thumb onboarding-layout-live">
+        <iframe loading="lazy" scrolling="no" tabindex="-1" aria-hidden="true" title="${escapeAdminHtml(l.name)} 미리보기" src="./index.html?card=main&__layout=${escapeAdminHtml(l.id)}&__thumb=1"></iframe>
       </div>
       <div class="onboarding-layout-label">
         <strong>${escapeAdminHtml(l.name)}</strong>
@@ -533,6 +532,7 @@ function renderBasicInfoOnboarding(message = "") {
       <h1>기본정보 입력</h1>
       <p class="admin-message">${escapeAdminHtml(message || "소셜 로그인 또는 회원가입이 완료되었습니다. 청첩장 생성을 위해 기본정보를 입력해 주세요.")}</p>
       <form class="form-grid" id="basic-info-form">
+        <div data-onboard-step="1">
         <div class="quick-input-grid">
           <label class="field"><span>신랑 이름</span><input name="groomName" required autocomplete="given-name"></label>
           <label class="field"><span>신부 이름</span><input name="brideName" required autocomplete="additional-name"></label>
@@ -545,16 +545,44 @@ function renderBasicInfoOnboarding(message = "") {
           <label class="field"><span>청첩장 공개 종료일</span><input name="publicCloseDate" type="date" data-public-close></label>
         </div>
         <p class="admin-message micro-help">공개 종료일은 예식일 기준 이후 3일까지만 설정할 수 있습니다.</p>
-        <div class="onboarding-layout-section">
-          <p class="section-label" style="margin:0 0 8px">청첩장 레이아웃 선택</p>
-          <p class="admin-message micro-help" style="margin:0 0 10px">나중에 슈퍼관리자에서 언제든지 변경할 수 있습니다.</p>
-          <div class="onboarding-layout-grid">${layoutCards}</div>
-          <input type="hidden" name="layoutId" value="classic">
+        <div class="onboarding-actions" style="display:flex;gap:10px;margin-top:6px;align-items:center">
+          <button type="button" class="btn" data-onboarding-cancel>가입 취소</button>
+          <button type="button" class="btn btn-primary" data-onboard-next style="flex:1">다음 · 레이아웃 선택 →</button>
         </div>
-        <button class="btn btn-primary">내 일반관리자 페이지 만들기</button>
+        </div>
+        <div data-onboard-step="2" hidden>
+          <div class="onboarding-layout-section">
+            <p class="section-label" style="margin:0 0 8px">청첩장 레이아웃 선택</p>
+            <p class="admin-message micro-help" style="margin:0 0 10px">미리보기를 보고 마음에 드는 디자인을 선택하세요. 나중에 슈퍼관리자에서 언제든지 변경할 수 있습니다.</p>
+            <div class="onboarding-layout-grid">${layoutCards}</div>
+            <input type="hidden" name="layoutId" value="classic">
+          </div>
+          <div class="onboarding-actions" style="display:flex;gap:10px;margin-top:6px;align-items:center">
+            <button type="button" class="btn" data-onboard-prev>← 이전</button>
+            <button class="btn btn-primary" style="flex:1">내 일반관리자 페이지 만들기</button>
+          </div>
+        </div>
       </form>
     </section>`;
   const form = document.querySelector("#basic-info-form");
+  document.querySelector("[data-onboarding-cancel]")?.addEventListener("click", async () => {
+    if (!confirm("가입을 취소하고 처음으로 돌아갈까요? 입력하신 정보는 저장되지 않습니다.")) return;
+    try { await supabaseClient?.auth?.signOut(); } catch {}
+    renderLogin();
+  });
+  // 단계 이동: 기본정보 → 레이아웃 선택
+  const onboardStep = (n) => form.querySelector(`[data-onboard-step="${n}"]`);
+  form.querySelector("[data-onboard-next]")?.addEventListener("click", () => {
+    const required = [...onboardStep(1).querySelectorAll("input[required]")];
+    if (required.some((field) => !field.reportValidity())) return;
+    onboardStep(1).hidden = true;
+    onboardStep(2).hidden = false;
+    onboardStep(2).scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  form.querySelector("[data-onboard-prev]")?.addEventListener("click", () => {
+    onboardStep(2).hidden = true;
+    onboardStep(1).hidden = false;
+  });
   // 레이아웃 선택 인터랙션
   form.querySelectorAll("[data-layout-pick]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -1253,6 +1281,7 @@ function editorDesignPanel() {
       <div class="editor-tooldock-pane" data-tooldock-pane="frame">
         ${editorDesignFramePicker(system.assets.frames, design.heroDecoration || "inherit")}
         <div class="editor-color-strip">${input("appearance.design.heroDecorationTint", "꾸밈 색상", design.heroDecorationTint || "#ffffff", "color")}</div>
+        ${rangeInput("appearance.design.heroDecorationSize", "꾸밈 크기 (하트·프레임)", Number(design.heroDecorationSize) || 100, 70, 130, 5)}
       </div>
       <div class="editor-tooldock-pane" data-tooldock-pane="text">
         ${editorDesignTextThemePicker(system.assets.textThemes, selectedTextTheme)}
@@ -2104,6 +2133,9 @@ function editorData(form) {
   next.appearance.design.heroDateEnabled = fields.get("appearance.design.heroDateEnabled") === "on";
   next.appearance.design.heroTextXPercent = Number(fields.get("appearance.design.heroTextXPercent") || next.appearance.design.heroTextXPercent || 50);
   next.appearance.design.heroTextYPercent = Number(fields.get("appearance.design.heroTextYPercent") || next.appearance.design.heroTextYPercent || 76);
+  if (fields.get("appearance.design.heroDecoration")) next.appearance.design.heroDecoration = fields.get("appearance.design.heroDecoration");
+  if (fields.get("appearance.design.heroDecorationTint")) next.appearance.design.heroDecorationTint = fields.get("appearance.design.heroDecorationTint");
+  next.appearance.design.heroDecorationSize = Number(fields.get("appearance.design.heroDecorationSize") || next.appearance.design.heroDecorationSize || 100);
   next.wedding.displayDate = form.elements["wedding.displayDateCustom"].value.trim();
   next.wedding.mapLinks = mapLinksFor(next.wedding.venue, next.wedding.address);
   return next;

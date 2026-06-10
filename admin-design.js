@@ -1258,7 +1258,7 @@ function renderLayoutTemplates(message = "") {
   const templates = system.layoutTemplates || [];
   const active = system.activeLayoutId || "classic";
   const cardSlug = window.RSVP_STORAGE?.getActiveInvitationSlug?.() || "main";
-  const previewUrl = (id) => `./index.html?card=${encodeURIComponent(cardSlug)}&__layout=${encodeURIComponent(id)}`;
+  const previewUrl = (id) => `./index.html?card=${encodeURIComponent(cardSlug)}&__layout=${encodeURIComponent(id)}&__heroimg=1`;
 
   const previewCard = (tpl) => {
     const isActive = tpl.id === active;
