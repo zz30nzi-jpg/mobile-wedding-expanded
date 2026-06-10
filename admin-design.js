@@ -58,6 +58,7 @@ async function saveDesignData(message, rerender) {
   applyPendingMovieThemeAssetsBeforeSave();
   try {
     await window.RSVP_STORAGE.saveInvitationData(invitationData);
+    await window.RSVP_STORAGE.saveDesignLibrary(invitationData);
     rerender(message || "저장했습니다.");
   } catch (error) {
     alert(error.message || "저장하지 못했습니다.");
@@ -485,7 +486,7 @@ function applyAIResult(result, form, scope = "all") {
     const bgId = `ai-bg-${seed}`;
     const fonts = designData().designSystem.assets.fonts || [];
     const matchedFont = fonts.find((font) => font.id === result.fontId) || fonts.find((font) => font.family === result.fontFamily) || fonts[0];
-    addAsset("frames", { id: frameId, name: `${result.name || "AI"} 메인 꾸밈`, mode: "overlay", heroDecoration: result.heroDecoration || "doodle_hearts", direction: result.galleryFrameDirection || result.backgroundDirection || "" });
+    addAsset("frames", { id: frameId, name: `${result.name || "AI"} 메인 꾸밈`, mode: "overlay", heroDecoration: result.heroDecoration || "frame_heart", direction: result.galleryFrameDirection || result.backgroundDirection || "" });
     addAsset("textThemes", { id: textId, name: `${result.name || "AI"} 문구 테마`, layout: result.heroTextTheme === "minimal_center" ? "center" : "poster-left", heroTextTheme: result.heroTextTheme || "editorial_left", fontId: matchedFont?.id || "noto-serif-kr", align: result.heroTextTheme === "minimal_center" ? "center" : "left", shadow: true, boxEnabled: false, nameSize: 38, dateSize: 12, direction: result.fontDirection || "" });
     addAsset("sectionIcons", { id: iconId, name: `${result.name || "AI"} 섹션 아이콘`, direction: result.sectionIconDirection || "" });
     addAsset("backgrounds", { id: bgId, name: `${result.name || "AI"} 배경 장식`, direction: result.backgroundDirection || "" });
@@ -1550,7 +1551,7 @@ function ensureMovieThemeAssets(result = {}) {
   system.assets.sectionIcons ||= [];
   system.assets.backgrounds ||= [];
   const stamp = Date.now();
-  const frameId = result.heroDecoration && !["none", "doodle_hearts", "organic_heart", "wedding_rings", "poster_card"].includes(result.heroDecoration)
+  const frameId = result.heroDecoration && !["none", "text_marriage", "frame_heart", "frame_arch", "frame_inset"].includes(result.heroDecoration)
     ? result.heroDecoration
     : `movie_frame_${aiSlug(result.name)}_${stamp}`;
   const textId = result.heroTextTheme && !["auto", "default_center", "editorial_left", "minimal_center"].includes(result.heroTextTheme)

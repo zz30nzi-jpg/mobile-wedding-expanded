@@ -33,7 +33,7 @@ function mergeInvitationData(fallback, saved) {
   return merged;
 }
 
-function normalizeInvitationData(fallback, saved) {
+function normalizeInvitationData(fallback, saved, library = null) {
   const merged = mergeInvitationData(fallback, saved);
   const legacyTransport = new Set([
     "창원중앙역에서 호텔까지 차량으로 약 15분",
@@ -53,7 +53,7 @@ function normalizeInvitationData(fallback, saved) {
   }));
   const customAccounts = accounts.filter((account) =>
     !defaultAccounts.some((defaultAccount) => account.side === defaultAccount.side && account.name === defaultAccount.name));
-  return window.WEDDING_DESIGN.normalize({ ...merged, accounts: [...orderedAccounts, ...customAccounts] });
+  return window.WEDDING_DESIGN.normalize({ ...merged, accounts: [...orderedAccounts, ...customAccounts] }, library);
 }
 
 function normalizeSlug(value = "") {
@@ -112,8 +112,8 @@ function mediaRoleFromSlot(slot = "") {
   return { folder: "design-assets", filename: `${value || "image"}-${Date.now()}.webp` };
 }
 
-function emptyMediaInvitation(fallback, { slug = "", groomName = "", brideName = "", groomBirthday = "", brideBirthday = "", weddingDate = "", weddingVenue = "", weddingHall = "", publicOpenDate = "", publicCloseDate = "" } = {}) {
-  const next = normalizeInvitationData(fallback, JSON.parse(JSON.stringify(fallback)));
+function emptyMediaInvitation(fallback, { slug = "", groomName = "", brideName = "", groomBirthday = "", brideBirthday = "", weddingDate = "", weddingVenue = "", weddingHall = "", publicOpenDate = "", publicCloseDate = "" } = {}, library = null) {
+  const next = normalizeInvitationData(fallback, JSON.parse(JSON.stringify(fallback)), library);
   next.hero = { ...(next.hero || {}), image: "", video: "", activeMedia: "image", introName: [groomName, brideName].filter(Boolean).join(" · "), introDate: "" };
   next.couple = {
     ...(next.couple || {}),
@@ -127,14 +127,21 @@ function emptyMediaInvitation(fallback, { slug = "", groomName = "", brideName =
     hall: weddingHall || "",
     address: "",
     officialUrl: "",
+    mapLinks: [],
   };
   next.accounts = [];
   next.gallery = Array.from({ length: 30 }, () => "");
+  next.transport = [];
   next.ending = { ...(next.ending || {}), image: "" };
-  next.meta = { ...(next.meta || {}), shareImage: "" };
+  next.meta = {
+    ...(next.meta || {}),
+    title: [groomName, brideName].filter(Boolean).join(" ♥ ") + ([groomName, brideName].some(Boolean) ? " 결혼합니다" : ""),
+    description: "",
+    shareImage: "",
+  };
   next.guestPhotos = { ...(next.guestPhotos || {}), eventDate: dateOnly(weddingDate), uploadSlug: slug || next.guestPhotos?.uploadSlug || "wedding-day" };
   next.publicPeriod = { ...(next.publicPeriod || {}), openDate: publicOpenDate || "", closeDate: publicCloseDate || "" };
-  const normalized = window.WEDDING_DESIGN.normalize(next);
+  const normalized = window.WEDDING_DESIGN.normalize(next, library);
   normalized.accounts = [];
   return normalized;
 }
@@ -180,12 +187,13 @@ async function ensureInvitationForCurrentUser(fallback = window.INVITATION_DATA,
   if (!groomName || !brideName || !weddingDate || !weddingVenue) return null;
   const slug = fallbackSlug(profile.cardSlug || meta.card_slug || `${groomName}-${brideName}` || user.email?.split("@")[0]);
   const title = [groomName, brideName].filter(Boolean).join(" · ") || user.email || "새 청첩장";
+  const library = await loadDesignLibrary();
   const { data: defaultSettings } = await client
     .from("invitation_settings")
     .select("content")
     .eq("id", DEFAULT_INVITATION_ID)
     .maybeSingle();
-  const baseContent = defaultSettings?.content ? normalizeInvitationData(fallback, defaultSettings.content) : fallback;
+  const baseContent = defaultSettings?.content ? normalizeInvitationData(fallback, defaultSettings.content, library) : fallback;
   const content = emptyMediaInvitation(baseContent, {
     slug,
     groomName,
@@ -197,7 +205,7 @@ async function ensureInvitationForCurrentUser(fallback = window.INVITATION_DATA,
     weddingHall: profile.weddingHall || meta.wedding_hall || "",
     publicOpenDate: profile.publicOpenDate || meta.public_open_date || "",
     publicCloseDate: profile.publicCloseDate || meta.public_close_date || "",
-  });
+  }, library);
   const { data: site, error: siteError } = await client
     .from("invitation_sites")
     .insert({ slug, owner_id: user.id, title, groom_name: groomName, bride_name: brideName, signup_email: user.email })
@@ -307,7 +315,64 @@ function clearInvitationCache(slug) {
   try { localStorage.removeItem(invitationCacheKey(slug)); } catch {}
 }
 
-async function fetchAndCacheInvitation(client, fallback, slug) {
+const DESIGN_LIBRARY_ID = "_design_library";
+const DESIGN_LIBRARY_CACHE_KEY = "wedding-design-library-cache";
+const DESIGN_LIBRARY_FIELDS = ["themes", "assets", "layoutTemplates", "deletedThemeIds", "deletedAssetIds", "colorDefaults", "fontDefaults", "aiSettings", "aiLibrary"];
+
+function extractDesignLibrary(system = {}) {
+  const library = {};
+  DESIGN_LIBRARY_FIELDS.forEach((key) => { if (system[key] !== undefined) library[key] = system[key]; });
+  return library;
+}
+
+function readDesignLibraryCache() {
+  try {
+    const raw = localStorage.getItem(DESIGN_LIBRARY_CACHE_KEY);
+    if (!raw) return null;
+    const { data, cachedAt } = JSON.parse(raw);
+    if (!data || Date.now() - cachedAt > INVITATION_CACHE_TTL) return null;
+    return data;
+  } catch { return null; }
+}
+
+function writeDesignLibraryCache(data) {
+  try { localStorage.setItem(DESIGN_LIBRARY_CACHE_KEY, JSON.stringify({ data, cachedAt: Date.now() })); } catch {}
+}
+
+async function fetchDesignLibrary(client) {
+  const { data, error } = await client.from("invitation_settings").select("content").eq("id", DESIGN_LIBRARY_ID).maybeSingle();
+  if (!error && data?.content) return data.content;
+  // _design_library가 아직 없으면 "main" 청첩장의 designSystem을 1회성 마이그레이션 소스로 사용
+  const { data: mainData } = await client.from("invitation_settings").select("content").eq("id", DEFAULT_INVITATION_ID).maybeSingle();
+  return mainData?.content?.designSystem ? extractDesignLibrary(mainData.content.designSystem) : null;
+}
+
+async function loadDesignLibrary() {
+  const client = getSupabaseClient();
+  if (!client) return readDesignLibraryCache();
+  const cached = readDesignLibraryCache();
+  if (cached) {
+    fetchDesignLibrary(client).then((fresh) => { if (fresh) writeDesignLibraryCache(fresh); }).catch(() => {});
+    return cached;
+  }
+  const fresh = await fetchDesignLibrary(client);
+  if (fresh) writeDesignLibraryCache(fresh);
+  return fresh;
+}
+
+async function saveDesignLibrary(content) {
+  const library = extractDesignLibrary(content?.designSystem || content || {});
+  const client = getSupabaseClient();
+  if (!client) {
+    writeDesignLibraryCache(library);
+    return;
+  }
+  const { error } = await client.from("invitation_settings").upsert({ id: DESIGN_LIBRARY_ID, content: library, updated_at: new Date().toISOString() });
+  if (error) throw error;
+  writeDesignLibraryCache(library);
+}
+
+async function fetchAndCacheInvitation(client, fallback, slug, library) {
   const { data, error } = await client
     .from("invitation_settings")
     .select("content")
@@ -315,7 +380,7 @@ async function fetchAndCacheInvitation(client, fallback, slug) {
     .maybeSingle();
   if (error || !data?.content) return null;
   writeInvitationCache(slug, data.content);
-  return normalizeInvitationData(fallback, data.content);
+  return normalizeInvitationData(fallback, data.content, library);
 }
 
 async function loadInvitationData(fallback) {
@@ -329,20 +394,21 @@ async function loadInvitationData(fallback) {
   // 로그인한 사용자가 있으면 소유한 사이트로 분기 (관리자 페이지용)
   const ownedSite = urlSlug ? null : await currentUserInvitationSite(client);
   const slug = setActiveInvitationSlug(urlSlug || ownedSite?.slug || DEFAULT_INVITATION_ID);
+  const library = await loadDesignLibrary();
 
   // 캐시에서 즉시 반환 후 백그라운드에서 최신 데이터 갱신 (stale-while-revalidate)
   const cached = readInvitationCache(slug);
   if (cached) {
     // 백그라운드에서 갱신 (화면은 이미 렌더됨)
-    fetchAndCacheInvitation(client, fallback, slug).then((fresh) => {
+    fetchAndCacheInvitation(client, fallback, slug, library).then((fresh) => {
       if (fresh) window.__invitationFreshData = fresh;
     }).catch(() => {});
-    return normalizeInvitationData(fallback, cached);
+    return normalizeInvitationData(fallback, cached, library);
   }
 
   // 캐시 없으면 직접 fetch
-  const result = await fetchAndCacheInvitation(client, fallback, slug);
-  return result || window.WEDDING_DESIGN.normalize(fallback);
+  const result = await fetchAndCacheInvitation(client, fallback, slug, library);
+  return result || window.WEDDING_DESIGN.normalize(fallback, library);
 }
 
 async function saveInvitationData(content) {
@@ -693,6 +759,8 @@ window.RSVP_STORAGE = {
   setInvitationSiteDisabled,
   removeInvitationSite,
   loadInvitationData,
+  loadDesignLibrary,
+  saveDesignLibrary,
   loadGuestbookEntries,
   loadAdminGuestbookEntries,
   readLocalResponses,

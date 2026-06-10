@@ -2231,7 +2231,6 @@ function bindEditor() {
     const frameDocument = frameWindow?.document;
     if (!frameWindow || !frameDocument?.body) return;
     const draft = previewDraft();
-    applyAppearance(draft.appearance);
     frameWindow.WEDDING_DESIGN?.normalize(draft);
     frameWindow.WEDDING_DESIGN?.apply(draft, frameDocument.body);
     const position = draft.hero?.contentPosition || "bottom";
