@@ -364,6 +364,48 @@ async function searchReferenceImages(query, num = 5) {
   }
 }
 
+async function fetchImageAsBase64(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("이미지를 불러오지 못했습니다.");
+  const buffer = await res.arrayBuffer();
+  const contentType = (res.headers.get("content-type") || "image/jpeg").split(";")[0];
+  return { mimeType: contentType, data: Buffer.from(buffer).toString("base64") };
+}
+
+function visionInstructionFor(query, settings = {}) {
+  const prompts = settings.prompts || {};
+  return `${prompts.base || ""}
+아래 이미지들을 분석해서 모바일 청첩장에 쓸 색상 팔레트를 추출해 주세요.
+검색어: ${query}
+이미지의 주조색·강조색·배경색을 청첩장 팔레트(side, background, card, ink, muted, accent, label, button, line)로 변환하세요.
+ink는 충분히 어두운 계열, accent는 이미지의 핵심 포인트색으로 지정하세요.
+팔레트는 CSS hex 값으로 제안하세요.`;
+}
+
+// Gemini Vision 기반 팔레트 추출 (이미지 URL 배열 → 색상 팔레트)
+async function extractPaletteFromImagesGemini(imageUrls, query, settings = {}) {
+  const images = (await Promise.all(imageUrls.slice(0, 4).map((url) => fetchImageAsBase64(url).catch(() => null)))).filter(Boolean);
+  if (!images.length) throw new Error("참조 이미지를 불러오지 못했습니다.");
+  const parts = [
+    { text: visionInstructionFor(query, settings) },
+    ...images.map((image) => ({ inline_data: { mime_type: image.mimeType, data: image.data } })),
+  ];
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+  const gemini = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
+    body: JSON.stringify({
+      contents: [{ parts }],
+      generationConfig: { responseMimeType: "application/json", responseJsonSchema: designSchema },
+    }),
+  });
+  const payload = await gemini.json();
+  if (!gemini.ok) throw new Error(payload.error?.message || "Gemini Vision 호출에 실패했습니다.");
+  const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text).join("") || "";
+  if (!text) throw new Error("Gemini 응답 본문이 없습니다.");
+  return JSON.parse(text);
+}
+
 // Vision API 기반 팔레트 추출 (이미지 URL 배열 → 색상 팔레트)
 async function extractPaletteFromImages(imageUrls, query, settings = {}) {
   const prompts = settings.prompts || {};
@@ -414,16 +456,17 @@ module.exports = async function aiDesign(request, response) {
   const prompt = designPrompt(type, context);
   const responseSchema = schemaFor(type);
   try {
-    // 검색기반 AI: Google 이미지 검색 → GPT Vision 팔레트 추출
+    // 검색기반 AI: Google 이미지 검색 → Vision 팔레트 추출 (OpenAI/Gemini 모두 지원)
     if (type === "imageSearch") {
-      if (provider !== "OpenAI") return response.status(400).json({ error: "이미지 검색 기반 팔레트는 OpenAI provider에서만 지원합니다." });
       const query = context.instruction || context.concept || "";
       if (!query) return response.status(400).json({ error: "검색어를 입력해 주세요." });
       const searchConfigured = Boolean(GOOGLE_SEARCH_API_KEY && GOOGLE_SEARCH_CX);
       const imageUrls = searchConfigured ? await searchReferenceImages(`${query} poster scene color palette`, 5) : [];
       let result;
       if (imageUrls.length > 0) {
-        result = await extractPaletteFromImages(imageUrls, query, context.settings || {});
+        result = provider === "Gemini"
+          ? await extractPaletteFromImagesGemini(imageUrls, query, context.settings || {})
+          : await extractPaletteFromImages(imageUrls, query, context.settings || {});
       } else {
         // Google Search 미설정 시 GPT 학습 지식 기반으로 팔레트 생성 (검색 없이)
         const fallbackPrompt = `${designPrompt("palette", context)}

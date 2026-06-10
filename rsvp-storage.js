@@ -542,11 +542,10 @@ async function setInvitationSiteDisabled(slug, disabled) {
 async function removeInvitationSite(slug) {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
-  const { data: setting } = await client
-    .from("invitation_settings")
-    .select("content")
-    .eq("id", slug)
-    .maybeSingle();
+  const [{ data: setting }, { data: site }] = await Promise.all([
+    client.from("invitation_settings").select("content").eq("id", slug).maybeSingle(),
+    client.from("invitation_sites").select("owner_id").eq("slug", slug).maybeSingle(),
+  ]);
   const guestSlug = setting?.content?.guestPhotos?.uploadSlug || slug;
   const [invitationFiles, guestFiles] = await Promise.all([
     listStorageFolder(client, "invitation-media", `invitations/${slug}`).catch(() => []),
@@ -560,6 +559,27 @@ async function removeInvitationSite(slug) {
   if (settingsError) throw settingsError;
   const { error: siteError } = await client.from("invitation_sites").delete().eq("slug", slug);
   if (siteError) throw siteError;
+  if (site?.owner_id) await deleteAuthAccount(site.owner_id);
+}
+
+async function deleteAuthAccount(userId) {
+  const client = getSupabaseClient();
+  const { data: sessionData } = await client.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) return;
+  try {
+    const response = await fetch("/api/admin-account", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action: "deleteUser", userId }),
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(payload.error || "계정 삭제에 실패했습니다.");
+    }
+  } catch (error) {
+    console.warn("계정 삭제 실패: 같은 이메일로 재가입하려면 Supabase Authentication에서 해당 계정을 수동으로 삭제해야 합니다.", error);
+  }
 }
 
 async function optimizeInvitationImage(file) {
