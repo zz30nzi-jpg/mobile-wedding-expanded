@@ -338,7 +338,7 @@ function themeModalMarkup(theme = {}) {
       <input type="hidden" name="galleryFrameDirection" value="${escapeAdminHtml(theme.galleryFrameDirection || "")}">
       <input type="hidden" name="buttonShapeDirection" value="${escapeAdminHtml(theme.buttonShapeDirection || "")}">
       ${select("type", "테마 유형", type, [["color", "컬러테마"], ["movie", "영화테마"]])}
-      <section class="ai-assistant"><h3>AI 디자인 어시스턴트</h3><p class="admin-message">컬러테마는 색상값 중심, 영화테마는 색감·폰트·꾸밈요소·갤러리 프레임·버튼 모양까지 결과를 만듭니다.</p>
+      <section class="ai-assistant"><h3>AI 디자인 어시스턴트</h3>
         <div class="ai-mode-tabs"><button class="ai-mode-tab is-active" type="button" data-ai-mode="generate">AI 생성</button><button class="ai-mode-tab" type="button" data-ai-mode="search">🔍 이미지 검색 기반</button></div>
         <div data-ai-generate-panel>
           <div class="ai-chat" data-ai-chat><p>AI: 원하는 무드, 참고 영화, 계절감, 색상값을 한 문장으로 알려주세요.</p></div>
@@ -372,8 +372,33 @@ function openThemeModal(themeId = "") {
   document.querySelector("#admin-design-modal").innerHTML = themeModalMarkup(theme);
   const modal = document.querySelector(".admin-modal");
   const form = document.querySelector("#theme-form");
-  const updateType = () => modal.querySelectorAll("[data-movie-fields]").forEach((item) => { item.hidden = form.elements.type.value !== "movie"; });
+  const updateType = () => {
+    const isMovie = form.elements.type.value === "movie";
+    modal.querySelectorAll("[data-movie-fields]").forEach((item) => { item.hidden = !isMovie; });
+    const generateTab = modal.querySelector('[data-ai-mode="generate"]');
+    const searchTab = modal.querySelector('[data-ai-mode="search"]');
+    const generatePanel = modal.querySelector("[data-ai-generate-panel]");
+    const searchPanel = modal.querySelector("[data-ai-search-panel]");
+    const searchHint = modal.querySelector("[data-ai-search-panel] .admin-message");
+    if (generateTab) generateTab.hidden = isMovie;
+    if (isMovie) {
+      generateTab?.classList.remove("is-active");
+      searchTab?.classList.add("is-active");
+      if (generatePanel) generatePanel.hidden = true;
+      if (searchPanel) searchPanel.hidden = false;
+    } else if (searchTab?.classList.contains("is-active")) {
+      searchTab.classList.remove("is-active");
+      generateTab?.classList.add("is-active");
+      if (generatePanel) generatePanel.hidden = false;
+      if (searchPanel) searchPanel.hidden = true;
+    }
+    if (searchHint) searchHint.innerHTML = isMovie
+      ? "영화명, 드라마, 브랜드명을 입력하면 이미지 검색 결과를 바탕으로 색상·메인 이미지 꾸밈·문구 테마·아이콘·배경·폰트까지 한 번에 생성합니다.<br><small>예: 디즈니 모아나 / 오징어게임 / 티파니앤코</small>"
+      : "영화명, 드라마, 브랜드명을 입력하면 실제 이미지에서 색상을 추출합니다.<br><small>예: 디즈니 모아나 / 오징어게임 / 티파니앤코</small>";
+  };
   form.elements.type.addEventListener("change", updateType); updateType();
+  // 사용자가 직접 테마명을 입력하면 이후 AI 결과로 자동 갱신하지 않음
+  form.elements.name?.addEventListener("input", () => { form.elements.name.dataset.aiFilled = "false"; });
   document.querySelector("[data-theme-close]").addEventListener("click", () => { document.querySelector("#admin-design-modal").innerHTML = ""; });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -471,40 +496,29 @@ function applyAIResult(result, form, scope = "all") {
     if (![...selectElement.options].some((option) => option.value === value)) selectElement.append(new Option(label || value, value));
     selectElement.value = value;
   };
-  const addAsset = (key, item) => {
-    const list = designData().designSystem.assets[key] ||= [];
-    const existing = list.find((asset) => asset.id === item.id);
-    if (existing) Object.assign(existing, item);
-    else list.push(item);
-  };
-  const registerMovieAssets = () => {
+  const applyMovieAssets = (movieScope) => {
     if (form.elements.type.value !== "movie") return;
-    const seed = (result.name || result.instruction || `ai-${Date.now()}`).toLowerCase().replace(/[^a-z0-9가-힣]+/g, "-").replace(/^-|-$/g, "").slice(0, 28) || `ai-${Date.now()}`;
-    const frameId = `ai-frame-${seed}`;
-    const textId = `ai-text-${seed}`;
-    const iconId = `ai-icon-${seed}`;
-    const bgId = `ai-bg-${seed}`;
-    const fonts = designData().designSystem.assets.fonts || [];
-    const matchedFont = fonts.find((font) => font.id === result.fontId) || fonts.find((font) => font.family === result.fontFamily) || fonts[0];
-    addAsset("frames", { id: frameId, name: `${result.name || "AI"} 메인 꾸밈`, mode: "overlay", heroDecoration: result.heroDecoration || "frame_heart", direction: result.galleryFrameDirection || result.backgroundDirection || "" });
-    addAsset("textThemes", { id: textId, name: `${result.name || "AI"} 문구 테마`, layout: result.heroTextTheme === "minimal_center" ? "center" : "poster-left", heroTextTheme: result.heroTextTheme || "editorial_left", fontId: matchedFont?.id || "noto-serif-kr", align: result.heroTextTheme === "minimal_center" ? "center" : "left", shadow: true, boxEnabled: false, nameSize: 38, dateSize: 12, direction: result.fontDirection || "" });
-    addAsset("sectionIcons", { id: iconId, name: `${result.name || "AI"} 섹션 아이콘`, direction: result.sectionIconDirection || "" });
-    addAsset("backgrounds", { id: bgId, name: `${result.name || "AI"} 배경 장식`, direction: result.backgroundDirection || "" });
-    ensureSelectOption(form.elements.heroDecoration, frameId, `${result.name || "AI"} 메인 꾸밈`);
-    ensureSelectOption(form.elements.heroTextTheme, textId, `${result.name || "AI"} 문구 테마`);
-    if (form.elements.sectionIcon) form.elements.sectionIcon.value = iconId;
-    if (form.elements.backgroundDecoration) form.elements.backgroundDecoration.value = bgId;
-    if (form.elements.fontDirection) form.elements.fontDirection.value = result.fontDirection || "";
-    if (form.elements.galleryFrameDirection) form.elements.galleryFrameDirection.value = result.galleryFrameDirection || "";
-    if (form.elements.buttonShapeDirection) form.elements.buttonShapeDirection.value = result.buttonShapeDirection || "";
+    const refs = ensureMovieThemeAssets(result);
+    const assets = designData().designSystem.assets;
+    const nameOf = (key, id) => (assets[key] || []).find((item) => item.id === id)?.name || id;
+    if ((movieScope === "all" || movieScope === "frame") && form.elements.heroDecoration) ensureSelectOption(form.elements.heroDecoration, refs.heroDecoration, nameOf("frames", refs.heroDecoration));
+    if ((movieScope === "all" || movieScope === "text") && form.elements.heroTextTheme) ensureSelectOption(form.elements.heroTextTheme, refs.heroTextTheme, nameOf("textThemes", refs.heroTextTheme));
+    if (movieScope === "all") {
+      if (form.elements.sectionIcon) form.elements.sectionIcon.value = refs.sectionIcon;
+      if (form.elements.backgroundDecoration) form.elements.backgroundDecoration.value = refs.backgroundDecoration;
+      if (form.elements.fontDirection) form.elements.fontDirection.value = result.fontDirection || "";
+      if (form.elements.galleryFrameDirection) form.elements.galleryFrameDirection.value = result.galleryFrameDirection || "";
+      if (form.elements.buttonShapeDirection) form.elements.buttonShapeDirection.value = result.buttonShapeDirection || "";
+    }
   };
-  if (result.name && form.elements.name && !form.elements.name.value.trim()) form.elements.name.value = result.name;
-  if (scope === "all" || scope === "palette") applyPalette();
-  if (scope === "all" && form.elements.type.value === "movie") registerMovieAssets();
-  else {
-    if ((scope === "all" || scope === "frame") && result.heroDecoration && form.elements.heroDecoration) form.elements.heroDecoration.value = result.heroDecoration;
-    if ((scope === "all" || scope === "text") && result.heroTextTheme && form.elements.heroTextTheme) form.elements.heroTextTheme.value = result.heroTextTheme;
+  if (result.name && form.elements.name && (!form.elements.name.value.trim() || form.elements.name.dataset.aiFilled === "true")) {
+    form.elements.name.value = result.name;
+    form.elements.name.dataset.aiFilled = "true";
   }
+  if (scope === "all" || scope === "palette") applyPalette();
+  if (scope === "all") applyMovieAssets("all");
+  else if (scope === "frame") applyMovieAssets("frame");
+  else if (scope === "text") applyMovieAssets("text");
 }
 
 function aiPalettePreview(palette = {}) {
@@ -537,12 +551,15 @@ function showAIResult(result, form) {
   </article>`;
   document.querySelectorAll("[data-ai-apply]").forEach((button) => button.addEventListener("click", () => applyAIResult(result, form, button.dataset.aiApply)));
   applyAIResult(result, form, isMovieTheme ? "all" : "palette");
-  document.querySelector("[data-ai-preview]").addEventListener("click", () => document.querySelector(".ai-visual-preview").classList.toggle("is-emphasized"));
+  document.querySelector("[data-ai-preview]").addEventListener("click", () => openAIThemePreview(result));
   document.querySelector("[data-ai-ignore]").addEventListener("click", () => { document.querySelector("[data-ai-results]").innerHTML = ""; });
   document.querySelector("[data-ai-regenerate]").addEventListener("click", async () => {
     try {
+      const userInstruction = result.type === "imageSearch"
+        ? (document.querySelector("[data-ai-search-query]")?.value?.trim() || result.prompt || result.instruction || result.concept || "")
+        : (document.querySelector("[data-ai-instruction]")?.value || "");
       const next = await runAIWithProgress(
-        () => AI_DESIGN_SERVICE.regenerateAIResult(result, document.querySelector("[data-ai-instruction]").value),
+        () => AI_DESIGN_SERVICE.regenerateAIResult(result, userInstruction),
         {},
         document.querySelector("[data-ai-progress]")
       );
@@ -552,6 +569,42 @@ function showAIResult(result, form) {
       document.querySelector("[data-ai-results]")?.insertAdjacentHTML("afterbegin", `<p class="admin-message">재생성에 실패했습니다. ${escapeAdminHtml(error.message || "")}</p>`);
     }
   });
+}
+
+function openAIThemePreview(result = {}) {
+  const validHeroDecorations = ["none", "doodle_hearts", "frame_arch", "frame_heart", "frame_inset", "organic_heart", "poster_card", "text_marriage", "wedding_rings"];
+  const validHeroTextThemes = ["editorial_left", "minimal_center", "default_center"];
+  const isMovie = result.type === "movie" || result.type === "imageSearch";
+  const payload = {
+    type: isMovie ? "movie" : "color",
+    name: result.name || "",
+    palette: result.palette || {},
+    heroDecoration: isMovie && validHeroDecorations.includes(result.heroDecoration) ? result.heroDecoration : "",
+    heroTextTheme: isMovie && validHeroTextThemes.includes(result.heroTextTheme) ? result.heroTextTheme : "",
+  };
+  if (!payload.palette || !Object.keys(payload.palette).length) {
+    alert("미리볼 팔레트가 없습니다. 먼저 AI 결과를 생성해 주세요.");
+    return;
+  }
+  try { sessionStorage.setItem("ai_theme_preview", JSON.stringify(payload)); } catch {}
+  const slug = window.RSVP_STORAGE?.getActiveInvitationSlug?.() || "main";
+  const url = `./index.html?card=${encodeURIComponent(slug)}&__layout=classic&__heroimg=1&__aiPreview=1`;
+  document.querySelector("#ai-theme-preview-modal")?.remove();
+  document.querySelector("#admin-design-modal")?.insertAdjacentHTML("beforeend", `<div class="ltp-preview-modal" id="ai-theme-preview-modal">
+    <div class="ltp-preview-backdrop" id="ai-theme-preview-backdrop"></div>
+    <div class="ltp-preview-panel">
+      <div class="ltp-preview-topbar">
+        <strong>테마 미리보기 (기본 레이아웃)</strong>
+        <button class="btn" type="button" id="ai-theme-preview-close">닫기</button>
+      </div>
+      <div class="ltp-preview-iframe-wrap">
+        <iframe class="ltp-preview-iframe" src="${escapeAdminHtml(url)}" title="테마 미리보기"></iframe>
+      </div>
+    </div>
+  </div>`);
+  const close = () => document.querySelector("#ai-theme-preview-modal")?.remove();
+  document.querySelector("#ai-theme-preview-close").addEventListener("click", close);
+  document.querySelector("#ai-theme-preview-backdrop").addEventListener("click", close);
 }
 
 const assetCategories = {
@@ -606,6 +659,22 @@ function frameEditorSample(item = {}) {
   return `<div class="frame-editor-canvas mode-${item.mode === "outer" ? "outer" : "overlay"}">
     ${source ? `<span class="frame-editor-decoration" style="--frame-opacity:${opacity};--frame-blend-mode:${blendMode};--frame-x:${xPercent}%;--frame-y:${yPercent}%;--frame-size:${sizePercent}%;--frame-tint:${tintColor};--frame-image:url('${escapeAdminHtml(source)}')"><img src="${escapeAdminHtml(source)}" alt="메인 이미지 꾸밈 미리보기"></span>` : '<span class="frame-editor-empty">이미지를 업로드하거나 AI로 생성해 주세요.</span>'}
   </div>`;
+}
+
+function frameModePickerMarkup(item = {}) {
+  return `<section class="frame-mode-section">
+    <h3 class="mobile-tool-title">1. 적용 방식 선택</h3>
+    <div class="frame-mode-picker">
+      <button class="frame-mode-btn ${(item.mode || "overlay") !== "outer" ? "is-active" : ""}" type="button" data-mode-pick="overlay">
+        <span class="frame-mode-icon">🖼</span><span class="frame-mode-label">사진 위에 겹치기</span><small>얇은 선·드로잉·코너 포인트</small>
+      </button>
+      <button class="frame-mode-btn ${item.mode === "outer" ? "is-active" : ""}" type="button" data-mode-pick="outer">
+        <span class="frame-mode-icon">🪟</span><span class="frame-mode-label">사진 바깥 액자</span><small>액자·필름 테두리·화환 프레임</small>
+      </button>
+      <input type="hidden" name="assetMode" value="${item.mode === "outer" ? "outer" : "overlay"}">
+    </div>
+    <div class="mobile-frame-editor"><div data-frame-live-preview>${frameEditorSample(item)}</div></div>
+  </section>`;
 }
 
 function designCombinedHeroPreview({ frame = {}, textTheme = {}, tintColor = "#ffffff", eyebrowEnabled = true, namesEnabled = true, dateEnabled = true, position = "bottom", xPercent, yPercent } = {}) {
@@ -682,21 +751,12 @@ function assetModalFields(type, item = {}) {
   const range = (name, label, value, min, max, step = 1) => `<label class="text-layout-control"><span>${label}</span><input name="${name}" type="range" min="${min}" max="${max}" step="${step}" value="${escapeAdminHtml(value)}"><output data-range-output="${name}">${escapeAdminHtml(value)}</output></label>`;
   return `<div class="asset-modal-fields">
     ${type === "frame" ? `<div class="mobile-frame-editor">
-      <div class="frame-mode-picker">
-        <button class="frame-mode-btn ${(item.mode || "overlay") !== "outer" ? "is-active" : ""}" type="button" data-mode-pick="overlay">
-          <span class="frame-mode-icon">🖼</span><span class="frame-mode-label">사진 위에 겹치기</span><small>얇은 선·드로잉·코너 포인트</small>
-        </button>
-        <button class="frame-mode-btn ${item.mode === "outer" ? "is-active" : ""}" type="button" data-mode-pick="outer">
-          <span class="frame-mode-icon">🪟</span><span class="frame-mode-label">사진 바깥 액자</span><small>액자·필름 테두리·화환 프레임</small>
-        </button>
-        <input type="hidden" name="assetMode" value="${item.mode === "outer" ? "outer" : "overlay"}">
-      </div>
-      <div data-frame-live-preview>${frameEditorSample(item)}</div>
-      <h3 class="mobile-tool-title">꾸밈 배치</h3>
+      <h3 class="mobile-tool-title">3. 꾸밈 배치 조정</h3>
       <section class="frame-position-section"><strong>위치 조정</strong><div class="frame-align-buttons"><button class="btn" type="button" data-frame-align="20">좌측</button><button class="btn" type="button" data-frame-align="50">중앙</button><button class="btn" type="button" data-frame-align="80">우측</button></div>
       <div class="text-layout-editor">${range("frameXPercent", "좌우 이동", item.xPercent ?? 50, 0, 100)}${range("frameYPercent", "위아래 이동", item.yPercent ?? 50, 0, 100)}</div></section>
       <div class="text-layout-editor">${range("frameSizePercent", item.mode === "outer" ? "전체 액자 크기" : "이미지 크기", item.sizePercent ?? 100, 20, 140)}${range("frameOpacity", "꾸밈 선명도", item.opacity ?? 1, 0.1, 1, 0.05)}</div>
       ${select("frameBlendMode", "사진과 어우러짐", item.blendMode || "normal", [["normal", "기본"], ["screen", "밝게"], ["multiply", "진하게"], ["overlay", "선명하게"], ["soft-light", "은은하게"]])}
+      ${input("frameTintColor", "꾸밈 색상", item.tintColor || "#ffffff", "color")}
     </div>` : ""}
     ${type === "textTheme" ? `<div class="mobile-text-editor">
       ${designSelect("fontId", "사용 폰트", fonts, item.fontId || "noto-serif-kr")}
@@ -776,7 +836,7 @@ function syncAssetDraftFromForm(type, form) {
     sizePercent: Math.max(20, Math.min(140, Number(form.elements.frameSizePercent.value) || 100)),
     opacity: Math.max(0.1, Math.min(1, Number(form.elements.frameOpacity.value) || 1)),
     blendMode: form.elements.frameBlendMode.value,
-    tintColor: window.assetSourceDraft.tintColor || "#ffffff",
+    tintColor: form.elements.frameTintColor?.value || window.assetSourceDraft.tintColor || "#ffffff",
   });
   if (type === "textTheme") Object.assign(window.assetSourceDraft, {
     layout: form.elements.layout.value,
@@ -943,7 +1003,8 @@ function openAssetCreateModal(type = "frame", assetId = "") {
       <div class="asset-type-tabs">${Object.entries(assetCategories).map(([value, item]) => `<button class="${value === type ? "is-active" : ""}" type="button" data-asset-type-tab="${value}">${item.label}</button>`).join("")}</div>
       <input type="hidden" name="assetType" value="${type}">
       ${input("assetName", "디자인 소스 이름", source.name || "")}
-      ${type !== "font" ? `<section class="ai-assistant"><h3>AI 디자인 어시스턴트</h3><div class="ai-chat" data-asset-ai-chat><p>AI: 원하는 ${category.label}의 분위기와 형태를 알려주세요.</p></div>
+      ${type === "frame" ? frameModePickerMarkup(source) : ""}
+      ${type !== "font" ? `<section class="ai-assistant"><h3>${type === "frame" ? "2. AI로 메인 이미지 꾸밈 만들기" : "AI 디자인 어시스턴트"}</h3><div class="ai-chat" data-asset-ai-chat><p>AI: 원하는 ${category.label}의 분위기와 형태를 알려주세요.</p></div>
         <div class="ai-input-row"><input data-asset-ai-instruction placeholder="따뜻한 빈티지 필름 느낌으로 만들어줘"><button class="btn" type="button" data-asset-ai-send>AI로 생성</button></div><div data-asset-ai-results></div>
       </section>` : ""}
       ${assetUploadFields(type)}
@@ -1550,22 +1611,23 @@ function ensureMovieThemeAssets(result = {}) {
   system.assets.textThemes ||= [];
   system.assets.sectionIcons ||= [];
   system.assets.backgrounds ||= [];
-  const stamp = Date.now();
-  const frameId = result.heroDecoration && !["none", "text_marriage", "frame_heart", "frame_arch", "frame_inset"].includes(result.heroDecoration)
+  // 실제 CSS에서 그려줄 수 있는 메인 이미지 꾸밈 종류 (AI가 새 이름을 제안해도 이 중 하나로 매핑)
+  const validHeroDecorations = ["none", "doodle_hearts", "frame_arch", "frame_heart", "frame_inset", "organic_heart", "poster_card", "text_marriage", "wedding_rings"];
+  const seed = aiSlug(result.id || result.name || "movie");
+  const heroDecorationKey = validHeroDecorations.includes(result.heroDecoration)
     ? result.heroDecoration
-    : `movie_frame_${aiSlug(result.name)}_${stamp}`;
+    : (result.frameMode === "outer" ? "frame_arch" : "doodle_hearts");
+  const frameId = validHeroDecorations.includes(result.heroDecoration) ? result.heroDecoration : `movie_frame_${seed}`;
   const textId = result.heroTextTheme && !["auto", "default_center", "editorial_left", "minimal_center"].includes(result.heroTextTheme)
     ? result.heroTextTheme
-    : `movie_text_${aiSlug(result.name)}_${stamp}`;
-  const iconId = `movie_icon_${aiSlug(result.name)}_${stamp}`;
-  const backgroundId = `movie_bg_${aiSlug(result.name)}_${stamp}`;
+    : `movie_text_${seed}`;
+  const iconId = `movie_icon_${seed}`;
+  const backgroundId = `movie_bg_${seed}`;
   if (!system.assets.frames.some((item) => item.id === frameId)) {
     system.assets.frames.push({
       id: frameId, name: result.frameName || `${result.name || "영화"} 메인 이미지 꾸밈`,
-      mode: result.frameMode === "outer" ? "outer" : "overlay", heroDecoration: frameId,
-      direction: result.frameDirection || result.heroDecoration || "영화 무드에 맞춘 신규 메인 이미지 꾸밈",
-      opacity: result.frameMode === "outer" ? 1 : 0.82, sizePercent: result.frameMode === "outer" ? 112 : 92,
-      xPercent: 50, yPercent: 50, tintColor: result.palette?.accent || "#ffffff", enabled: true,
+      mode: result.frameMode === "outer" ? "outer" : "overlay", heroDecoration: heroDecorationKey,
+      direction: result.frameDirection || "영화 무드에 맞춘 신규 메인 이미지 꾸밈", enabled: true,
     });
   }
   if (!system.assets.textThemes.some((item) => item.id === textId)) {

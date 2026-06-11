@@ -106,6 +106,7 @@ window.INVITATION_DATA = {
     { title: "자가용", text: "내비게이션에 '그랜드 머큐어 앰배서더 창원' 또는 주소를 입력해 주세요." },
   ],
   gallery: Array.from({ length: 30 }, () => ""),
+  galleryThumbs: Array.from({ length: 30 }, () => ""),
   notices: [
     { title: "식사 안내", text: "예식 전후로 연회장을 편하게 이용해 주세요." },
     { title: "주차 안내", text: "주차 등록은 예식장 로비 키오스크에서 가능합니다." },

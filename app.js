@@ -211,6 +211,10 @@ function galleryImages() {
   return data.gallery.filter(Boolean).slice(0, 30);
 }
 
+function galleryThumbAt(index) {
+  return data.galleryThumbs?.[index] || data.gallery[index] || "";
+}
+
 function shuffledGalleryPreview(images) {
   const shuffled = [...images];
   for (let index = shuffled.length - 1; index > 0; index -= 1) {
@@ -392,7 +396,7 @@ function render() {
       <section class="section" id="gallery">
         ${sectionCopy("gallery", "Gallery", "갤러리")}
         <div class="gallery-grid">
-          ${galleryPreviewImages.map((image, index) => `<button class="gallery-item" data-gallery="${gallery.indexOf(image)}" aria-label="사진 ${index + 1} 크게 보기"><span class="media" ${lazyMediaStyle(image)}></span></button>`).join("")}
+          ${galleryPreviewImages.map((image, index) => `<button class="gallery-item" data-gallery="${gallery.indexOf(image)}" aria-label="사진 ${index + 1} 크게 보기"><span class="media" ${lazyMediaStyle(galleryThumbAt(gallery.indexOf(image)))}></span></button>`).join("")}
         </div>
         <button class="btn gallery-more" id="gallery-more">사진 더보기</button>
       </section>
@@ -744,13 +748,6 @@ function openGallerySlider(index = 0) {
   openModal(gallerySlider(index));
   const slider = document.querySelector(".gallery-slider");
   let touchStartX = 0;
-  const preloadAround = (activeIndex) => {
-    const images = galleryImages();
-    [-1, 1].forEach((step) => {
-      const image = new Image();
-      image.src = mediaUrl(images[(activeIndex + step + images.length) % images.length]);
-    });
-  };
   const move = (step) => {
     const images = galleryImages();
     const current = Number(slider.dataset.galleryIndex);
@@ -763,9 +760,7 @@ function openGallerySlider(index = 0) {
     image.src = mediaUrl(images[next]);
     image.alt = `갤러리 사진 ${next + 1}`;
     page.textContent = `${next + 1} / ${images.length}`;
-    preloadAround(next);
   };
-  preloadAround(Number(slider.dataset.galleryIndex));
   document.querySelectorAll("[data-gallery-move]").forEach((button) => {
     button.addEventListener("click", () => move(Number(button.dataset.galleryMove)));
   });
@@ -1065,9 +1060,28 @@ function applyLayoutTemplate(layoutId) {
   }
 }
 
+function applyAIThemePreviewOverride() {
+  if (new URLSearchParams(location.search).get("__aiPreview") !== "1") return;
+  let payload;
+  try { payload = JSON.parse(sessionStorage.getItem("ai_theme_preview") || "null"); } catch { payload = null; }
+  if (!payload?.palette || !Object.keys(payload.palette).length) return;
+  window.WEDDING_DESIGN.normalize(data);
+  const system = data.designSystem;
+  const isMovie = payload.type === "movie";
+  const theme = { id: "__ai_preview__", name: payload.name || "AI 미리보기", type: isMovie ? "movie" : "color", enabled: true, palette: payload.palette };
+  if (isMovie) {
+    theme.heroDecoration = payload.heroDecoration || "none";
+    theme.heroTextTheme = payload.heroTextTheme || "default_center";
+  }
+  system.themes = system.themes.filter((item) => item.id !== "__ai_preview__");
+  system.themes.push(theme);
+  data.appearance.design = { ...data.appearance.design, presetId: "__ai_preview__", heroDecoration: "inherit", heroTextTheme: "inherit" };
+}
+
 async function start() {
   applyAppearance(data.appearance);
   data = await window.RSVP_STORAGE.loadInvitationData(data);
+  applyAIThemePreviewOverride();
   try { guestbookEntries = await window.RSVP_STORAGE.loadGuestbookEntries(); }
   catch { guestbookEntries = []; }
   applyAppearance(data.appearance);

@@ -223,13 +223,16 @@ ${designPromptForType()}
 요청 유형: ${type}
 사용자 요청: ${context.instruction || context.mood || ""}
 영화 또는 컨셉: ${context.concept || ""}
+중요: 사용자 요청에 구체적인 모양·소재·색상·분위기(예: 별, 하트, 동물, 특정 색 등)가 적혀 있다면 그것을 최우선으로 반영해서 결과물의 핵심 모티프로 삼으세요. 아래 가이드라인은 사용자 요청과 충돌하지 않는 범위에서 배치/구조 참고용으로만 사용하고, 사용자가 지정한 모양이나 소재를 다른 것으로 바꾸지 마세요.
+이 결과물은 결혼식 모바일 청첩장을 위한 디자인입니다. 사용자 요청이 영화·컨셉·분위기 키워드만 담고 있어도, 항상 결혼·웨딩·커플·사랑·로맨틱한 정서를 함께 고려해서 청첩장에 어울리도록 다듬어 반영하세요.
+${type === "palette" ? `컬러테마 요청은 "사용자 요청"에 적힌 분위기·소재·장소·색(예: 숲속, 바다, 가을, 빈티지, 핑크 등)에서 연상되는 색감을 팔레트의 중심으로 삼고, 그 위에 결혼식에 어울리는 우아함과 따뜻함을 더해 완성하세요.` : ""}
 팔레트는 CSS에서 바로 사용할 수 있는 색상으로 제안하세요.
 팔레트의 ink는 본문 글자색이므로 반드시 충분히 어두운 계열로 지정하세요. side는 모바일 청첩장 좌우 빈 여백 색상이며 background와 명확히 구분되어야 합니다. accent는 버튼/강조색, label은 영문 섹션 라벨색, button은 일반 버튼 배경색입니다. button은 background/card와 너무 비슷하거나 너무 밝지 않게 하고, 밝은 버튼이면 문구가 어두워야 합니다.
 폰트 파일이나 새 폰트 생성은 하지 마세요. fontId는 사용 가능한 목록 중 하나만 참고값으로 고르세요.
 컬러테마 요청이면 색상 팔레트 추천에 집중하세요.
 영화테마 요청이면 실제 영화 포스터, 명장면, 시대감, 조명, 의상/소품, 대표 색감에서 무드를 추출하세요.
 표절이나 특정 포스터 복제는 피하고, 그 영화가 연상되는 색상·여백·구도·질감·장면 감정만 재해석하세요.
-생성 스타일은 사랑스럽고 키치하며, 드로잉 라인 장식이 많은 모바일 청첩장 디자인을 우선합니다.
+사용자 요청에 별도의 모양·소재·분위기 지정이 없을 때만, 생성 스타일은 사랑스럽고 키치하며 드로잉 라인 장식이 많은 모바일 청첩장 디자인을 기본값으로 사용하세요.
 기존 디자인 소스 id를 고르는 대신, heroDecoration에는 새 프레임 id로 쓸 짧은 snake_case 이름을, heroTextTheme에는 새 문구테마 id로 쓸 짧은 snake_case 이름을 작성하세요.
 frameName, frameMode, frameDirection, textThemeName, textThemeLayout, sectionIconDirection, backgroundDirection을 모두 영화 무드에 맞는 신규 소스로 직접 제안하세요.
 메인 이미지 프레임 모양, 갤러리 배치 레이아웃, 갤러리 미리보기 프레임 디자인, 전체 폰트 방향, 메인문구테마가 하나의 영화 무드로 일관되게 보이도록 제안하세요.`;
@@ -350,6 +353,47 @@ async function callOpenAIImageWithRetry(prompt) {
   throw new Error(`OpenAI 이미지 생성 서버가 일시적으로 혼잡합니다. 잠시 후 다시 시도해 주세요. ${lastError?.message || ""}`.trim());
 }
 
+async function callGeminiImageModel(model, prompt) {
+  const gemini = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_API_KEY },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { responseModalities: ["IMAGE"] },
+    }),
+  });
+  const payload = await gemini.json();
+  if (!gemini.ok) {
+    const error = new Error(payload.error?.message || "Gemini 이미지 생성에 실패했습니다.");
+    error.retryable = gemini.status === 429 || gemini.status === 503 || isGeminiBusy(payload);
+    throw error;
+  }
+  const parts = payload.candidates?.[0]?.content?.parts || [];
+  const imagePart = parts.find((part) => part.inlineData || part.inline_data);
+  const inline = imagePart?.inlineData || imagePart?.inline_data;
+  if (!inline?.data) throw new Error("Gemini 이미지 생성 결과가 비어 있습니다.");
+  const mimeType = inline.mimeType || inline.mime_type || "image/png";
+  return `data:${mimeType};base64,${inline.data}`;
+}
+
+async function callGeminiImage(prompt) {
+  const primary = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
+  const models = [...new Set([primary, "gemini-2.5-flash-image-preview"])];
+  let lastError;
+  for (const model of models) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        return await callGeminiImageModel(model, prompt);
+      } catch (error) {
+        lastError = error;
+        if (!error.retryable) throw error;
+        await sleep(700 + attempt * 1100);
+      }
+    }
+  }
+  throw new Error(`Gemini 이미지 생성이 일시적으로 혼잡합니다. 잠시 후 다시 시도해 주세요. ${lastError?.message || ""}`.trim());
+}
+
 // Google Custom Search — 이미지 URL 목록 반환 (GOOGLE_SEARCH_API_KEY + GOOGLE_SEARCH_CX 필요)
 async function searchReferenceImages(query, num = 5) {
   if (!GOOGLE_SEARCH_API_KEY || !GOOGLE_SEARCH_CX) return [];
@@ -379,6 +423,7 @@ function visionInstructionFor(query, settings = {}) {
 검색어: ${query}
 이미지의 주조색·강조색·배경색을 청첩장 팔레트(side, background, card, ink, muted, accent, label, button, line)로 변환하세요.
 ink는 충분히 어두운 계열, accent는 이미지의 핵심 포인트색으로 지정하세요.
+이 팔레트는 결혼식 모바일 청첩장에 사용되므로, 검색어의 분위기를 살리면서도 결혼·웨딩·커플·사랑·로맨틱한 느낌과 어울리는 우아함을 더해 조정하세요.
 팔레트는 CSS hex 값으로 제안하세요.`;
 }
 
@@ -415,6 +460,7 @@ async function extractPaletteFromImages(imageUrls, query, settings = {}) {
 검색어: ${query}
 이미지의 주조색·강조색·배경색을 청첩장 팔레트(side, background, card, ink, muted, accent, label, button, line)로 변환하세요.
 ink는 충분히 어두운 계열, accent는 이미지의 핵심 포인트색으로 지정하세요.
+이 팔레트는 결혼식 모바일 청첩장에 사용되므로, 검색어의 분위기를 살리면서도 결혼·웨딩·커플·사랑·로맨틱한 느낌과 어울리는 우아함을 더해 조정하세요.
 팔레트는 CSS hex 값으로 제안하세요.`;
   const inputPayload = [
     { type: "input_text", text: visionInstruction },
@@ -449,8 +495,8 @@ module.exports = async function aiDesign(request, response) {
     return response.status(configured ? 200 : 503).json({ configured, provider, error: configured ? "" : provider === "Gemini" ? "GEMINI_API_KEY 환경변수를 등록해 주세요." : "OPENAI_API_KEY와 OPENAI_MODEL 환경변수를 등록해 주세요." });
   }
   if (request.method !== "POST") return response.status(405).json({ error: "지원하지 않는 요청입니다." });
-  if (provider === "Gemini" && !GEMINI_API_KEY) return response.status(503).json({ error: "Gemini 서버 환경변수가 설정되지 않았습니다." });
-  if (provider !== "Gemini" && !process.env.OPENAI_API_KEY) return response.status(503).json({ error: "OPENAI_API_KEY 환경변수를 등록해 주세요." });
+  if (provider === "Gemini" && type !== "assetImage" && !GEMINI_API_KEY) return response.status(503).json({ error: "Gemini 서버 환경변수가 설정되지 않았습니다." });
+  if (provider !== "Gemini" && type !== "assetImage" && !process.env.OPENAI_API_KEY) return response.status(503).json({ error: "OPENAI_API_KEY 환경변수를 등록해 주세요." });
   if (provider !== "Gemini" && type !== "assetImage" && !process.env.OPENAI_MODEL) return response.status(503).json({ error: "OPENAI_MODEL 환경변수를 등록해 주세요." });
 
   const prompt = designPrompt(type, context);
@@ -470,21 +516,25 @@ module.exports = async function aiDesign(request, response) {
       } else {
         // Google Search 미설정 시 GPT 학습 지식 기반으로 팔레트 생성 (검색 없이)
         const fallbackPrompt = `${designPrompt("palette", context)}
-검색어 "${query}"에서 연상되는 영화·컨셉의 대표 색상을 모바일 청첩장 팔레트로 변환하세요.
-포스터·명장면·의상·소품에서 추출한 것처럼 제안하세요.`;
+검색어 "${query}"에서 연상되는 분위기·장소·소재·대표 색상(영화/드라마라면 포스터·명장면·의상·소품 포함)을 모바일 청첩장 팔레트로 변환하세요.`;
         result = provider === "Gemini" ? await callGemini(fallbackPrompt, designSchema) : await callOpenAIWithRetry(fallbackPrompt, designSchema);
       }
       return response.status(200).json({ ...result, imageUrls, searchConfigured, prompt: query, createdAt: new Date().toISOString() });
     }
     if (type === "assetImage") {
-      if (!process.env.OPENAI_API_KEY) return response.status(400).json({ error: "이미지 생성에는 OpenAI API Key가 필요합니다. 슈퍼관리자 > AI 설정에서 OpenAI API Key를 등록해 주세요." });
+      // 선택한 Provider의 키가 없으면 다른 Provider 키로 자동 대체 (둘 다 없을 때만 오류)
+      let imageProvider = provider === "Gemini" ? "Gemini" : "OpenAI";
+      if (imageProvider === "Gemini" && !GEMINI_API_KEY) imageProvider = process.env.OPENAI_API_KEY ? "OpenAI" : "Gemini";
+      if (imageProvider === "OpenAI" && !process.env.OPENAI_API_KEY) imageProvider = GEMINI_API_KEY ? "Gemini" : "OpenAI";
+      if (imageProvider === "Gemini" && !GEMINI_API_KEY) return response.status(400).json({ error: "이미지 생성에는 GEMINI_API_KEY 또는 OPENAI_API_KEY가 필요합니다. 슈퍼관리자 > AI 설정에서 등록해 주세요." });
+      if (imageProvider === "OpenAI" && !process.env.OPENAI_API_KEY) return response.status(400).json({ error: "이미지 생성에는 OPENAI_API_KEY 또는 GEMINI_API_KEY가 필요합니다. 슈퍼관리자 > AI 설정에서 등록해 주세요." });
       const imagePrompt = designPrompt("imagePrompt", context);
       const isFrame = context.assetType === "frame";
       const isOverlay = isFrame && context.mode !== "outer";
       const modeInstruction = isFrame
         ? isOverlay
-          ? "적용방식=오버레이(사진 위 겹치기): 인물 얼굴과 신체를 가리지 않는 코너 포인트·얇은 선 드로잉·작은 꽃잎·리본 등 가장자리 장식 위주로 생성. 중앙은 완전히 비워 두어야 함. 선의 굵기는 최대 2px로 가늘고 섬세하게."
-          : "적용방식=아웃터(사진 바깥 액자): 사진을 감싸는 사각·원형·불규칙 액자 형태로 생성. 가운데는 완전히 투명하게 비워 사진이 보이도록 하고, 테두리 장식만 남김. 코너 장식·필름 테두리·꽃 화환 액자 등 프레임 구조로 만들 것."
+          ? "적용방식=오버레이(사진 위 겹치기): 인물 얼굴과 신체를 가리지 않도록 사진 가장자리/모서리 위주로 배치하고, 중앙은 완전히 비워 두어야 함. 선의 굵기는 최대 2px로 가늘고 섬세하게. 위 '사용자 요청'에 모양·소재(예: 별, 하트, 리본 등)가 지정되어 있다면 그 모양을 그대로 사용해서 오버레이 장식을 만드세요. 사용자 요청에 모양 지정이 없을 때만 코너 포인트·얇은 선 드로잉·작은 꽃잎·리본 등을 기본값으로 사용하세요."
+          : "적용방식=아웃터(사진 바깥 액자): 사진을 감싸는 액자 형태로 생성하고, 가운데는 완전히 투명하게 비워 사진이 보이도록 하세요. 위 '사용자 요청'에 모양·소재(예: 하트, 별, 아치, 리본 등)가 지정되어 있다면 액자 자체를 그 모양으로 만드세요. 사용자 요청에 모양 지정이 없을 때만 사각·원형·불규칙 액자, 코너 장식, 필름 테두리, 꽃 화환 액자 등을 기본값으로 사용하세요."
         : "";
       const fallbackPrompt = `${imagePrompt}
 요청한 디자인 소스를 실제 이미지로 생성하세요.
@@ -492,17 +542,27 @@ module.exports = async function aiDesign(request, response) {
 ${modeInstruction}
 투명 배경 PNG. 단일 디자인 소스. 텍스트/글자/로고/워터마크 없음.
 메인 사진은 만들지 말고, 청첩장 위에 얹거나 감쌀 수 있는 장식 요소만 생성하세요.`;
-      const promptResult = process.env.OPENAI_MODEL ? await callOpenAIWithRetry(`${imagePrompt}
+      const promptRefineRequest = `${imagePrompt}
 요청한 디자인 소스를 실제 이미지 생성 프롬프트로 변환하세요.
 이미지 유형: ${context.assetType || ""}
 ${modeInstruction}
 반드시 투명 배경 PNG에 적합하게, 단일 디자인 소스만 생성하도록 작성하세요.
-텍스트/글자/로고/워터마크는 넣지 마세요.`, imageSchema) : {
-        name: context.assetType === "frame" ? (isOverlay ? "AI 오버레이 꾸밈" : "AI 액자 프레임") : context.assetType === "sectionIcon" ? "AI 섹션 아이콘" : "AI 전체 배경 장식",
-        direction: context.instruction || "AI 이미지 생성 결과",
-        prompt: fallbackPrompt,
-      };
-      const imageDataUrl = await callOpenAIImageWithRetry(promptResult.prompt || fallbackPrompt);
+텍스트/글자/로고/워터마크는 넣지 마세요.`;
+      let promptResult;
+      if (imageProvider === "Gemini") {
+        promptResult = await callGemini(promptRefineRequest, imageSchema);
+      } else if (process.env.OPENAI_MODEL) {
+        promptResult = await callOpenAIWithRetry(promptRefineRequest, imageSchema);
+      } else {
+        promptResult = {
+          name: context.assetType === "frame" ? (isOverlay ? "AI 오버레이 꾸밈" : "AI 액자 프레임") : context.assetType === "sectionIcon" ? "AI 섹션 아이콘" : "AI 전체 배경 장식",
+          direction: context.instruction || "AI 이미지 생성 결과",
+          prompt: fallbackPrompt,
+        };
+      }
+      const imageDataUrl = imageProvider === "Gemini"
+        ? await callGeminiImage(promptResult.prompt || fallbackPrompt)
+        : await callOpenAIImageWithRetry(promptResult.prompt || fallbackPrompt);
       return response.status(200).json({ ...promptResult, imageDataUrl, createdAt: new Date().toISOString() });
     }
     const result = provider === "Gemini" ? await callGemini(prompt, responseSchema) : await callOpenAIWithRetry(prompt, responseSchema);

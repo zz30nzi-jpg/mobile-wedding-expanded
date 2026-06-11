@@ -5,6 +5,15 @@
     { side: "#faf8ea", background: "#f4f0df", card: "#fbf7ea", ink: "#37463f", muted: "#718076", accent: "#56725d", label: "#647b6b", button: "#edf1df", line: "#d4d8c5" },
   ];
   const choose = (items, seed = "") => items[Math.abs([...seed].reduce((sum, char) => sum + char.charCodeAt(0), Date.now())) % items.length];
+  const svgDataUrl = (svg) => `data:image/svg+xml;base64,${btoa(svg)}`;
+  const ASSET_IMAGE_SVG = {
+    frame: {
+      overlay: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 670"><g fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M50 60c-9-13 9-23 17-11c4-9 21-5 15 8c-4 9-21 17-32 3z"/><path d="M362 76c8-12-7-21-15-9c-4-9-19-4-13 7c4 9 19 13 28 2z"/><path d="M46 596c-8-12 9-21 15-9c2-9 19-5 13 6c-4 9-19 13-28 3z"/><path d="M372 610c9-9-6-21-13-11c-2-9-17-5-13 5c2 9 17 13 26 6z"/><path d="M34 330c19-6 32 8 25 25"/><path d="M386 348c-19-6-32 8-25 25"/></g></svg>',
+      outer: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 670"><rect x="14" y="14" width="392" height="642" rx="26" fill="none" stroke="#ffffff" stroke-width="16"/><rect x="38" y="38" width="344" height="594" rx="14" fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="8 10"/></svg>',
+    },
+    sectionIcon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><g fill="none" stroke="#8d3440" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M256 100c38 60 112 76 150 76c-22 54-22 136 0 190c-38 0-112 16-150 76c-38-60-112-76-150-76c22-54 22-136 0-190c38 0 112-16 150-76z"/></g></svg>',
+    background: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080"><g fill="none" stroke="#d8c8bd" stroke-width="2" opacity="0.6"><circle cx="220" cy="220" r="140"/><circle cx="1680" cy="240" r="180"/><circle cx="960" cy="900" r="240"/><path d="M0 540h1920" stroke-dasharray="6 18"/></g></svg>',
+  };
   const settings = (context = {}) => ({ ...(window.WEDDING_AI_SETTINGS?.() || {}), ...(context.settings || {}) });
   const isLocalPage = () => ["localhost", "127.0.0.1", ""].includes(window.location.hostname) || window.location.protocol === "file:";
   const configuredEndpoint = () => window.RSVP_CONFIG?.aiEndpoint || "/api/ai-design";
@@ -85,7 +94,11 @@
   const generateHeroTextTheme = async (context = {}) => request("textTheme", context, () => result("textTheme", context, { heroTextTheme: choose(["editorial_left", "minimal_center"], context.instruction), fontDirection: "상업적 무료 명조 계열 폰트", fontId: "noto-serif-kr", fontFamily: "Noto Serif KR", fontLicense: "SIL Open Font License", layout: { position: "poster-left", align: "left", shadow: true, boxEnabled: false, nameSize: 34, dateSize: 12 } }));
   const generateSectionIcon = async (context = {}) => request("sectionIcon", context, () => result("sectionIcon", context, { direction: "단색 또는 2색의 단순한 꽃과 별 조합", postprocess: window.AI_POSTPROCESS.describe(context.settings) }));
   const generateBackgroundDecoration = async (context = {}) => request("background", context, () => result("background", context, { direction: "본문 바깥에 머무르는 저채도 장식", postprocess: window.AI_POSTPROCESS.describe(context.settings) }));
-  const generateAssetImage = async (context = {}) => request("assetImage", context, () => result("assetImage", context, { imageDataUrl: "", direction: context.instruction || "AI 이미지 생성" }));
+  const generateAssetImage = async (context = {}) => request("assetImage", context, () => {
+    const mode = context.mode === "outer" ? "outer" : "overlay";
+    const svg = context.assetType === "frame" ? ASSET_IMAGE_SVG.frame[mode] : ASSET_IMAGE_SVG[context.assetType] || ASSET_IMAGE_SVG.sectionIcon;
+    return result("assetImage", context, { imageDataUrl: svgDataUrl(svg), direction: context.instruction || "AI 이미지 생성" });
+  });
   const generateTransportGuide = async (context = {}) => request("transportGuide", context, () => ({
     ...result("transportGuide", context),
     items: [
@@ -103,8 +116,17 @@
     ],
     caution: "Mock Mode 결과입니다.",
   }));
-  const searchBasedPalette = async (context = {}) => request("imageSearch", context, () => result("imageSearch", context, {
-    palette: choose(palettes, context.instruction),
+  const searchBasedPalette = async (context = {}) => request("imageSearch", context, () => ({
+    ...result("movie", context, {
+      palette: choose(palettes, `${context.concept || ""}${context.instruction || ""}`),
+      heroDecoration: choose(["doodle_hearts", "organic_heart", "poster_card"], context.instruction),
+      heroTextTheme: choose(["editorial_left", "minimal_center"], context.concept),
+      sectionIconDirection: "작은 별과 필름 라인의 2색 아이콘",
+      backgroundDirection: "저채도 종이 질감과 은은한 빛 번짐",
+      fontDirection: "명조 계열의 영화 포스터 같은 큰 이름 글자", fontId: "noto-serif-kr", fontFamily: "Noto Serif KR", fontLicense: "SIL Open Font License",
+      galleryFrameDirection: "얇은 필름 테두리", buttonShapeDirection: "둥근 캡슐형 버튼",
+    }),
+    type: "imageSearch",
     imageUrls: [],
     searchConfigured: false,
   }));
@@ -117,12 +139,14 @@
     concept: "세로 스크롤 기반 카드형 레이아웃",
   }));
   const regenerateAIResult = async (previous = {}, userInstruction = "") => {
-    const context = { ...previous, instruction: userInstruction || previous.instruction };
+    const instruction = userInstruction || previous.instruction || previous.concept || previous.prompt || "";
+    const context = { ...previous, instruction, concept: instruction };
     if (previous.type === "movie") return recommendMovieTheme(context);
     if (previous.type === "frame") return generateFrameDecoration(context);
     if (previous.type === "textTheme") return generateHeroTextTheme(context);
     if (previous.type === "sectionIcon") return generateSectionIcon(context);
     if (previous.type === "background") return generateBackgroundDecoration(context);
+    if (previous.type === "imageSearch") return searchBasedPalette(context);
     return recommendColorPalette(context);
   };
   const testAIConnection = async (settings = {}) => {

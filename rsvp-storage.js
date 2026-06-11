@@ -3,11 +3,14 @@ const GUESTBOOK_LOCAL_KEY = "wedding-guestbook-entries";
 const INVITATION_LOCAL_KEY = "wedding-invitation-preview-draft";
 const DEFAULT_INVITATION_ID = "main";
 let activeInvitationSlug = "";
+let supabaseClientInstance = null;
 
 function getSupabaseClient() {
+  if (supabaseClientInstance) return supabaseClientInstance;
   const config = window.RSVP_CONFIG || {};
   if (!config.supabaseUrl || !config.supabaseAnonKey || !window.supabase) return null;
-  return window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+  supabaseClientInstance = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey);
+  return supabaseClientInstance;
 }
 
 function readLocalResponses() {
@@ -33,6 +36,30 @@ function mergeInvitationData(fallback, saved) {
   return merged;
 }
 
+function weddingDisplayDateLongKo(value) {
+  if (!value) return "";
+  const date = new Date(`${value}:00+09:00`);
+  if (Number.isNaN(date.getTime())) return "";
+  const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+  const day = weekdays[date.getDay()];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const dateOfMonth = String(date.getDate()).padStart(2, "0");
+  const hour = date.getHours();
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  const period = hour < 12 ? "오전" : "오후";
+  const twelveHour = hour % 12 || 12;
+  return `${year}. ${month}. ${dateOfMonth}. ${day}요일 ${period} ${twelveHour}시 ${minute}분`;
+}
+
+function accountRelationKey(relation = "") {
+  if (relation.includes("아버")) return "father";
+  if (relation.includes("어머")) return "mother";
+  if (relation === "신랑") return "groom";
+  if (relation === "신부") return "bride";
+  return relation || "";
+}
+
 function normalizeInvitationData(fallback, saved, library = null) {
   const merged = mergeInvitationData(fallback, saved);
   const legacyTransport = new Set([
@@ -47,13 +74,36 @@ function normalizeInvitationData(fallback, saved, library = null) {
   });
   const accounts = Array.isArray(merged.accounts) ? merged.accounts : [];
   const defaultAccounts = Array.isArray(fallback.accounts) ? fallback.accounts : [];
+  const sameAccountRole = (account, defaultAccount) =>
+    account.side === defaultAccount.side && accountRelationKey(account.relation) === accountRelationKey(defaultAccount.relation);
   const orderedAccounts = defaultAccounts.map((defaultAccount) => ({
     ...defaultAccount,
-    ...(accounts.find((account) => account.side === defaultAccount.side && account.name === defaultAccount.name) || {}),
+    ...(accounts.find((account) => sameAccountRole(account, defaultAccount)) || {}),
   }));
   const customAccounts = accounts.filter((account) =>
-    !defaultAccounts.some((defaultAccount) => account.side === defaultAccount.side && account.name === defaultAccount.name));
+    !defaultAccounts.some((defaultAccount) => sameAccountRole(account, defaultAccount)));
   return window.WEDDING_DESIGN.normalize({ ...merged, accounts: [...orderedAccounts, ...customAccounts] }, library);
+}
+
+const HANGUL_CHO = ["g", "kk", "n", "d", "tt", "r", "m", "b", "pp", "s", "ss", "", "j", "jj", "ch", "k", "t", "p", "h"];
+const HANGUL_JUNG = ["a", "ae", "ya", "yae", "eo", "e", "yeo", "ye", "o", "wa", "wae", "oe", "yo", "u", "wo", "we", "wi", "yu", "eu", "ui", "i"];
+const HANGUL_JONG = ["", "g", "kk", "gs", "n", "nj", "nh", "d", "l", "lg", "lm", "lb", "ls", "lt", "lp", "lh", "m", "b", "bs", "s", "ss", "ng", "j", "ch", "k", "t", "p", "h"];
+
+function romanizeHangul(value = "") {
+  let out = "";
+  for (const ch of String(value || "")) {
+    const code = ch.codePointAt(0);
+    if (code >= 0xac00 && code <= 0xd7a3) {
+      const offset = code - 0xac00;
+      const cho = Math.floor(offset / (21 * 28));
+      const jung = Math.floor((offset % (21 * 28)) / 28);
+      const jong = offset % 28;
+      out += HANGUL_CHO[cho] + HANGUL_JUNG[jung] + HANGUL_JONG[jong];
+    } else {
+      out += ch;
+    }
+  }
+  return out;
 }
 
 function normalizeSlug(value = "") {
@@ -66,8 +116,24 @@ function normalizeSlug(value = "") {
     .slice(0, 48);
 }
 
+// Supabase Storage 키는 ASCII만 허용하므로, 한글이 포함된 슬러그(기존 계정 포함)도
+// 스토리지 경로를 만들 때는 항상 로마자로 변환해 "Invalid key" 오류를 방지한다.
+function storageSlug(value = "") {
+  return romanizeHangul(String(value || ""))
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 48);
+}
+
 function fallbackSlug(seed = "") {
-  return normalizeSlug(seed) || `card-${Date.now().toString(36)}`;
+  return storageSlug(seed) || `card-${Date.now().toString(36)}`;
+}
+
+function getStorageSlug() {
+  return storageSlug(getActiveInvitationSlug()) || "card";
 }
 
 function dateOnly(value = "") {
@@ -123,14 +189,24 @@ function emptyMediaInvitation(fallback, { slug = "", groomName = "", brideName =
   next.wedding = {
     ...(next.wedding || {}),
     date: weddingDate ? `${weddingDate}:00+09:00` : "",
+    displayDate: weddingDisplayDateLongKo(weddingDate),
+    displayDateFormat: "long_ko",
+    displayDateCustom: "",
     venue: weddingVenue || "",
     hall: weddingHall || "",
     address: "",
     officialUrl: "",
     mapLinks: [],
   };
-  next.accounts = [];
+  next.accounts = (fallback.accounts || []).map((account) => ({
+    side: account.side,
+    relation: account.relation,
+    name: account.relation === "신랑" ? groomName || "" : account.relation === "신부" ? brideName || "" : "",
+    bank: "",
+    number: "",
+  }));
   next.gallery = Array.from({ length: 30 }, () => "");
+  next.galleryThumbs = Array.from({ length: 30 }, () => "");
   next.transport = [];
   next.ending = { ...(next.ending || {}), image: "" };
   next.meta = {
@@ -141,9 +217,7 @@ function emptyMediaInvitation(fallback, { slug = "", groomName = "", brideName =
   };
   next.guestPhotos = { ...(next.guestPhotos || {}), eventDate: dateOnly(weddingDate), uploadSlug: slug || next.guestPhotos?.uploadSlug || "wedding-day" };
   next.publicPeriod = { ...(next.publicPeriod || {}), openDate: publicOpenDate || "", closeDate: publicCloseDate || "" };
-  const normalized = window.WEDDING_DESIGN.normalize(next, library);
-  normalized.accounts = [];
-  return normalized;
+  return window.WEDDING_DESIGN.normalize(next, library);
 }
 
 async function currentUserInvitationSite(client) {
@@ -411,6 +485,15 @@ async function loadInvitationData(fallback) {
   return result || window.WEDDING_DESIGN.normalize(fallback, library);
 }
 
+async function loadSafeInvitationData(fallback = window.INVITATION_DATA) {
+  try {
+    const invitation = await loadInvitationData(fallback);
+    return invitation && typeof invitation === "object" ? invitation : {};
+  } catch {
+    return fallback && typeof fallback === "object" ? fallback : {};
+  }
+}
+
 async function saveInvitationData(content) {
   const client = getSupabaseClient();
   const slug = getActiveInvitationSlug();
@@ -495,9 +578,9 @@ async function listInvitationSites() {
   const contentBySlug = new Map((settings || []).map((row) => [row.id, row.content || {}]));
   return Promise.all(sites.map(async (site) => {
     const content = contentBySlug.get(site.slug) || {};
-    const guestSlug = content.guestPhotos?.uploadSlug || site.slug || "wedding-day";
+    const guestSlug = storageSlug(content.guestPhotos?.uploadSlug || site.slug) || "wedding-day";
     const [invitationFiles, guestFiles] = await Promise.all([
-      listStorageFolder(client, "invitation-media", `invitations/${site.slug}`).catch(() => []),
+      listStorageFolder(client, "invitation-media", `invitations/${storageSlug(site.slug)}`).catch(() => []),
       listStorageFolder(client, "guest-photos", guestSlug).catch(() => []),
     ]);
     const invitationBytes = storageBytes(invitationFiles);
@@ -546,9 +629,9 @@ async function removeInvitationSite(slug) {
     client.from("invitation_settings").select("content").eq("id", slug).maybeSingle(),
     client.from("invitation_sites").select("owner_id").eq("slug", slug).maybeSingle(),
   ]);
-  const guestSlug = setting?.content?.guestPhotos?.uploadSlug || slug;
+  const guestSlug = storageSlug(setting?.content?.guestPhotos?.uploadSlug || slug) || "wedding-day";
   const [invitationFiles, guestFiles] = await Promise.all([
-    listStorageFolder(client, "invitation-media", `invitations/${slug}`).catch(() => []),
+    listStorageFolder(client, "invitation-media", `invitations/${storageSlug(slug)}`).catch(() => []),
     listStorageFolder(client, "guest-photos", guestSlug).catch(() => []),
   ]);
   const invitationPaths = invitationFiles.map((file) => file.path);
@@ -604,22 +687,66 @@ async function optimizeInvitationImage(file) {
   }
 }
 
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("미리보기 이미지를 읽지 못했습니다."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function createGalleryImageVariants(file) {
+  if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+    throw new Error("JPG, PNG, WEBP 이미지만 업로드할 수 있습니다.");
+  }
+  if (!("createImageBitmap" in window)) throw new Error("이 브라우저에서는 이미지 최적화를 지원하지 않습니다.");
+  try {
+    const bitmap = await createImageBitmap(file);
+    const renderVariant = (maxDimension, quality) => {
+      const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      return new Promise((resolve) => canvas.toBlob(resolve, "image/webp", quality));
+    };
+    const [display, thumb] = await Promise.all([renderVariant(1280, 0.78), renderVariant(480, 0.7)]);
+    bitmap.close();
+    if (!display || !thumb) throw new Error("이미지를 WebP로 변환하지 못했습니다.");
+    return { display, thumb };
+  } catch {
+    throw new Error("이미지를 최적화하지 못했습니다. JPG, PNG, WEBP 이미지를 다시 선택해 주세요.");
+  }
+}
+
 async function uploadInvitationImage(file, slot) {
   const client = getSupabaseClient();
   if (!file.type.startsWith("image/") || file.size > 20 * 1024 * 1024) {
     throw new Error("20MB 이하 이미지 파일만 업로드할 수 있습니다.");
   }
-  const optimized = await optimizeInvitationImage(file);
-  if (!client) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(new Error("미리보기 이미지를 읽지 못했습니다."));
-      reader.readAsDataURL(optimized);
-    });
-  }
   const role = mediaRoleFromSlot(slot);
-  const path = `invitations/${getActiveInvitationSlug()}/${role.folder}/${role.filename}`;
+  if (role.folder === "gallery") {
+    const { display, thumb } = await createGalleryImageVariants(file);
+    if (!client) {
+      const [path, thumbPath] = await Promise.all([blobToDataUrl(display), blobToDataUrl(thumb)]);
+      return { path, thumbPath };
+    }
+    const base = role.filename.replace(/\.webp$/, "");
+    const ts = Date.now();
+    const path = `invitations/${getStorageSlug()}/${role.folder}/${base}-${ts}.webp`;
+    const thumbPath = `invitations/${getStorageSlug()}/${role.folder}/${base}-${ts}-thumb.webp`;
+    const [displayUpload, thumbUpload] = await Promise.all([
+      client.storage.from("invitation-media").upload(path, display, { cacheControl: "31536000", contentType: "image/webp", upsert: true }),
+      client.storage.from("invitation-media").upload(thumbPath, thumb, { cacheControl: "31536000", contentType: "image/webp", upsert: true }),
+    ]);
+    if (displayUpload.error) throw displayUpload.error;
+    if (thumbUpload.error) throw thumbUpload.error;
+    return { path, thumbPath };
+  }
+  const optimized = await optimizeInvitationImage(file);
+  if (!client) return blobToDataUrl(optimized);
+  const path = `invitations/${getStorageSlug()}/${role.folder}/${role.filename}`;
   const { error } = await client.storage
     .from("invitation-media")
     .upload(path, optimized, { cacheControl: "31536000", contentType: "image/webp", upsert: true });
@@ -635,7 +762,7 @@ async function uploadInvitationMedia(file, slot) {
     throw new Error("50MB 이하 MP4, WebM 또는 MOV 영상만 업로드할 수 있습니다.");
   }
   const extension = file.type === "video/webm" ? "webm" : file.type === "video/quicktime" ? "mov" : "mp4";
-  const path = `invitations/${getActiveInvitationSlug()}/hero/hero-video.${extension}`;
+  const path = `invitations/${getStorageSlug()}/hero/hero-video.${extension}`;
   const { error } = await client.storage.from("invitation-media").upload(path, file, { cacheControl: "31536000", contentType: file.type, upsert: true });
   if (error) {
     if (/mime type|not supported/i.test(error.message || "")) {
@@ -660,8 +787,8 @@ async function uploadDesignAsset(file, slot = "asset") {
   }
   const extension = file.name.split(".").pop()?.toLowerCase() || "png";
   const filename = `${slot}-${Date.now()}-${crypto.randomUUID?.() || "asset"}.${extension}`.replace(/[^a-z0-9가-힣._-]/gi, "-");
-  const path = `invitations/${getActiveInvitationSlug()}/design-assets/${filename}`;
-  const { error } = await client.storage.from("invitation-media").upload(path, file, { cacheControl: "3600", contentType, upsert: true });
+  const path = `invitations/${getStorageSlug()}/design-assets/${filename}`;
+  const { error } = await client.storage.from("invitation-media").upload(path, file, { cacheControl: "31536000", contentType, upsert: true });
   if (error) throw error;
   return path;
 }
@@ -670,8 +797,8 @@ async function uploadGuestPhotos(files, onProgress = () => {}) {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
   const session = await ensureGuestPhotoSession(client);
-  const invitation = await loadInvitationData(window.INVITATION_DATA);
-  const uploadSlug = invitation.guestPhotos?.uploadSlug || "wedding-day";
+  const invitation = await loadSafeInvitationData();
+  const uploadSlug = storageSlug(invitation.guestPhotos?.uploadSlug) || "wedding-day";
   const uploaded = [];
   for (let index = 0; index < files.length; index += 1) {
     const file = files[index];
@@ -717,8 +844,8 @@ async function listOwnGuestPhotos() {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
   const session = await ensureGuestPhotoSession(client);
-  const invitation = await loadInvitationData(window.INVITATION_DATA);
-  const folder = `${invitation.guestPhotos?.uploadSlug || "wedding-day"}/${session.user.id}`;
+  const invitation = await loadSafeInvitationData();
+  const folder = `${storageSlug(invitation.guestPhotos?.uploadSlug) || "wedding-day"}/${session.user.id}`;
   const folders = [folder, session.user.id];
   const results = await Promise.all(folders.map(async (target) => {
     const { data: files, error } = await client.storage
@@ -745,8 +872,8 @@ async function listGuestPhotoFolder(client, folder = "") {
 async function listGuestPhotos() {
   const client = getSupabaseClient();
   if (!client) throw new Error("Supabase가 연결되지 않았습니다.");
-  const invitation = await loadInvitationData(window.INVITATION_DATA);
-  const folder = invitation.guestPhotos?.uploadSlug || getActiveInvitationSlug() || "wedding-day";
+  const invitation = await loadSafeInvitationData();
+  const folder = storageSlug(invitation.guestPhotos?.uploadSlug || getActiveInvitationSlug()) || "wedding-day";
   const photos = (await listGuestPhotoFolder(client, folder)).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
   return signedGuestPhotos(client, photos.map((photo) => photo.path), photos, 30 * 24 * 60 * 60);
 }
